@@ -5,9 +5,18 @@
 - Public pages render without authentication.
 - Public pages have unique titles and descriptions.
 - Sitemap excludes private routes.
+- Robots excludes candidate, admin, and authentication areas.
+- Public header and footer contain the approved navigation destinations.
+- Canonical and Open Graph metadata use validated site configuration.
+- Owner-supplied public name, regulatory text, address, email, phone, and application destination match controlled configuration.
+- Missing optional booking/principal-broker values remain disabled or absent rather than becoming claims.
 - Draft/suspended/archived agent profiles return non-public behavior.
 - Closed recruitment postings are not listed publicly.
 - Mobile layout remains usable at 320 CSS pixels.
+- Public navigation uses keyboard-native controls and all public actions remain real links or native controls.
+- Mockup-only people, ratings, lender counts, rates, licence examples, testimonials, and portal metrics do not appear in public source.
+
+Phase 1A web evidence: 9 Vitest files / 27 tests cover anonymous page rendering, metadata uniqueness, sitemap, robots, shell navigation/contact facts, configuration fail-closed behavior, dynamic publication boundaries, source claim leakage, reflow guardrails, apply privacy copy, and portal API requests. The production Next build prerenders 30 pages/routes without metadata, routing, hydration, or type errors.
 
 ## Apply flow
 

@@ -1,8 +1,8 @@
 # Keeper Financial
 
-Phase 0 foundation for Keeper Financial’s public website, candidate portal, and brokerage administration portal. This repository intentionally does **not** implement mortgage origination, borrower financial-data collection, lender submission, custom e-signature, commission calculation, or a client CRM.
+Phase 1A engineering implementation for Keeper Financial’s public website, with the Phase 0 candidate-portal, administration, API, authorization, storage, and data foundations preserved. This repository intentionally does **not** implement mortgage origination, borrower financial-data collection, lender submission, custom e-signature, commission calculation, or a client CRM.
 
-`docs/00_PROJECT_SOURCE_OF_TRUTH.md` remains authoritative. Start with [the Phase 0 report](docs/16_PHASE_0_IMPLEMENTATION_REPORT.md) for the implemented boundary.
+`docs/00_PROJECT_SOURCE_OF_TRUTH.md` remains authoritative. Start with [the Phase 1A report](docs/17_PHASE_1A_IMPLEMENTATION_REPORT.md) for delivered public routes, validation evidence, and owner-approval blockers; the [Phase 0 report](docs/16_PHASE_0_IMPLEMENTATION_REPORT.md) records the preserved security foundation.
 
 ## Repository
 
@@ -47,6 +47,8 @@ make web-dev
 
 Open `http://localhost:3000`; API documentation is local-only at `http://localhost:8000/docs`. The synthetic seed subjects support direct local API authorization-header testing. They are not real Supabase accounts.
 
+The local public site uses the owner-supplied Keeper Financial identity, contact details, and allow-listed secure application destination from `.env.example`. Public content is typed and repository-controlled in `apps/web/lib/public-content.ts`; public facts are validated in `apps/web/lib/site-config.ts`. A future booking URL is disabled until supplied.
+
 To run all containerized application services after creating `.env` and starting local Supabase:
 
 ```bash
@@ -64,6 +66,8 @@ make migrate-check
 make build
 make openapi
 ```
+
+The exact Phase 1A acceptance pipeline is documented in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT.md`.
 
 The API OpenAPI document is exported into `packages/contracts/openapi.json`; `openapi-typescript` then creates `packages/contracts/src/generated.ts`. Regenerate contracts whenever a route or schema changes.
 

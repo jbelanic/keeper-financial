@@ -2,7 +2,7 @@
 
 ## Design source
 
-A preferred high-fidelity mockup will be supplied separately.
+Three owner-approved 1122 × 1402 desktop mockups are stored in `docs/ui/reference`: home, recruitment, and agent profile.
 
 Treat the mockup as the primary visual reference for:
 
@@ -17,6 +17,16 @@ Treat the mockup as the primary visual reference for:
 - Public-site composition.
 
 Do not copy inaccessible interactions or layouts without adaptation.
+
+## Phase 1A translation
+
+- Shared tokens use the approved paper, ink, warm gold, fine-border, restrained-shadow, editorial-serif, and sans-serif direction.
+- Public heroes use a split copy/image composition on wide screens and a single-column crop-safe layout on narrow screens.
+- The public header exposes all approved navigation labels in a desktop navigation and a keyboard-native `details`/`summary` mobile menu.
+- Service cards, process steps, dark calls to action, empty states, policy content, and recruitment sections are reusable patterns rather than screenshot-specific markup.
+- The logo is a semantic text/CSS lockup because no approved standalone vector logo was supplied.
+- Two photography-only raster assets were generated from the approved home and recruitment mockups as visual references. They contain no embedded UI, brand text, rates, awards, testimonials, or sample data and are documented in `docs/ui/README.md`.
+- The agent-profile mockup informed card, border, icon, and spacing treatment only. No CRM dashboard, client, application, production, pipeline, appointment, or portal feature was implemented in Phase 1A.
 
 ## Product experience principles
 
@@ -132,3 +142,5 @@ Create:
 - No horizontal page scrolling at 320 CSS pixels.
 - Touch targets should be practical.
 - Portal navigation must remain usable without hover.
+
+Implemented public reflow guardrails include page-level overflow clipping, `min-width: 0` on layout containers, single-column layouts below 52rem, full-width actions on the smallest breakpoint, crop-safe `next/image` containers, and explicit 36rem narrow-screen rules. Browser/manual WCAG and visual-regression approval remain Phase 1F work.

@@ -15,12 +15,11 @@
 
 ## Initial assumptions requiring confirmation
 
-- Keeper Financial’s authorized public brokerage name.
-- Brokerage licence number.
+- Keeper Financial’s public/legal names and currently published regulatory text were supplied for Phase 1A: `Keeper Financial` / `Keeper Financial Inc.` and `FSCO # 13696`. Legal/regulatory approval for production wording remains required.
 - Principal broker identity and approved title.
 - Exact Filogix product edition.
 - Whether Filogix provides the preferred borrower application experience.
-- Mortgage application URL structure and agent attribution support.
+- The brokerage-wide secure application URL is approved as `https://apply.keeperfinancial.ca/`. Agent attribution support remains unknown and no agent-specific link is fabricated.
 - Preferred booking tool.
 - Preferred transactional email provider.
 - Preferred e-signature provider.
@@ -33,16 +32,15 @@
 - Who may approve public agent profiles.
 - Whether agents may propose their own profile edits.
 
-## UI questions to resolve when mockup is supplied
+## UI questions remaining after mockup implementation
 
 - Font licensing and web availability.
 - Exact colors and contrast.
-- Public navigation labels.
-- Mobile adaptations.
 - Image licensing.
-- Card and form behavior.
-- Whether mockup includes all required regulatory identity fields.
-- Which components can be directly implemented and which require accessibility adjustment.
+- Final font licensing and whether an approved vector logo/source photography will replace the accessible text lockup and generated photography-only assets.
+- Owner visual approval of the implemented mobile adaptations and 320px reflow.
+- Manual WCAG 2.1 AA and content/contrast approval.
+- Final legal/privacy/complaints/accessibility wording, formal contacts, escalation steps, and response timelines.
 
 ## CRM decision gate
 
@@ -63,3 +61,6 @@ Revisit CRM only after measuring:
 Record approved decisions here with date, owner, rationale, and affected documents.
 
 - 2026-07-14 — Implementation decision: selected Next.js App Router for the single React/TypeScript web application, following the preferred architecture baseline. Rationale and consequences are recorded in `docs/adr/0001-nextjs-app-router.md`. No source-of-truth change required.
+- 2026-07-14 — Owner-provided Phase 1A public facts: `Keeper Financial` / `Keeper Financial Inc.`, `FSCO # 13696`, London office address, support email, published phone, and `https://apply.keeperfinancial.ca/`. These supersede all mockup sample values and are implemented through validated public configuration.
+- 2026-07-14 — Phase 1A content decision: typed repository-controlled content is the approved simplest content mechanism; no CMS or page builder is introduced.
+- 2026-07-14 — Phase boundary decision: `/careers` may present the brokerage but exposes no candidate workflow/posting record; `/agents` exposes a finished empty approved-publication boundary; dynamic slugs return non-public behavior until Phases 1C/1E.

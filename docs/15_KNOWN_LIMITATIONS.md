@@ -1,13 +1,14 @@
 # Known Limitations
 
-Phase 0 is a reviewable engineering foundation, not a production launch or a compliance certification.
+Phase 1A is a reviewable public-site engineering implementation on top of the Phase 0 foundation. It is not a production launch, legal approval, accessibility certification, or compliance certification.
 
 ## Product and privacy boundary
 
-- Public content, regulatory identity, privacy, complaints, accessibility, and contact details are explicit placeholders pending owner and legal approval.
-- The supplied desktop mockups informed tokens and layout direction only; pages are not final high-fidelity reproductions.
+- The owner supplied the current public/legal name, `FSCO # 13696`, address, support email, phone, and secure application URL. These are controlled configuration rather than placeholders. Production still requires owner/legal confirmation of the final regulatory presentation and legal/privacy/complaints/accessibility wording.
+- The approved desktop mockups now inform the implemented tokens, responsive public shell, split-image heroes, trust bands, cards, typography direction, and CTAs. No standalone approved vector logo, font files/licences, or source photography was supplied; the site therefore uses an accessible CSS/text lockup and two documented generated photography-only assets pending owner licensing/visual approval.
 - Candidate registration/provisioning, applications, posting queries, review queues, onboarding workflows, controlled-document issuance, and public agent-profile queries remain for later phases. Because no candidate application submission exists yet, the required pre-submission candidate privacy disclosure also remains to be implemented with that flow.
-- Agent and career dynamic pages render foundation text only and expose no database record. Publication filtering must be implemented and tested before real content is connected.
+- Agent and career landing pages show honest finished empty states. Dynamic profile/posting slugs return non-public behavior and expose no database records. Database-backed publication filtering and query tests must be implemented with Phases 1C and 1E before any records are connected.
+- `/apply` is visually integrated and the approved brokerage-wide application destination is configured through the existing HTTPS/exact-host API redirect control. Lead notification/queue, consent withdrawal, booking provider, and any agent-specific application attribution remain Phase 1B or later.
 - Independent agent portals/microsites, mortgage origination, borrower documents, lender submissions, commissions, payroll, custom signing, automated FSRA verification, and a client CRM remain explicitly out of scope.
 
 ## Security and operations
@@ -22,6 +23,7 @@ Phase 0 is a reviewable engineering foundation, not a production launch or a com
 - Retention categories exist only as policy requirements. Final periods, deletion execution, litigation/regulatory holds, and owner-approved policy are not implemented.
 - Email, monitoring/error reporting, backup and isolated restore testing, incident response, secret scanning, access review, vendor/subprocessor registers, privacy/data-processing registers, vulnerability operations, and deployment hosting are unselected or unexecuted.
 - Accessibility components provide semantic labels, focus, errors, reflow-oriented layout, and non-colour status text, but there has been no browser automation or manual WCAG 2.1 AA audit.
+- CSS and component tests cover explicit 320px-oriented reflow guardrails, but there is not yet a cross-browser visual-regression suite or owner-approved mobile reference. Manual keyboard, zoom, screen-reader, contrast, and 320 CSS-pixel review remain required.
 - Local Supabase subjects are not automatically provisioned into application users. This is intentional deny-by-default behavior, but requires a controlled, audited administration workflow.
 
 ## Dependency and environment validation

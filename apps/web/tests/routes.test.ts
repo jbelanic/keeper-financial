@@ -6,6 +6,10 @@ describe("route inventory", () => {
       expect.arrayContaining([
         "/",
         "/apply",
+        "/how-it-works",
+        "/about",
+        "/mortgages/purchase",
+        "/mortgages/investment-properties",
         "/agents/[slug]",
         "/careers/[slug]",
         "/privacy",

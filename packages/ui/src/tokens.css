@@ -1,12 +1,15 @@
 :root {
-  --color-ink: #202221;
-  --color-ink-soft: #555953;
-  --color-paper: #fffdf9;
-  --color-surface: #f7f3ec;
-  --color-border: #d9d1c5;
-  --color-accent: #a96910;
-  --color-accent-strong: #7b4807;
-  --color-accent-soft: #f4e8d2;
+  --color-ink: #1d201f;
+  --color-ink-soft: #575a56;
+  --color-paper: #fffefb;
+  --color-surface: #f7f3ed;
+  --color-surface-strong: #eee7dc;
+  --color-border: #ddd4c7;
+  --color-accent: #a36914;
+  --color-accent-strong: #82500a;
+  --color-accent-soft: #f5e9d4;
+  --color-charcoal: #202423;
+  --color-charcoal-soft: #303432;
   --color-success: #236b3a;
   --color-success-soft: #e7f4e9;
   --color-warning: #7a5100;
@@ -25,9 +28,12 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
-  --radius-sm: 0.25rem;
-  --radius-md: 0.65rem;
-  --radius-lg: 1rem;
-  --shadow-card: 0 0.4rem 1.5rem rgb(40 32 20 / 8%);
-  --content-max: 72rem;
+  --space-8: 4.5rem;
+  --radius-sm: 0.2rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.8rem;
+  --shadow-card: 0 0.6rem 2rem rgb(47 38 24 / 7%);
+  --shadow-float: 0 0.8rem 2.4rem rgb(20 22 21 / 16%);
+  --content-max: 76rem;
+  --content-reading: 45rem;
 }

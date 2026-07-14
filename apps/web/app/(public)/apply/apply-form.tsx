@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { Button, ConsentCheckbox, ErrorSummary, FormField } from "@keeper/ui";
 
-export function ApplyForm() {
+export function ApplyForm({
+  unavailableContact = "the published phone or email contact",
+}: {
+  unavailableContact?: string;
+}) {
   const [errors, setErrors] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
 
@@ -53,7 +57,7 @@ export function ApplyForm() {
       setSubmitted(true);
     } catch {
       setErrors([
-        "The contact service is unavailable. Please use the approved telephone contact once published.",
+        `The contact service is unavailable. Please use ${unavailableContact}.`,
       ]);
     }
   }
@@ -63,8 +67,9 @@ export function ApplyForm() {
       <input type="hidden" name="website" value="" autoComplete="off" />
       <ErrorSummary errors={errors} />
       {submitted ? (
-        <p role="status" className="notice">
-          Thank you. Your minimal-contact inquiry was recorded.
+        <p role="status" aria-live="polite" className="notice notice-success">
+          Thank you. Your minimal contact request was recorded. Keeper Financial
+          can respond using your selected contact method.
         </p>
       ) : null}
       <div className="grid-2">

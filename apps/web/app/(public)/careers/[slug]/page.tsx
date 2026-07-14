@@ -1,29 +1,24 @@
 import type { Metadata } from "next";
-import { FoundationPage } from "@/lib/foundation-page";
+import { notFound } from "next/navigation";
+import { createPageMetadata } from "@/lib/metadata";
+
+export const dynamic = "force-static";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  return {
-    title: `Career opportunity: ${slug}`,
-    description: "Foundation for a published Keeper Financial opportunity.",
-    robots: { index: false, follow: false },
-  };
+  await params;
+  return createPageMetadata({
+    title: "Opportunity not published",
+    description:
+      "No approved Keeper Financial opportunity is published at this address.",
+    path: "/careers",
+    noIndex: true,
+  });
 }
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  return (
-    <div className="container section">
-      <FoundationPage
-        title="Career opportunity"
-        description={`Posting route reserved for published opportunity “${slug}”. Draft and closed posting queries arrive in Phase 1C.`}
-      />
-    </div>
-  );
+
+export default function CareerOpportunityPage(): never {
+  notFound();
 }

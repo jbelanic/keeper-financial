@@ -15,6 +15,41 @@ export function Card({
   return <section className={`card ${className}`.trim()} {...props} />;
 }
 
+export function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  align = "start",
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  align?: "start" | "center";
+}) {
+  return (
+    <header className={`section-heading section-heading-${align}`}>
+      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+      <h2>{title}</h2>
+      {description ? <p>{description}</p> : null}
+    </header>
+  );
+}
+
+export function Disclosure({
+  summary,
+  children,
+}: {
+  summary: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className="disclosure">
+      <summary>{summary}</summary>
+      <div className="disclosure-content">{children}</div>
+    </details>
+  );
+}
+
 export function FormField({
   id,
   label,

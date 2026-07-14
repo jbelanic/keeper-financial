@@ -16,14 +16,15 @@ Outcome:
 
 ## Phase 1A — Public website
 
-- Approved visual design.
-- Public navigation and footer.
-- Home.
-- Mortgage service pages.
-- About and contact.
-- Privacy, complaints, accessibility.
-- Search metadata and sitemap.
-- Content controls.
+- **Engineering implemented on `feature/phase-1a-public-site`; owner/legal approval pending.**
+- Approved visual design translated into tokens, components, responsive heroes, cards, trust bands, and CTAs.
+- Public navigation, mobile menu, footer, loading/error/empty/not-found behavior.
+- Home, mortgage landing, purchase, refinance, renewal, first-time-buyer, investment-property, and How It Works pages.
+- About, contact, privacy, complaints, accessibility, careers presentation, agent-directory empty boundary, and visually integrated `/apply`.
+- Canonical metadata, Open Graph metadata, sitemap, robots exclusions, and approved-fact structured data.
+- Typed repository-controlled content plus validated owner-controlled public configuration.
+
+Phase 1A is not production-approved until the outstanding content/legal, image/font licensing, accessibility, and production-host decisions in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT.md` are resolved.
 
 ## Phase 1B — Get Started and lead inquiry
 

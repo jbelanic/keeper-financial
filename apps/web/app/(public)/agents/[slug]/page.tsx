@@ -1,29 +1,24 @@
 import type { Metadata } from "next";
-import { FoundationPage } from "@/lib/foundation-page";
+import { notFound } from "next/navigation";
+import { createPageMetadata } from "@/lib/metadata";
+
+export const dynamic = "force-static";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  return {
-    title: `Agent profile: ${slug}`,
-    description: "Foundation for a brokerage-approved agent profile.",
-    robots: { index: false, follow: false },
-  };
+  await params;
+  return createPageMetadata({
+    title: "Agent profile not published",
+    description:
+      "No approved Keeper Financial agent profile is published at this address.",
+    path: "/agents",
+    noIndex: true,
+  });
 }
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  return (
-    <div className="container section">
-      <FoundationPage
-        title="Agent profile"
-        description={`Profile route reserved for approved agent identifier “${slug}”. Public database rendering is scheduled for Phase 1E.`}
-      />
-    </div>
-  );
+
+export default function AgentProfilePage(): never {
+  notFound();
 }
