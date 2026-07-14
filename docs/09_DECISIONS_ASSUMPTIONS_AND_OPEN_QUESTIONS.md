@@ -61,3 +61,5 @@ Revisit CRM only after measuring:
 ## Change log
 
 Record approved decisions here with date, owner, rationale, and affected documents.
+
+- 2026-07-14 — Implementation decision: selected Next.js App Router for the single React/TypeScript web application, following the preferred architecture baseline. Rationale and consequences are recorded in `docs/adr/0001-nextjs-app-router.md`. No source-of-truth change required.

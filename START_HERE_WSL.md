@@ -1,5 +1,7 @@
 # Start Here — Windows, WSL, VS Code, and Codex CLI
 
+> Phase 0 has now been scaffolded. For the current runnable setup, use `README.md` and `docs/LOCAL_DEVELOPMENT.md`; the steps below are retained as the original repository-bootstrap record.
+
 ## 1. Create the fresh project directory
 
 From the WSL terminal:

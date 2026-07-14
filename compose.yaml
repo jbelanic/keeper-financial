@@ -1,0 +1,58 @@
+name: keeper-financial
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: keeper
+      POSTGRES_USER: keeper
+      POSTGRES_PASSWORD: keeper_local_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - keeper_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keeper -d keeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://keeper:keeper_local_only@db:5432/keeper
+      LOCAL_STORAGE_PATH: /app/storage/dev_uploads
+      SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage/dev_uploads:/app/storage/dev_uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+    env_file: .env
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  keeper_postgres:

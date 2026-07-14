@@ -1,0 +1,30 @@
+{
+  "name": "keeper-financial",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @keeper/web",
+    "build": "npm run build --workspace @keeper/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "format:check": "npm run format:check --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "contracts:generate": "npm run generate --workspace @keeper/contracts"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.19"
+    }
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}

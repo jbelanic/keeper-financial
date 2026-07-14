@@ -1,1 +1,32 @@
 ~/.hermes/.env
+
+# Local configuration and credentials
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# JavaScript
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+
+# Local services and private development objects
+.supabase/
+storage/dev_uploads/*
+!storage/dev_uploads/.gitkeep
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/

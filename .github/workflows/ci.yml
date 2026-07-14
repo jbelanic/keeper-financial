@@ -1,0 +1,65 @@
+name: phase-0-validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm audit
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          API_INTERNAL_URL: http://localhost:8000
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: local-ci-placeholder
+
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: keeper
+          POSTGRES_USER: keeper
+          POSTGRES_PASSWORD: keeper_local_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U keeper -d keeper"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -e 'apps/api[dev]'
+      - run: ruff format --check apps/api
+      - run: ruff check apps/api
+      - run: mypy apps/api/src
+      - run: pytest apps/api/tests
+      - run: alembic upgrade head && alembic check
+        working-directory: apps/api
+        env:
+          APP_ENV: local
+          DEV_AUTH_ENABLED: "true"
+          DATABASE_URL: postgresql+psycopg://keeper:keeper_local_only@localhost:5432/keeper

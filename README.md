@@ -1,53 +1,74 @@
-# Keeper Financial — Phase 1 Baseline Pack
+# Keeper Financial
 
-This pack defines the initial product, architecture, security, privacy, delivery, and Codex operating baseline for a fresh Keeper Financial project.
+Phase 0 foundation for Keeper Financial’s public website, candidate portal, and brokerage administration portal. This repository intentionally does **not** implement mortgage origination, borrower financial-data collection, lender submission, custom e-signature, commission calculation, or a client CRM.
 
-## Phase 1 outcome
+`docs/00_PROJECT_SOURCE_OF_TRUTH.md` remains authoritative. Start with [the Phase 0 report](docs/16_PHASE_0_IMPLEMENTATION_REPORT.md) for the implemented boundary.
 
-Launch a production-ready foundation for:
+## Repository
 
-1. A professional public brokerage website.
-2. A single `Get Started` experience with:
-   - a minimal-information contact path; and
-   - a secure redirect to the selected mortgage application vendor.
-3. Public mortgage-agent recruitment pages and postings.
-4. Candidate account creation and online applications.
-5. Brokerage review and selection workflows.
-6. Selected-candidate onboarding with controlled documents, acknowledgements, completion tracking, and administrative approval.
-7. Brokerage-controlled public agent profile pages.
-8. An architecture that can integrate with Filogix, Scarlett, or another mortgage platform without storing full borrower mortgage applications.
+```text
+apps/web             Next.js React/TypeScript application
+apps/api             FastAPI modular monolith, SQLAlchemy, Alembic
+packages/ui          Accessible components and design tokens
+packages/contracts   OpenAPI-to-TypeScript generation boundary
+infrastructure       Container definitions
+supabase              Local Supabase CLI configuration
+storage/dev_uploads  Git-ignored local-only private object storage
+docs                  Governing baseline and Phase 0 operating documentation
+```
 
-## Explicitly out of scope
+## Prerequisites
 
-Phase 1 does not build:
+- Node.js 22 LTS or newer supported release below 25
+- npm 10+
+- Python 3.12–3.14
+- Docker with Compose
+- Supabase CLI for local identity
 
-- A mortgage origination system.
-- A lender-submission system.
-- A borrower document vault.
-- A credit-bureau integration.
-- A mortgage compliance engine.
-- A commission or payroll engine.
-- A custom e-signature engine.
-- A complete mortgage-client CRM.
-- Automated FSRA licence verification unless a supported authoritative integration is available.
-- Automated provisioning into Filogix, Scarlett, or other third-party systems unless an approved API is available.
+No production credentials belong in this repository.
 
-## Recommended reading order
+## First local run
 
-1. `docs/00_PROJECT_SOURCE_OF_TRUTH.md`
-2. `docs/01_PRODUCT_VISION_AND_SCOPE.md`
-3. `docs/02_PHASE_1_MVP_REQUIREMENTS.md`
-4. `docs/03_ARCHITECTURE_BASELINE.md`
-5. `docs/04_SECURITY_PRIVACY_COMPLIANCE_BASELINE.md`
-6. `docs/05_DOMAIN_MODEL_AND_LIFECYCLES.md`
-7. `docs/06_UX_UI_IMPLEMENTATION_GUIDE.md`
-8. `docs/07_DELIVERY_PLAN.md`
-9. `docs/08_ACCEPTANCE_TESTS.md`
-10. `docs/09_DECISIONS_ASSUMPTIONS_AND_OPEN_QUESTIONS.md`
-11. `docs/10_CODEX_WORKING_AGREEMENT.md`
-12. `START_HERE_WSL.md`
-13. `INITIAL_CODEX_PROMPT.md`
+```bash
+cp .env.example .env
+make bootstrap
+supabase start
+docker compose up -d db
+make migrate
+make seed
+make api-dev
+```
 
-## Governing rule
+In another terminal:
 
-When documents conflict, `00_PROJECT_SOURCE_OF_TRUTH.md` controls. Any approved scope, architecture, security, privacy, workflow, or status-model change must update the source-of-truth document and the affected supporting documents in the same change.
+```bash
+make web-dev
+```
+
+Open `http://localhost:3000`; API documentation is local-only at `http://localhost:8000/docs`. The synthetic seed subjects support direct local API authorization-header testing. They are not real Supabase accounts.
+
+To run all containerized application services after creating `.env` and starting local Supabase:
+
+```bash
+docker compose up --build
+```
+
+## Validation
+
+```bash
+make format
+make lint
+make typecheck
+make test
+make migrate-check
+make build
+make openapi
+```
+
+The API OpenAPI document is exported into `packages/contracts/openapi.json`; `openapi-typescript` then creates `packages/contracts/src/generated.ts`. Regenerate contracts whenever a route or schema changes.
+
+## Local authorization boundary
+
+Supabase proves identity; it never grants portal access by itself. The API also requires an active, verified local `UserIdentity`, the appropriate `Role`/`UserRole`, the required `Candidate` relationship, and an allowed lifecycle state. Development identity headers work only when both `APP_ENV=local` and `DEV_AUTH_ENABLED=true`.
+
+See [local development](docs/LOCAL_DEVELOPMENT.md), [environment variables](docs/11_ENVIRONMENT_VARIABLES.md), and [known limitations](docs/15_KNOWN_LIMITATIONS.md).

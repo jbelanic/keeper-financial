@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import logging
+import re
+import time
+import uuid
+from collections.abc import Awaitable, Callable
+
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from keeper_api.api.router import api_router
+from keeper_api.api.routes.health import router as health_router
+from keeper_api.core.config import get_settings
+from keeper_api.core.logging import configure_logging
+from keeper_api.services.submission_guard import LeadSubmissionGuard, SubmissionRateLimited
+
+settings = get_settings()
+configure_logging()
+logger = logging.getLogger("keeper_api.request")
+request_id_pattern = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
+
+app = FastAPI(
+    title=settings.app_name,
+    version="0.1.0",
+    docs_url=None if settings.app_env == "production" else "/docs",
+    redoc_url=None,
+    openapi_url=None if settings.app_env == "production" else "/openapi.json",
+)
+app.state.lead_submission_guard = LeadSubmissionGuard(
+    request_limit=settings.lead_rate_limit_requests,
+    window_seconds=settings.lead_rate_limit_window_seconds,
+    tracked_clients=settings.lead_rate_limit_tracked_clients,
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Request-ID",
+        "X-Dev-Auth-Sub",
+        "X-Dev-Auth-AAL",
+    ],
+)
+
+
+@app.middleware("http")
+async def request_context(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    supplied_request_id = request.headers.get("x-request-id", "")
+    request_id = (
+        supplied_request_id
+        if request_id_pattern.fullmatch(supplied_request_id)
+        else str(uuid.uuid4())
+    )
+    request.state.request_id = request_id
+    started = time.monotonic()
+    response: Response
+    if request.method == "POST" and request.url.path == "/api/v1/leads":
+        try:
+            request.app.state.lead_submission_guard.check(
+                request.client.host if request.client else None
+            )
+        except SubmissionRateLimited as exc:
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": "too many contact requests; please try again later"},
+                headers={"Retry-After": str(exc.retry_after_seconds)},
+            )
+        else:
+            response = await call_next(request)
+    else:
+        response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    logger.info(
+        "request completed",
+        extra={
+            "event": "http.request",
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": round((time.monotonic() - started) * 1000, 2),
+        },
+    )
+    return response
+
+
+app.include_router(health_router)
+app.include_router(api_router)
