@@ -71,5 +71,5 @@ Local Docker/PostgreSQL and migration validation is complete. Hosted Supabase Au
 - Final font/image licensing, brand tokens, navigation labels, mobile interpretation, and accessibility/content approval.
 - Hosting, private R2 account/bucket, transactional email, booking, mortgage application, and established e-signature providers.
 - Mortgage provider allowed host/base URL and whether approved agent-specific links are supported.
-- Retention periods, candidate document categories, malware-scanning provider, candidate MFA policy, and post-decline/withdrawal access policy.
+- Retention periods and malware-scanning provider remain open. Candidate document categories, candidate MFA, and post-decline/withdrawal access were subsequently approved for Phase 1C in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 - Roles allowed to approve profiles, onboarding exceptions, FSRA evidence, final activation, privacy contact, and incident/security owners.

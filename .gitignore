@@ -27,6 +27,7 @@ __pycache__/
 /supabase/.temp/cli-latest
 storage/dev_uploads/*
 !storage/dev_uploads/.gitkeep
+/start-hermes.sh
 
 # Editors and operating systems
 .DS_Store

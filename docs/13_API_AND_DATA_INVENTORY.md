@@ -23,7 +23,7 @@ Production disables OpenAPI. Local and controlled non-production expose `/openap
 |---|---|
 | `User`, `UserIdentity` | Local account and verified Supabase subject link. |
 | `Role`, `UserRole` | Application authorization grants. |
-| `Candidate`, `CandidateApplication`, `CandidateStatusHistory` | Recruitment relationship, controlled application revision state, append-oriented lifecycle evidence. |
+| `Candidate`, `CandidateApplication`, `CandidateStatusHistory` | Recruitment relationship, required posting-specific application/attempt, controlled revision and application-level state, append-oriented lifecycle evidence. Supports concurrent applications but only one nonterminal attempt per candidate/posting. |
 | `RecruitmentPosting` | Draft/published/closed/archived opportunity. |
 | `OnboardingPlan`, `OnboardingTask`, `CandidateOnboardingTask` | Reusable plan and assigned task state. |
 | `ControlledDocument`, `DocumentVersion` | Logical controlled document and immutable issued-file metadata. |
@@ -35,6 +35,8 @@ Production disables OpenAPI. Local and controlled non-production expose `/openap
 | `AuditEvent` | Append-oriented safe lead creation, marketing grant/withdrawal, lifecycle, publication, and document event metadata. |
 
 UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. There is deliberately no mortgage deal, borrower finance, borrower document, credit, lender submission, commission, or payroll model.
+
+Phase 1C implementation must bring the foundation schema into conformance with `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: posting is mandatory, application attempts and application-level lifecycle remain distinct, the questionnaire is version-controlled, document category is explicit, and application/document authorization enforces the approved cardinality and AAL2 rules.
 
 ## Contract generation
 

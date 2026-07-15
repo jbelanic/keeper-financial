@@ -65,7 +65,7 @@ Each consent record should include:
 
 ## Candidate privacy
 
-Before submitting an application, candidates must be shown:
+Before submitting an application, candidates must be shown the exact approved disclosure in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`, versioned immutably as `candidate-privacy-disclosure-2026-07-15-v1`. It covers:
 
 - purpose of collection;
 - categories collected;
@@ -75,12 +75,15 @@ Before submitting an application, candidates must be shown:
 - contact for privacy questions;
 - consequences of not supplying required information.
 
+The server owns the wording version and acknowledgement timestamp. A wording change creates a new version; it never rewrites the version recorded against an earlier submission.
+
 ## Authentication
 
 - Managed identity provider.
 - Verified email for candidate portal entry.
 - MFA mandatory for brokerage administrators.
-- MFA strongly encouraged or required for candidates handling restricted documents.
+- Candidate AAL2 is not required for general portal access, draft saves, or application submission.
+- Candidate AAL2 is required for every candidate-document upload and every restricted-document view/download; server-side ownership and lifecycle checks still apply.
 - Rate limiting and anti-automation controls.
 - Secure password-reset flow.
 - Session revocation on suspension/offboarding.

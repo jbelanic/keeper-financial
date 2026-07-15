@@ -12,7 +12,7 @@ Represents a person’s relationship with the brokerage recruitment process.
 
 ### CandidateApplication
 
-Versioned or controlled application content associated with a candidate and optional recruitment posting.
+Versioned or controlled application content associated with a candidate and a required recruitment posting. A candidate may have multiple concurrent applications, but only one nonterminal application per posting. A withdrawn or declined reapplication is a distinct immutable attempt, not a reset of the prior record. See `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 
 ### RecruitmentPosting
 
@@ -93,6 +93,8 @@ conditionally_selected → declined
 
 - Candidate cannot self-select.
 - Candidate cannot self-activate.
+- Recruitment decisions and lifecycle state are application-specific when a candidate has multiple applications.
+- Withdrawal or decline of one application must not silently transition another application.
 - Invalid transitions must fail.
 - Status reason is mandatory for decline, suspension, override, and offboarding.
 - Activation must check all configured mandatory gates.

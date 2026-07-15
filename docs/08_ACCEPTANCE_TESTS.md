@@ -60,11 +60,16 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 ## Candidate application
 
 - Candidate saves draft.
-- Required fields prevent submission.
+- Questionnaire sections, fields, formats, lengths, repeat limits, optionality, prose allow-list, and server-owned fields exactly match `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
+- Required Opportunity, Contact information, Application details, and Privacy and declaration sections prevent submission when incomplete; Employment history, Education and training, and documents remain optional.
 - Submission creates status history and audit event.
-- Submitted application cannot be silently edited.
+- Submission records the immutable `candidate-privacy-disclosure-2026-07-15-v1` version and acknowledgement time; caller overrides fail.
+- Submitted application cannot be silently edited; only the approved draft fields are candidate-editable before submission.
 - Information request reopens only approved sections or creates a controlled response path.
 - Withdrawal follows valid transition policy.
+- Multiple concurrent posting-specific applications are allowed, with no more than one nonterminal attempt per candidate/posting.
+- Reapplication creates a new attempt and preserves the withdrawn/declined attempt, revision history, and documents.
+- A withdrawn candidate retains read-only access to their submitted application and eligible uploaded documents while records are retained, but cannot edit or upload.
 
 ## Review
 
@@ -76,9 +81,12 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 
 ## Documents
 
-- Upload rejects unsupported file types and excessive size.
+- Only optional `resume` and `cover_letter` categories exist in Phase 1C; there is no generic or regulated-document category and neither category gates submission.
+- Upload accepts only `.pdf`, `.doc`, and `.docx` with the exact matching approved MIME/signature and rejects files over 10 MiB.
+- Candidate document upload requires AAL2 before and after submission; after-submission uploads are append-only and limited to active application states.
 - Private object cannot be fetched anonymously.
 - Authorized retrieval is short-lived or proxied.
+- Candidate restricted-document view/download requires AAL2 in addition to ownership and lifecycle authorization.
 - Candidate cannot retrieve another candidate’s file.
 - Issued document version cannot be edited.
 - New revision supersedes prior version.

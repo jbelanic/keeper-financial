@@ -12,6 +12,9 @@
 8. Defer a full mortgage-client CRM.
 9. Assess current Filogix CRM capability before buying or building another CRM.
 10. Do not build custom e-signature functionality.
+11. Use the exact Phase 1C candidate questionnaire, posting-specific application cardinality, optional résumé/cover-letter categories, privacy disclosure version, and candidate MFA policy in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
+12. Permit multiple concurrent posting-specific applications, with no more than one nonterminal application per candidate/posting and immutable new attempts for permitted reapplication.
+13. Require candidate AAL2 for document upload and restricted-document access, but not for general portal access, draft saves, or application submission.
 
 ## Initial assumptions requiring confirmation
 
@@ -26,8 +29,6 @@
 - Cloud hosting selection.
 - R2 account and bucket availability.
 - Final retention periods.
-- Candidate document categories.
-- Whether candidate MFA is mandatory.
 - Whether active-agent resources remain in this portal after onboarding.
 - Who may approve public agent profiles.
 - Whether agents may propose their own profile edits.
@@ -64,3 +65,4 @@ Record approved decisions here with date, owner, rationale, and affected documen
 - 2026-07-14 — Owner-provided Phase 1A public facts: `Keeper Financial` / `Keeper Financial Inc.`, `FSCO # 13696`, London office address, support email, published phone, and `https://apply.keeperfinancial.ca/`. These supersede all mockup sample values and are implemented through validated public configuration.
 - 2026-07-14 — Phase 1A content decision: typed repository-controlled content is the approved simplest content mechanism; no CMS or page builder is introduced.
 - 2026-07-14 — Phase boundary decision: `/careers` may present the brokerage but exposes no candidate workflow/posting record; `/agents` exposes a finished empty approved-publication boundary; dynamic slugs return non-public behavior until Phases 1C/1E.
+- 2026-07-15 — Phase 1C candidate policy approved in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: exact questionnaire and validation limits; posting-specific concurrent-application/reapplication rules; optional résumé and cover-letter categories only; immutable privacy disclosure `candidate-privacy-disclosure-2026-07-15-v1`; and candidate AAL2 for uploads and restricted-document access only. No regulatory suitability, licensing, background-check, government-identity, identity-document, or financial questions/documents were introduced.
