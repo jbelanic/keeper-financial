@@ -77,6 +77,12 @@ async def request_context(
             response = await call_next(request)
     else:
         response = await call_next(request)
+    if (request.method == "GET" and request.url.path == "/api/v1/leads") or (
+        request.method == "POST"
+        and request.url.path.startswith("/api/v1/leads/")
+        and request.url.path.endswith("/marketing-consent/withdrawal")
+    ):
+        response.headers["Cache-Control"] = "no-store"
     response.headers["X-Request-ID"] = request_id
     logger.info(
         "request completed",

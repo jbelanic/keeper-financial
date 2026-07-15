@@ -16,20 +16,35 @@
 - Public navigation uses keyboard-native controls and all public actions remain real links or native controls.
 - Mockup-only people, ratings, lender counts, rates, licence examples, testimonials, and portal metrics do not appear in public source.
 
-Phase 1A web evidence: 9 Vitest files / 27 tests cover anonymous page rendering, metadata uniqueness, sitemap, robots, shell navigation/contact facts, configuration fail-closed behavior, dynamic publication boundaries, source claim leakage, reflow guardrails, apply privacy copy, and portal API requests. The production Next build prerenders 30 pages/routes without metadata, routing, hydration, or type errors.
+Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT.md`. Phase 1B adds focused apply-form, attribution, booking, protected lead-queue, no-store request, consent-state, pagination, withdrawal-confirmation, and route-protection coverage.
 
 ## Apply flow
 
 - `/apply` shows both paths.
 - Contact-first form submits approved minimal fields.
+- Consent wording/privacy versions and source/capture source are selected only by the server; caller override fields are rejected as extras.
 - Required service-contact acknowledgement is enforced.
-- Marketing consent remains optional.
+- Marketing consent remains optional and unchecked by default.
 - A marketing-consent record is created only when selected.
-- Free-text warning is visible.
-- Overly long and disallowed input is rejected.
+- Prominent and adjacent free-text warnings cover financial, identity, health, credential, and underwriting information.
+- Overly long, sensitive, control-character, unknown, and automation-trap input is rejected.
+- Valid query attribution becomes a hidden controlled slug; invalid attribution is omitted and unpublished/unknown profiles are rejected by the API.
+- Pending submission disables duplicates; errors preserve values, focus an announced summary, and map `422`, `429`/`Retry-After`, `503`, server, and network failures without exposing internals.
+- Success is announced and is the only state that resets the form.
 - Full application redirects only to configured HTTPS allowed hosts.
-- Agent attribution uses an allowed agent identifier.
+- Agent redirect attribution uses only safe grammar and an approved configuration mapping.
 - No sensitive information appears in redirect URL.
+- Phone remains a real `tel:` action; book-a-call renders only for a validated optional HTTPS URL.
+
+## Lead administration
+
+- `GET /api/v1/leads` and marketing withdrawal deny anonymous, unmapped identity, mapped identity-only, inactive, wrong-role, candidate, and admin-without-required-MFA callers; an active verified AAL2 admin is allowed.
+- The list is no-store, maximum 100 rows per request, offset-paginated, newest-first by `created_at` then `id`, and accepts only lifecycle status filtering.
+- Queue URLs contain only safe page/status values; list output contains the necessary lead fields and explicit service/marketing consent states and timestamps.
+- Withdrawal affects only the lead’s marketing consent, preserves `granted_at`, sets `withdrawn_at` once, is idempotent, and never changes service acknowledgement.
+- First withdrawal creates exactly one `marketing_consent.withdrawn` audit with actor, request ID, target consent ID, and safe capture source. Unknown lead or absent marketing consent returns a safe `404`.
+- Lead, service consent, optional marketing consent, and audits roll back together on persistence failure.
+- Request logs and audit metadata exclude contact fields, message, tokens, raw payloads, and private URL/query values.
 
 ## Authentication and authorization
 

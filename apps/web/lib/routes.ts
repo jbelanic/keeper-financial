@@ -48,6 +48,7 @@ export const CANDIDATE_ROUTES = [
 
 export const ADMIN_ROUTES = [
   "/admin",
+  "/admin/leads",
   "/admin/candidates",
   "/admin/onboarding",
   "/admin/agents",

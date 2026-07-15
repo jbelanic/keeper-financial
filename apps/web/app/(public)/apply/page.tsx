@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Card } from "@keeper/ui";
 import { InteriorPageHeader, Icon } from "@/lib/public-components";
+import { safeAgentAttribution } from "@/lib/lead-attribution";
 import { createPageMetadata } from "@/lib/metadata";
-import { siteConfig } from "@/lib/site-config";
+import { getPublicSiteConfig, siteConfig } from "@/lib/site-config";
 import { ApplyForm } from "./apply-form";
 
 export const metadata: Metadata = createPageMetadata({
@@ -12,11 +13,20 @@ export const metadata: Metadata = createPageMetadata({
   path: "/apply",
 });
 
-export default function ApplyPage() {
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-  const applicationHost = new URL(siteConfig.mortgageApplicationUrl).hostname;
+type PublicSiteConfig = ReturnType<typeof getPublicSiteConfig>;
 
+export function ApplyPaths({
+  agentSlug,
+  config = siteConfig,
+  apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+}: {
+  agentSlug?: string;
+  config?: PublicSiteConfig;
+  apiBase?: string;
+}) {
+  const attribution = agentSlug
+    ? `?${new URLSearchParams({ agent: agentSlug }).toString()}`
+    : "";
   return (
     <>
       <div className="container">
@@ -24,6 +34,11 @@ export default function ApplyPage() {
           title="Choose the path that works for you"
           description="Speak with Keeper Financial using minimal contact information, or continue to the approved external platform for a full mortgage application."
         />
+        <p className="notice apply-warning">
+          Do not submit financial, identity, health, credential, or underwriting
+          information in the contact form. Use the secure full-application path
+          for detailed mortgage information.
+        </p>
       </div>
       <section className="section section-no-top">
         <div className="container apply-grid">
@@ -35,14 +50,22 @@ export default function ApplyPage() {
             <h2>Speak with someone first</h2>
             <p>
               Provide only enough information for the team to contact you. Do
-              not submit sensitive financial or identity information.
+              not include sensitive financial, identity, health, credential, or
+              underwriting information.
             </p>
             <p className="contact-shortcuts">
               Prefer to call?{" "}
-              <a href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
+              <a href={config.phoneHref}>{config.phoneDisplay}</a>
+              {config.bookingUrl ? (
+                <>
+                  {" "}
+                  or <a href={config.bookingUrl}>Book a call</a>
+                </>
+              ) : null}
             </p>
             <ApplyForm
-              unavailableContact={`${siteConfig.phoneDisplay} or ${siteConfig.email}`}
+              preferredAgentSlug={agentSlug}
+              unavailableContact={`${config.phoneDisplay} or ${config.email}`}
             />
           </Card>
           <Card className="apply-card secure-application-card">
@@ -62,22 +85,30 @@ export default function ApplyPage() {
               <li>No destination is accepted from a visitor-supplied URL.</li>
               <li>No sensitive information is added to the redirect URL.</li>
             </ul>
-            <p className="secure-destination">
-              Approved destination: <strong>{applicationHost}</strong>
-            </p>
             <a
               className="button-link"
-              href={`${apiBase}/api/v1/integrations/mortgage-application`}
+              href={`${apiBase}/api/v1/integrations/mortgage-application${attribution}`}
             >
               Continue to the secure application
             </a>
             <p className="fine-print">
               You are leaving the Keeper Financial public website. Review the
-              provider’s privacy and security information before submitting.
+              provider’s privacy and security information before submitting. If
+              the provider is unavailable, call {config.phoneDisplay} or email{" "}
+              {config.email}.
             </p>
           </Card>
         </div>
       </section>
     </>
   );
+}
+
+export default async function ApplyPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ agent?: string | string[] }>;
+} = {}) {
+  const agentSlug = safeAgentAttribution((await searchParams)?.agent);
+  return <ApplyPaths agentSlug={agentSlug} />;
 }

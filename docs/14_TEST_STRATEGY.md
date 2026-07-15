@@ -18,6 +18,17 @@
 - Source-safety tests guard against mockup-only claims/sample people and assert the explicit narrow-screen/page-overflow CSS controls.
 - Existing apply-form minimization/consent tests and API authorization, lifecycle, lead abuse, storage, redirect, and environment tests remain part of the complete pipeline.
 
+## Phase 1B additions
+
+- Lead API characterization covers exact public response fields, extra-forbid consent overrides, immutable server versions/source, service/marketing separation, sensitive/control/trap rejection, published versus unpublished profile attribution, and atomic rollback of lead/consent/audit writes.
+- Abuse tests cover the exact request boundary, forwarded-header spoof resistance, `Retry-After`, window reopening, existing-client behavior at capacity, and fail-closed admission for new peers.
+- Redirect tests cover base and mapped success, slug grammar, unknown mapping, disabled provider, HTTPS, exact host, credentials, query, fragment, and absence of `Location` on failure.
+- Both admin lead operations use the full denial matrix: anonymous, unmapped identity, mapped identity-only, inactive, wrong role, candidate, missing required AAL2, and allowed AAL2 admin.
+- Queue tests cover no-store, bounded limit, deterministic newest-first order, offset pagination, safe status filtering, necessary response shape, and rejection of PII query keys.
+- Withdrawal tests cover marketing-only mutation, preserved grant/service evidence, one-time timestamp/audit, idempotency, safe unknown/absent behavior, actor/request/target metadata, and no duplicate audit.
+- Frontend tests cover hidden safe attribution, invalid omission, balanced paths, real phone/conditional booking, backend-only mortgage CTA, duplicate suppression, value preservation, accessible focus/live regions, safe error messages, authenticated no-store queue requests, loading/error/empty/pagination states, text consent states, confirmation, and protected layout/navigation.
+- OpenAPI tests pin public versus bearer-protected operations, forbidden consent override properties, success response schemas, and runtime error responses. Generation is run twice and hashes must remain stable.
+
 Production readiness still requires browser-based automated accessibility and visual-regression coverage at agreed viewports plus manual keyboard, zoom, screen-reader, contrast, and 320 CSS-pixel review.
 
 ## Security regression expectations

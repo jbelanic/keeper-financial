@@ -1,4 +1,4 @@
-# Phase 0 Threat Model Summary
+# Phase 1B Threat Model Summary
 
 This is an engineering threat model, not a legal or compliance certification.
 
@@ -19,11 +19,13 @@ This is an engineering threat model, not a legal or compliance certification.
 | Candidate accesses another candidate’s file | Opaque UUID route, random object key, server ownership/role check on every retrieval, audit event | Upload workflow authorization and adversarial integration tests against R2. |
 | Public/private object exposure | No public object route or URL, local-only filesystem guard, private R2 adapter, short signed retrieval | Bucket-policy review and production probe. |
 | Unsafe file | MIME/size allow-list, random key, quarantine state blocks retrieval | Magic-byte/extension checks and selected malware scanner. |
-| Open redirect or sensitive redirect query | Configuration-only destination, HTTPS and exact-host allow-list, query/fragment/credential rejection | Vendor URL approval and agent-map operational process. |
-| Contact form becomes a mortgage application or abuse target | Explicit field allow-list, extra-field rejection, length limits, sensitive-term rejection, UI warning, hidden automation trap, and bounded direct-peer rate limiter that fails closed | Privacy-reviewed wording; deployment-level aggregate limiting, trusted-proxy design, monitoring, and tuning before production. |
-| Consent bundled with service | Required service acknowledgement and separately optional marketing record | Withdrawal workflow and final wording/version approval. |
+| Open redirect or sensitive redirect query | Configuration-only destination, HTTPS and exact-host allow-list, query/fragment/credential rejection, safe slug grammar, and approved agent mapping | Vendor URL/map approval and controlled operational update process. |
+| Contact form becomes a mortgage application or abuse target | Explicit field allow-list, extra/control/sensitive-field rejection, length limits, prominent/adjacent UI warnings, zero-length automation trap, and bounded direct-peer rate limiter that fails closed | Legal/privacy approval of draft wording; deployment-level aggregate limiting, trusted-proxy design, monitoring, and tuning before production. |
+| Caller rewrites consent evidence | Immutable server registry owns exact draft engineering wording versions, privacy version, source, and capture source; override fields are forbidden | Final legal/privacy wording and immutable version approval. |
+| Consent bundled with service or withdrawal damages service evidence | Required service acknowledgement, separately optional marketing record, row-locked/idempotent admin withdrawal, and safe first-withdrawal audit | Customer-facing withdrawal channel/process, retention/deletion policy, and concurrency integration test on PostgreSQL. |
+| Lead/contact data leaks through admin URLs or caches | Server-protected layout, FastAPI `require_admin`, nonlocal AAL2, no-store API/server fetch, safe page/status URL filters only, bounded response | Browser/proxy cache probes and production access review. |
 | Unauthorized lifecycle/publication change | Backend transition maps, reason requirements, admin role, approval evidence, audit event | Activation-gate implementation and principal-broker approval policy. |
-| Tokens or personal payloads leak through logs | Structured request logs contain method/path/status/IDs only; audit metadata is explicitly safe | Central log pipeline tests and redaction review. |
+| Tokens or personal payloads leak through logs/audits | Structured request logs contain method/path/status/IDs only; lead/consent audits contain identifiers, status/source/capture source only | Central log pipeline tests and redaction review. |
 | Unsafe deployment configuration | Pydantic startup validation rejects local storage, dev auth, debug, wildcard/loopback/non-HTTPS origins, missing R2, and missing admin MFA outside local | Deployment-policy test in selected hosting platform. |
 | Audit evidence altered | No general update/delete API; append-oriented service | Database privileges, retention, immutable export/storage decision. |
 

@@ -14,9 +14,10 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
     "/mortgage-application",
     status_code=status.HTTP_307_TEMPORARY_REDIRECT,
     response_class=RedirectResponse,
+    responses={503: {"description": "Configured application destination unavailable"}},
 )
 def mortgage_application_redirect(
-    agent: str | None = Query(default=None, max_length=100),
+    agent: str | None = Query(default=None, pattern=r"^[a-z0-9-]{1,100}$"),
     settings: Settings = Depends(get_settings),
 ) -> RedirectResponse:
     try:

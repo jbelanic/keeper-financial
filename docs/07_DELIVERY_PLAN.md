@@ -28,13 +28,16 @@ Phase 1A is not production-approved until the outstanding content/legal, image/f
 
 ## Phase 1B — Get Started and lead inquiry
 
-- `/apply` dual path.
-- Minimal inquiry form.
-- Service-contact acknowledgement.
-- Optional marketing consent.
-- Agent/source attribution.
-- External mortgage-application redirect.
-- Administrative lead notification or queue.
+- **Engineering implemented on `feature/phase-1b`; owner/legal/production approval pending.**
+- Balanced `/apply` contact-first and controlled full-application paths with adjacent sensitive-data warnings.
+- Strict minimal inquiry schema, automation trap, direct-peer bounded limiter, resilient accessible client states, and server-owned consent versions.
+- Required service-contact acknowledgement and separate optional marketing consent with safe grant/withdrawal audits.
+- Safe query-derived agent attribution accepted only for a published profile; source/capture source remain server-owned `website_apply`.
+- Configuration-only external mortgage-application redirect with grammar-checked optional attribution and fail-closed host/URL rules.
+- Protected, bounded `/admin/leads` queue with status/page filters only and idempotent admin marketing-consent withdrawal.
+- FastAPI-authoritative OpenAPI and generated TypeScript declarations, plus queue-order/filter indexes in migration `20260714_0002`.
+
+Phase 1B does not add notification email, assignment/CRM workflow, export/bulk actions, marketing automation, borrower application data, or production operations. See `docs/18_PHASE_1B_IMPLEMENTATION_REPORT.md`.
 
 ## Phase 1C — Recruitment
 

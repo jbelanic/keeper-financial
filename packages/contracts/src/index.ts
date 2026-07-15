@@ -1,2 +1,3 @@
-// Generated API types are exported after `make openapi`.
+export type { components, operations, paths } from "./generated";
+
 export type PortalArea = "candidate" | "admin";

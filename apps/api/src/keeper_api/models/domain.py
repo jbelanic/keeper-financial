@@ -9,6 +9,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -248,6 +249,8 @@ class LeadInquiry(IdTimestampsMixin, Base):
     __tablename__ = "lead_inquiries"
     __table_args__ = (
         status_check("status", ["new", "assigned", "contacted", "closed"], "ck_lead_status"),
+        Index("ix_lead_inquiries_created_at_id", "created_at", "id"),
+        Index("ix_lead_inquiries_status_created_at_id", "status", "created_at", "id"),
     )
 
     name: Mapped[str] = mapped_column(String(120))

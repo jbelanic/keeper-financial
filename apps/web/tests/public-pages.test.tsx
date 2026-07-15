@@ -2,7 +2,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import AboutPage from "@/app/(public)/about/page";
 import AccessibilityPage from "@/app/(public)/accessibility/page";
 import AgentsPage from "@/app/(public)/agents/page";
-import ApplyPage from "@/app/(public)/apply/page";
 import CareersPage from "@/app/(public)/careers/page";
 import ComplaintsPage from "@/app/(public)/complaints/page";
 import ContactPage from "@/app/(public)/contact/page";
@@ -17,7 +16,6 @@ const pages: Array<[string, () => React.ReactNode]> = [
   ["How it works", HowItWorksPage],
   ["About", AboutPage],
   ["Contact", ContactPage],
-  ["Get started", ApplyPage],
   ["Our agents", AgentsPage],
   ["Join Keeper Financial", CareersPage],
   ["Privacy", PrivacyPage],

@@ -21,9 +21,15 @@ The Phase 0 seed does not create Supabase Auth users. To exercise the web sign-i
 
 For API-only local checks, `X-Dev-Auth-Sub` may identify a seeded subject while local development authentication is enabled. Never enable this mechanism outside local.
 
+The `/admin/leads` page remains behind the admin layout and obtains its bearer token on the server. For API-only testing, an active verified local user with `brokerage_admin` may call `GET /api/v1/leads` or the lead-specific marketing-withdrawal route using the local development subject header. Set `X-Dev-Auth-AAL: aal2` when exercising the nonlocal-equivalent MFA policy. Do not place contact data in queue query strings; supported web filters are only `page` and `status`.
+
 ## Database changes
 
 Change SQLAlchemy models and create an Alembic revision. Apply with `make migrate`; confirm model/revision alignment with `make migrate-check`. Never edit an issued production migration to reshape an already-deployed database.
+
+Phase 1B adds revision `20260714_0002` for deterministic lead queue ordering/filter indexes; the issued `20260714_0001` foundation remains unchanged.
+
+After changing FastAPI routes or schemas, run `make openapi`. It exports OpenAPI, regenerates TypeScript declarations, and formats the contract package so a second run should produce no drift.
 
 ## Private documents
 
@@ -35,3 +41,4 @@ Local objects live only under `storage/dev_uploads`, which is ignored except for
 - API database health is `503`: start PostgreSQL and apply migrations.
 - Portal redirects to sign-in after successful identity login: confirm a verified local `UserIdentity`, role, active user, and permitted candidate state exist.
 - Mortgage application endpoint is `503`: expected until an approved HTTPS provider and allow-listed host are configured.
+- Agent-attributed apply/redirect returns validation or unavailable behavior: confirm the slug grammar, a published `AgentProfile` for lead attribution, and a separately approved `MORTGAGE_APPLICATION_AGENT_LINKS` entry for redirect attribution.

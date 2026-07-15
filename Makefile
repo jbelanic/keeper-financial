@@ -50,3 +50,4 @@ seed:
 openapi:
 	.venv/bin/python apps/api/scripts/export_openapi.py
 	npm run contracts:generate
+	npm run format --workspace @keeper/contracts
