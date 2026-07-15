@@ -1,3 +1,6 @@
+import io
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -7,6 +10,7 @@ from keeper_api.integrations.mortgage_application import (
     MortgageApplicationAdapter,
     MortgageApplicationUnavailable,
 )
+from keeper_api.services.storage import LocalPrivateStorage, StorageError
 
 
 def configured_settings(**overrides: object) -> Settings:
@@ -169,9 +173,23 @@ def test_safe_nonlocal_configuration_is_accepted() -> None:
         supabase_issuer="https://identity.keeper.example/auth/v1",
         supabase_jwks_url="https://identity.keeper.example/auth/v1/.well-known/jwks.json",
         storage_backend="r2",
+        malware_scanner_backend="disabled",
         r2_endpoint_url="https://synthetic-account.r2.cloudflarestorage.com",
         r2_access_key_id="synthetic-access-id",
         r2_secret_access_key="synthetic-secret",
         r2_bucket="keeper-staging-private",
     )
     assert settings.app_env == "staging_non_sensitive"
+
+
+def test_local_storage_permission_failure_is_a_safe_storage_error(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    storage = LocalPrivateStorage(settings)
+
+    def deny_mkdir(self: Path, *args: object, **kwargs: object) -> None:
+        raise PermissionError("synthetic permission failure")
+
+    monkeypatch.setattr(Path, "mkdir", deny_mkdir)
+    with pytest.raises(StorageError, match="private storage write failed"):
+        storage.put(io.BytesIO(b"%PDF-1.7 synthetic"), content_type="application/pdf")

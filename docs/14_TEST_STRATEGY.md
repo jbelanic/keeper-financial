@@ -29,6 +29,16 @@
 - Frontend tests cover hidden safe attribution, invalid omission, balanced paths, real phone/conditional booking, backend-only mortgage CTA, duplicate suppression, value preservation, accessible focus/live regions, safe error messages, authenticated no-store queue requests, loading/error/empty/pagination states, text consent states, confirmation, and protected layout/navigation.
 - OpenAPI tests pin public versus bearer-protected operations, forbidden consent override properties, success response schemas, and runtime error responses. Generation is run twice and hashes must remain stable.
 
+## Phase 1C additions
+
+- Posting tests cover the full admin denial matrix, bounded plain text/no HTML, lifecycle transition/audit evidence, published-only pagination, direct-slug equivalence, source snapshots, and unmounted premature Phase 1D status operations.
+- Provisioning tests cover anonymous/unverified/unpublished, subject/email/role conflict, identity-only denial, atomic narrow grants, retry/idempotency, preserved draft content, same-posting reapplication attempts, and safe audit metadata.
+- Application tests cover extra-forbid server fields, exact formats/lengths/repeat limits, ownership, cross-candidate denial, optimistic revisions, immutable provenance, submission requirements/privacy evidence, repeat submission, submitted immutability, minimal status, and application-specific withdrawal.
+- Document tests cover candidate AAL2, category/extension/MIME/magic agreement, empty/double-extension/malformed/oversize rejection, random/private storage, clean and quarantined decisions, scanner absence, storage/database failure cleanup, category count, draft deletion, submitted append-only behavior, cross-owner denial, owner/admin retrieval, and safe audits.
+- An opt-in isolated PostgreSQL test runs two concurrent application starts and submissions, proving one application, one history, and one submission audit. SQLite remains the fast boundary suite.
+- Web tests cover published/error/empty recruitment rendering, Supabase registration and safe callback provisioning bridge, persistent progress, explicit required/optional labels, linked/focused errors, save-before-review, disclosure visibility, duplicate guards, withdrawal focus restoration, AAL2 document announcements/quarantine, and admin lifecycle UI.
+- OpenAPI tests pin Phase 1C security declarations, route inventory, internal-field exclusions, and server-owned draft exclusions. Generation is run twice and hashes must remain stable.
+
 Production readiness still requires browser-based automated accessibility and visual-regression coverage at agreed viewports plus manual keyboard, zoom, screen-reader, contrast, and 320 CSS-pixel review.
 
 ## Security regression expectations
@@ -39,4 +49,4 @@ Do not replace database-backed authorization tests with UI visibility tests. Hid
 
 ## Before production
 
-Add real Supabase JWT/JWKS tests, R2 bucket-policy and signed-URL tests, malware-scanner tests, multi-replica/edge abuse-control tests, browser accessibility automation plus manual WCAG review, continuous dependency/secret scanning, backup/restore exercises, and deployment health/rollback tests.
+Add hosted Supabase JWT/JWKS/callback tests, R2 bucket-policy and signed-URL tests, the selected production malware-scanner adapter/integration tests, multi-replica/edge abuse-control tests, browser accessibility automation plus manual WCAG review, continuous dependency/secret scanning, backup/restore exercises, and deployment health/rollback tests.

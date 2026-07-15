@@ -2,7 +2,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import AboutPage from "@/app/(public)/about/page";
 import AccessibilityPage from "@/app/(public)/accessibility/page";
 import AgentsPage from "@/app/(public)/agents/page";
-import CareersPage from "@/app/(public)/careers/page";
 import ComplaintsPage from "@/app/(public)/complaints/page";
 import ContactPage from "@/app/(public)/contact/page";
 import HowItWorksPage from "@/app/(public)/how-it-works/page";
@@ -17,7 +16,6 @@ const pages: Array<[string, () => React.ReactNode]> = [
   ["About", AboutPage],
   ["Contact", ContactPage],
   ["Our agents", AgentsPage],
-  ["Join Keeper Financial", CareersPage],
   ["Privacy", PrivacyPage],
   ["Complaints", ComplaintsPage],
   ["Accessibility", AccessibilityPage],
@@ -32,4 +30,22 @@ describe("anonymous public pages", () => {
       cleanup();
     },
   );
+
+  it("renders careers anonymously from the published-posting boundary", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: [], total: 0, limit: 25, offset: 0 }),
+      }),
+    );
+    const { default: CareersPage } = await import(
+      "@/app/(public)/careers/page"
+    );
+    render(<>{await CareersPage()}</>);
+    expect(
+      screen.getByRole("heading", { level: 1, name: /join keeper financial/i }),
+    ).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
 });

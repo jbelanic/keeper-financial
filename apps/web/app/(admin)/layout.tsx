@@ -6,8 +6,8 @@ import { PortalShell } from "@/lib/shells";
 const links: Array<[string, string]> = [
   ["Overview", "/admin"],
   ["Leads", "/admin/leads"],
+  ["Recruitment postings", "/admin/recruitment"],
   ["Candidates", "/admin/candidates"],
-  ["Onboarding", "/admin/onboarding"],
   ["Agents", "/admin/agents"],
   ["Content", "/admin/content"],
 ];

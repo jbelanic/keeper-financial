@@ -25,12 +25,16 @@ describe("route inventory", () => {
   });
 
   it("classifies every protected candidate and admin route", () => {
-    expect(CANDIDATE_ROUTES).toHaveLength(4);
+    expect(CANDIDATE_ROUTES).toContain(
+      "/candidate/applications/[applicationId]",
+    );
+    expect(CANDIDATE_ROUTES).toHaveLength(5);
     expect(
       CANDIDATE_ROUTES.every((route) => route.startsWith("/candidate")),
     ).toBe(true);
     expect(ADMIN_ROUTES).toContain("/admin/leads");
-    expect(ADMIN_ROUTES).toHaveLength(6);
+    expect(ADMIN_ROUTES).toContain("/admin/recruitment");
+    expect(ADMIN_ROUTES).toHaveLength(7);
     expect(ADMIN_ROUTES.every((route) => route.startsWith("/admin"))).toBe(
       true,
     );

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,6 +20,14 @@ from keeper_api.models.statuses import CandidateStatus
 
 PortalArea = Literal["candidate", "admin"]
 security = HTTPBearer(auto_error=False)
+_PROVIDER_EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _provider_email(value: str) -> str:
+    email = value.strip().lower()
+    if len(email) > 254 or not _PROVIDER_EMAIL.fullmatch(email):
+        raise HTTPException(status_code=403, detail="verified provider email is invalid")
+    return email
 
 
 @dataclass(frozen=True)
@@ -31,6 +40,14 @@ class Principal:
     aal: str
     candidate_id: uuid.UUID | None
     candidate_status: CandidateStatus | None
+
+
+@dataclass(frozen=True)
+class ExternalIdentity:
+    subject: str
+    email: str
+    verified: bool
+    aal: str
 
 
 def _decode_token(token: str, settings: Settings) -> dict[str, Any]:
@@ -105,6 +122,39 @@ def get_current_principal(
     return _load_principal(db, subject, str(aal))
 
 
+def get_verified_external_identity(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    x_dev_auth_sub: str | None = Header(default=None),
+    x_dev_auth_email: str | None = Header(default=None),
+    x_dev_auth_verified: str = Header(default="false"),
+    x_dev_auth_aal: str = Header(default="aal1"),
+    settings: Settings = Depends(get_settings),
+) -> ExternalIdentity:
+    if settings.dev_auth_enabled and settings.app_env == "local" and x_dev_auth_sub:
+        if not x_dev_auth_email:
+            raise HTTPException(status_code=403, detail="verified provider email is required")
+        return ExternalIdentity(
+            subject=x_dev_auth_sub,
+            email=_provider_email(x_dev_auth_email),
+            verified=x_dev_auth_verified.lower() == "true",
+            aal=x_dev_auth_aal,
+        )
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="authentication required")
+    claims = _decode_token(credentials.credentials, settings)
+    subject = claims.get("sub")
+    email = claims.get("email")
+    verified = claims.get("email_verified") is True or bool(claims.get("email_confirmed_at"))
+    if not isinstance(subject, str) or not subject or not isinstance(email, str) or not email:
+        raise HTTPException(status_code=401, detail="invalid identity token")
+    return ExternalIdentity(
+        subject=subject,
+        email=_provider_email(email),
+        verified=verified,
+        aal=str(claims.get("aal", "aal1")),
+    )
+
+
 def authorize_portal(principal: Principal, area: PortalArea, settings: Settings) -> Principal:
     if not principal.is_active or principal.verified_at is None:
         raise HTTPException(
@@ -142,6 +192,16 @@ def require_candidate(
     settings: Settings = Depends(get_settings),
 ) -> Principal:
     return authorize_portal(principal, "candidate", settings)
+
+
+def require_candidate_aal2(
+    principal: Principal = Depends(get_current_principal),
+    settings: Settings = Depends(get_settings),
+) -> Principal:
+    authorize_portal(principal, "candidate", settings)
+    if principal.aal != "aal2":
+        raise HTTPException(status_code=403, detail="candidate MFA is required for documents")
+    return principal
 
 
 def require_admin(

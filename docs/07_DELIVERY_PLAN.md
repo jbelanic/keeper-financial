@@ -41,13 +41,16 @@ Phase 1B does not add notification email, assignment/CRM workflow, export/bulk a
 
 ## Phase 1C — Recruitment
 
-- Recruitment landing page.
-- Posting list/detail.
-- Admin posting management.
-- Candidate registration.
-- Application draft and submission.
-- Candidate document upload.
-- Candidate status.
+- **Engineering implemented on `feature/phase-1c`; production/provider/legal operations remain pending.**
+- Published-only public posting list/detail and explicit admin create/edit/publish/close/archive lifecycle.
+- Supabase registration/verification callback plus narrow, verified, idempotent posting-specific local provisioning.
+- Typed approved questionnaire, incomplete draft saves, optimistic revision checks, transactional exactly-once submission, immutable posting provenance, and read-only submitted content.
+- Exact server-owned candidate privacy disclosure/version and submission acknowledgement evidence.
+- Private résumé/cover-letter upload, signature/MIME/extension/size validation, random keys, quarantine/scan adapter boundary, owner/admin retrieval, and AAL2 enforcement.
+- Minimal application-specific candidate status, candidate-owned withdrawal, retained read-only access, and same-posting reapplication as a new attempt.
+- Migration `20260715_0003`, generated OpenAPI/TypeScript contracts, accessible public/candidate/admin workflows, and synthetic local fixtures.
+
+Phase 1C deliberately leaves candidate review, information requests/reopening, decisions, onboarding, controlled documents, profile publication, notifications, production malware scanning, and production operations to later approved phases. See `docs/20_PHASE_1C_IMPLEMENTATION_REPORT.md`.
 
 ## Phase 1D — Review and onboarding
 

@@ -5,9 +5,7 @@ import { PortalShell } from "@/lib/shells";
 
 const links: Array<[string, string]> = [
   ["Overview", "/candidate"],
-  ["Application", "/candidate/application"],
-  ["Onboarding", "/candidate/onboarding"],
-  ["Documents", "/candidate/documents"],
+  ["Applications", "/candidate/application"],
 ];
 
 export const metadata: Metadata = {

@@ -13,9 +13,18 @@ describe("dynamic publication boundaries", () => {
   });
 
   it("returns non-public behavior for recruitment slugs until approved postings exist", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+    );
     const { default: CareerOpportunityPage } = await import(
       "@/app/(public)/careers/[slug]/page"
     );
-    expect(() => CareerOpportunityPage()).toThrow("NEXT_NOT_FOUND");
+    await expect(
+      CareerOpportunityPage({
+        params: Promise.resolve({ slug: "unpublished-opportunity" }),
+      }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    vi.unstubAllGlobals();
   });
 });

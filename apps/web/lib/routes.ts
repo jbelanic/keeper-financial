@@ -18,6 +18,8 @@ export const PUBLIC_ROUTES = [
   "/accessibility",
   "/contact",
   "/auth/sign-in",
+  "/auth/register",
+  "/auth/callback",
 ] as const;
 
 export const SITEMAP_ROUTES = [
@@ -42,6 +44,7 @@ export const SITEMAP_ROUTES = [
 export const CANDIDATE_ROUTES = [
   "/candidate",
   "/candidate/application",
+  "/candidate/applications/[applicationId]",
   "/candidate/onboarding",
   "/candidate/documents",
 ] as const;
@@ -49,6 +52,7 @@ export const CANDIDATE_ROUTES = [
 export const ADMIN_ROUTES = [
   "/admin",
   "/admin/leads",
+  "/admin/recruitment",
   "/admin/candidates",
   "/admin/onboarding",
   "/admin/agents",

@@ -22,6 +22,9 @@ services:
       context: .
       dockerfile: infrastructure/docker/api.Dockerfile
     env_file: .env
+    # Match the local host owner so the non-root API can write the bind-mounted
+    # private development storage directory without broadening its permissions.
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     environment:
       DATABASE_URL: postgresql+psycopg://keeper:keeper_local_only@db:5432/keeper
       LOCAL_STORAGE_PATH: /app/storage/dev_uploads

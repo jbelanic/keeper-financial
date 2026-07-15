@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -16,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -88,6 +90,7 @@ class RecruitmentPosting(IdTimestampsMixin, Base):
     __tablename__ = "recruitment_postings"
     __table_args__ = (
         status_check("status", ["draft", "published", "closed", "archived"], "ck_posting_status"),
+        Index("ix_recruitment_postings_publication", "status", "published_at", "id"),
     )
 
     slug: Mapped[str] = mapped_column(String(100), unique=True, index=True)
@@ -95,7 +98,15 @@ class RecruitmentPosting(IdTimestampsMixin, Base):
     summary: Mapped[str] = mapped_column(String(500))
     body: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="draft")
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    updated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    published_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    archived_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class CandidateApplication(IdTimestampsMixin, Base):
@@ -104,22 +115,100 @@ class CandidateApplication(IdTimestampsMixin, Base):
         status_check(
             "state", ["draft", "submitted", "reopened", "withdrawn"], "ck_application_state"
         ),
-        UniqueConstraint("candidate_id", "revision"),
+        status_check(
+            "status",
+            ["application_started", "application_submitted", "withdrawn", "declined"],
+            "ck_candidate_application_status",
+        ),
+        UniqueConstraint(
+            "candidate_id",
+            "recruitment_posting_id",
+            "attempt_number",
+            name="uq_candidate_application_attempt",
+        ),
+        Index("ix_candidate_applications_candidate_created", "candidate_id", "created_at", "id"),
+        Index(
+            "uq_candidate_application_nonterminal_posting",
+            "candidate_id",
+            "recruitment_posting_id",
+            unique=True,
+            postgresql_where=text("status IN ('application_started', 'application_submitted')"),
+            sqlite_where=text("status IN ('application_started', 'application_submitted')"),
+        ),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
-    recruitment_posting_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("recruitment_postings.id", ondelete="SET NULL")
+    recruitment_posting_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recruitment_postings.id", ondelete="RESTRICT"), index=True
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer, default=1)
+    source_posting_slug: Mapped[str] = mapped_column(String(100))
+    source_posting_title: Mapped[str] = mapped_column(String(160))
+    source_posting_version: Mapped[int] = mapped_column(Integer)
+    schema_version: Mapped[str] = mapped_column(
+        String(80), default="candidate-application-2026-07-15-v1"
     )
     revision: Mapped[int] = mapped_column(Integer, default=1)
     state: Mapped[str] = mapped_column(String(20), default="draft")
+    status: Mapped[str] = mapped_column(String(48), default="application_started")
+    email: Mapped[str] = mapped_column(String(254))
+    given_name: Mapped[str | None] = mapped_column(String(70))
+    family_name: Mapped[str | None] = mapped_column(String(70))
+    preferred_name: Mapped[str | None] = mapped_column(String(70))
+    phone: Mapped[str | None] = mapped_column(String(16))
+    city: Mapped[str | None] = mapped_column(String(100))
+    region: Mapped[str | None] = mapped_column(String(100))
+    country_code: Mapped[str | None] = mapped_column(String(2))
+    preferred_contact_method: Mapped[str | None] = mapped_column(String(20))
+    available_from: Mapped[date | None] = mapped_column(Date)
+    referral_source: Mapped[str | None] = mapped_column(String(40))
+    referral_detail: Mapped[str | None] = mapped_column(String(120))
+    interest_statement: Mapped[str | None] = mapped_column(String(2000))
+    relevant_experience: Mapped[str | None] = mapped_column(String(2000))
+    privacy_acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
+    information_accuracy_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    privacy_disclosure_version: Mapped[str | None] = mapped_column(String(80))
+    privacy_acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CandidateEmploymentEntry(IdTimestampsMixin, Base):
+    __tablename__ = "candidate_employment_entries"
+    __table_args__ = (UniqueConstraint("application_id", "position"),)
+
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer)
+    employer_name: Mapped[str] = mapped_column(String(160))
+    role_title: Mapped[str] = mapped_column(String(160))
+    start_month: Mapped[str] = mapped_column(String(7))
+    currently_employed: Mapped[bool] = mapped_column(Boolean)
+    end_month: Mapped[str | None] = mapped_column(String(7))
+    summary: Mapped[str | None] = mapped_column(String(1000))
+
+
+class CandidateEducationEntry(IdTimestampsMixin, Base):
+    __tablename__ = "candidate_education_entries"
+    __table_args__ = (UniqueConstraint("application_id", "position"),)
+
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer)
+    institution_name: Mapped[str] = mapped_column(String(160))
+    program_name: Mapped[str] = mapped_column(String(160))
+    completion_year: Mapped[int | None] = mapped_column(Integer)
 
 
 class CandidateStatusHistory(IdTimestampsMixin, Base):
     __tablename__ = "candidate_status_history"
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    application_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="CASCADE"), index=True
+    )
     previous_status: Mapped[str | None] = mapped_column(String(48))
     new_status: Mapped[str] = mapped_column(String(48))
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -196,18 +285,31 @@ class CandidateDocument(IdTimestampsMixin, Base):
         status_check(
             "status", [item.value for item in DocumentStatus], "ck_candidate_document_status"
         ),
+        status_check("category", ["resume", "cover_letter"], "ck_candidate_document_category"),
+        Index(
+            "ix_candidate_documents_application_category",
+            "application_id",
+            "category",
+            "created_at",
+        ),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("candidates.id", ondelete="CASCADE"), index=True
     )
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="CASCADE"), index=True
+    )
+    category: Mapped[str] = mapped_column(String(32), default="resume")
     object_key: Mapped[str] = mapped_column(String(255), unique=True)
     original_filename: Mapped[str] = mapped_column(String(255))
     content_type: Mapped[str] = mapped_column(String(100))
+    detected_content_type: Mapped[str] = mapped_column(String(100))
     size_bytes: Mapped[int] = mapped_column(Integer)
     sha256_digest: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32), default=DocumentStatus.UPLOADED.value)
     scan_status: Mapped[str] = mapped_column(String(32), default="pending")
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class PolicyAcknowledgement(IdTimestampsMixin, Base):
@@ -304,6 +406,8 @@ __all__ = [
     "Candidate",
     "CandidateApplication",
     "CandidateDocument",
+    "CandidateEducationEntry",
+    "CandidateEmploymentEntry",
     "CandidateOnboardingTask",
     "CandidateStatusHistory",
     "ConsentRecord",

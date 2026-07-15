@@ -65,13 +65,15 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 - Submission creates status history and audit event.
 - Submission records the immutable `candidate-privacy-disclosure-2026-07-15-v1` version and acknowledgement time; caller overrides fail.
 - Submitted application cannot be silently edited; only the approved draft fields are candidate-editable before submission.
-- Information request reopens only approved sections or creates a controlled response path.
+- Information-request/reopening behavior is a Phase 1D acceptance item and is intentionally unavailable in Phase 1C.
 - Withdrawal follows valid transition policy.
 - Multiple concurrent posting-specific applications are allowed, with no more than one nonterminal attempt per candidate/posting.
 - Reapplication creates a new attempt and preserves the withdrawn/declined attempt, revision history, and documents.
 - A withdrawn candidate retains read-only access to their submitted application and eligible uploaded documents while records are retained, but cannot edit or upload.
 
 ## Review
+
+The following are deferred Phase 1D acceptance tests; Phase 1C verifies that the premature candidate-status transition endpoint is unmounted.
 
 - Invalid status transitions fail.
 - Decline requires reason.

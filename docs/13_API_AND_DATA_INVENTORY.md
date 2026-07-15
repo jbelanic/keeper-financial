@@ -1,4 +1,4 @@
-# Initial API and Data Inventory
+# Phase 1C API and Data Inventory
 
 ## API routes
 
@@ -11,7 +11,20 @@
 | GET | `/api/v1/leads?limit=&offset=&status=` | Brokerage admin | No-store, bounded newest-first lead queue; optional lifecycle status only. |
 | POST | `/api/v1/leads/{id}/marketing-consent/withdrawal` | Brokerage admin | Idempotently withdraws only existing marketing consent; no-store. |
 | GET | `/api/v1/integrations/mortgage-application` | Public | Validated redirect to configured external provider; `503` when disabled/unsafe. |
-| POST | `/api/v1/candidates/{id}/status` | Brokerage admin | Service-enforced lifecycle transition and audit event. |
+| GET | `/api/v1/recruitment/postings` | Public | Bounded deterministic published-posting summaries only. |
+| GET | `/api/v1/recruitment/postings/{slug}` | Public | Published plain-text posting detail; all non-public/invalid/missing slugs return the same `404`. |
+| POST | `/api/v1/recruitment/postings/{slug}/applications/start` | Verified external identity | Published-posting-only atomic/idempotent candidate provisioning and application attempt. |
+| GET, POST | `/api/v1/admin/recruitment-postings` | Brokerage admin | No-store bounded list and draft creation. |
+| PATCH | `/api/v1/admin/recruitment-postings/{id}` | Brokerage admin | Bounded plain-text draft/published edit with version/audit. |
+| POST | `/api/v1/admin/recruitment-postings/{id}/{publish|close|archive}` | Brokerage admin | Explicit lifecycle transition with actor/time/audit. |
+| GET | `/api/v1/candidate/privacy-disclosure` | Candidate | Exact server-owned immutable disclosure text and version; no-store. |
+| GET | `/api/v1/candidate/applications` | Candidate | Owned posting-specific applications only; no-store. |
+| GET | `/api/v1/candidate/applications/status` | Candidate | Minimal application-specific allow-listed status and candidate-visible messages only. |
+| GET, PATCH | `/api/v1/candidate/applications/{id}` | Owning candidate | Owned read and typed revision-checked draft update. |
+| POST | `/api/v1/candidate/applications/{id}/submit` | Owning candidate | Row-locked server validation and exactly-once submission/privacy/history/audit transaction. |
+| POST | `/api/v1/candidate/applications/{id}/withdraw` | Owning candidate | Application-specific valid, idempotent, audited withdrawal; no deletion. |
+| GET, POST | `/api/v1/candidate/applications/{id}/documents` | Owning candidate at AAL2 | Private metadata list and validated/quarantined optional upload. |
+| DELETE | `/api/v1/candidate/applications/{id}/documents/{document_id}` | Owning candidate at AAL2 | Draft-only candidate document removal. |
 | POST | `/api/v1/agents/{id}/status` | Brokerage admin | Service-enforced approval/publication lifecycle. |
 | GET | `/api/v1/documents/{id}/download` | Owning candidate or brokerage admin | Authorized, audited local response or short-lived R2 redirect; quarantine denied. |
 
@@ -27,7 +40,8 @@ Production disables OpenAPI. Local and controlled non-production expose `/openap
 | `RecruitmentPosting` | Draft/published/closed/archived opportunity. |
 | `OnboardingPlan`, `OnboardingTask`, `CandidateOnboardingTask` | Reusable plan and assigned task state. |
 | `ControlledDocument`, `DocumentVersion` | Logical controlled document and immutable issued-file metadata. |
-| `CandidateDocument` | Private object metadata, hash, quarantine and status—not object bytes. |
+| `CandidateEmploymentEntry`, `CandidateEducationEntry` | Bounded normalized repeat groups for the approved questionnaire; no unrestricted answer JSON. |
+| `CandidateDocument` | Required candidate/application/category linkage plus private random object key, declared/detected MIME, hash, size, current/quarantine/scan status, and timestamps—not object bytes. |
 | `PolicyAcknowledgement` | Exact document-version and wording evidence. |
 | `AgentProfile` | Approval-controlled public profile metadata and publication state. |
 | `LeadInquiry` | Approved minimal contact fields only; server-owned source/status. Queue indexes support `(created_at,id)` and `(status,created_at,id)`. |
@@ -36,10 +50,10 @@ Production disables OpenAPI. Local and controlled non-production expose `/openap
 
 UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. There is deliberately no mortgage deal, borrower finance, borrower document, credit, lender submission, commission, or payroll model.
 
-Phase 1C implementation must bring the foundation schema into conformance with `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: posting is mandatory, application attempts and application-level lifecycle remain distinct, the questionnaire is version-controlled, document category is explicit, and application/document authorization enforces the approved cardinality and AAL2 rules.
+Migration `20260715_0003` brings the schema into conformance with `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: posting and immutable source provenance are mandatory, attempt/application lifecycle is distinct, the questionnaire/disclosure are version-controlled, and every new candidate document has explicit application/category linkage. The migration refuses to invent provenance or linkage for incompatible legacy rows.
 
 ## Contract generation
 
 FastAPI/Pydantic owns the OpenAPI contract. `make openapi` exports it and runs `openapi-typescript` to create TypeScript declarations. Generated output should change in the same review as API schema changes.
 
-`packages/contracts/src/index.ts` exports generated `paths`, `operations`, and `components` while retaining the hand-authored `PortalArea`. The public lead operation has no bearer security requirement; list and withdrawal declare HTTP bearer security; redirect remains public and documents its `307`, validation, and fail-closed `503` responses.
+`packages/contracts/src/index.ts` exports generated `paths`, `operations`, and `components` while retaining the hand-authored `PortalArea`. Public posting operations have no bearer declaration; provisioning, candidate, document, and administration operations declare HTTP bearer security. Candidate response schemas structurally omit internal reason/note/actor/audit/decision fields.

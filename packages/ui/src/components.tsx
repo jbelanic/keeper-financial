@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement } from "react";
+import { cloneElement, forwardRef, isValidElement } from "react";
 import type {
   ComponentPropsWithoutRef,
   ReactElement,
@@ -6,12 +6,14 @@ import type {
   RefObject,
 } from "react";
 
-export function Button({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"button">) {
-  return <button className={`button ${className}`.trim()} {...props} />;
-}
+export const Button = forwardRef<
+  HTMLButtonElement,
+  ComponentPropsWithoutRef<"button">
+>(function Button({ className = "", ...props }, ref) {
+  return (
+    <button ref={ref} className={`button ${className}`.trim()} {...props} />
+  );
+});
 
 export function Card({
   className = "",
@@ -297,6 +299,7 @@ export function ConfirmationDialog({
   return (
     <dialog
       ref={dialogRef}
+      open
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"

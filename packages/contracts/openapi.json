@@ -420,13 +420,69 @@
         }
       }
     },
-    "/api/v1/candidates/{candidate_id}/status": {
+    "/api/v1/recruitment/postings": {
+      "get": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "List Public Postings",
+        "operationId": "list_public_postings_api_v1_recruitment_postings_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPostingList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recruitment/postings/{slug}/applications/start": {
       "post": {
         "tags": [
-          "candidates"
+          "recruitment"
         ],
-        "summary": "Transition Candidate",
-        "operationId": "transition_candidate_api_v1_candidates__candidate_id__status_post",
+        "summary": "Start Candidate Application",
+        "operationId": "start_candidate_application_api_v1_recruitment_postings__slug__applications_start_post",
         "security": [
           {
             "HTTPBearer": []
@@ -434,13 +490,340 @@
         ],
         "parameters": [
           {
-            "name": "candidate_id",
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-email",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Email"
+            }
+          },
+          {
+            "name": "x-dev-auth-verified",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "false",
+              "title": "X-Dev-Auth-Verified"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateApplicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Verified identity required"
+          },
+          "404": {
+            "description": "Posting unavailable"
+          },
+          "409": {
+            "description": "Identity conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recruitment/postings/{slug}": {
+      "get": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "Get Public Posting",
+        "operationId": "get_public_posting_api_v1_recruitment_postings__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicPosting"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/recruitment-postings": {
+      "get": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "List Admin Postings",
+        "operationId": "list_admin_postings_api_v1_admin_recruitment_postings_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPostingList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "Create Admin Posting",
+        "operationId": "create_admin_posting_api_v1_admin_recruitment_postings_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostingCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPosting"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/recruitment-postings/{posting_id}": {
+      "patch": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "Patch Admin Posting",
+        "operationId": "patch_admin_posting_api_v1_admin_recruitment_postings__posting_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "posting_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Candidate Id"
+              "title": "Posting Id"
             }
           },
           {
@@ -475,7 +858,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CandidateTransitionRequest"
+                "$ref": "#/components/schemas/PostingUpdate"
               }
             }
           }
@@ -486,10 +869,952 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CandidateStatusResponse"
+                  "$ref": "#/components/schemas/AdminPosting"
                 }
               }
             }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Posting not found"
+          },
+          "409": {
+            "description": "Posting lifecycle or slug conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/recruitment-postings/{posting_id}/{action}": {
+      "post": {
+        "tags": [
+          "recruitment"
+        ],
+        "summary": "Transition Admin Posting",
+        "operationId": "transition_admin_posting_api_v1_admin_recruitment_postings__posting_id___action__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "posting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Posting Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "publish",
+                "close",
+                "archive"
+              ],
+              "type": "string",
+              "title": "Action"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPosting"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Posting not found"
+          },
+          "409": {
+            "description": "Posting lifecycle conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications": {
+      "get": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "List Candidate Applications",
+        "operationId": "list_candidate_applications_api_v1_candidate_applications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications/status": {
+      "get": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "Candidate Status",
+        "operationId": "candidate_status_api_v1_candidate_applications_status_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateStatusListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications/{application_id}": {
+      "get": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "Get Candidate Application",
+        "operationId": "get_candidate_application_api_v1_candidate_applications__application_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateApplicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "404": {
+            "description": "Owned application not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "Patch Candidate Application",
+        "operationId": "patch_candidate_application_api_v1_candidate_applications__application_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationDraftUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateApplicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "404": {
+            "description": "Owned application not found"
+          },
+          "409": {
+            "description": "Application revision or lifecycle conflict"
+          },
+          "422": {
+            "description": "Draft validation failed"
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications/{application_id}/submit": {
+      "post": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "Submit Candidate Application",
+        "operationId": "submit_candidate_application_api_v1_candidate_applications__application_id__submit_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateApplicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "404": {
+            "description": "Owned application not found"
+          },
+          "409": {
+            "description": "Application revision or lifecycle conflict"
+          },
+          "422": {
+            "description": "Required submission content is incomplete"
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications/{application_id}/withdraw": {
+      "post": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "Withdraw Candidate Application",
+        "operationId": "withdraw_candidate_application_api_v1_candidate_applications__application_id__withdraw_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateApplicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "404": {
+            "description": "Owned application not found"
+          },
+          "409": {
+            "description": "Application revision or lifecycle conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/privacy-disclosure": {
+      "get": {
+        "tags": [
+          "candidate applications"
+        ],
+        "summary": "Candidate Privacy Disclosure",
+        "operationId": "candidate_privacy_disclosure_api_v1_candidate_privacy_disclosure_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidatePrivacyDisclosureResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications/{application_id}/documents": {
+      "post": {
+        "tags": [
+          "candidate documents"
+        ],
+        "summary": "Upload Candidate Document",
+        "operationId": "upload_candidate_document_api_v1_candidate_applications__application_id__documents_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDocumentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate ownership or AAL2 denied"
+          },
+          "404": {
+            "description": "Owned application or document not found"
+          },
+          "409": {
+            "description": "Application lifecycle or category limit conflict"
+          },
+          "422": {
+            "description": "Document category, name, type, signature, or size rejected"
+          },
+          "503": {
+            "description": "Private storage or scanning unavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "candidate documents"
+        ],
+        "summary": "List Candidate Documents",
+        "operationId": "list_candidate_documents_api_v1_candidate_applications__application_id__documents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDocumentList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate ownership or AAL2 denied"
+          },
+          "404": {
+            "description": "Owned application or document not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/applications/{application_id}/documents/{document_id}": {
+      "delete": {
+        "tags": [
+          "candidate documents"
+        ],
+        "summary": "Remove Draft Candidate Document",
+        "operationId": "remove_draft_candidate_document_api_v1_candidate_applications__application_id__documents__document_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate ownership or AAL2 denied"
+          },
+          "404": {
+            "description": "Owned application or document not found"
+          },
+          "409": {
+            "description": "Submitted documents are append-only"
+          },
+          "503": {
+            "description": "Private storage unavailable"
           },
           "422": {
             "description": "Validation Error",
@@ -647,6 +1972,18 @@
               }
             }
           },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Ownership, role, lifecycle, or AAL2 denied"
+          },
+          "404": {
+            "description": "Document metadata or private object unavailable"
+          },
+          "409": {
+            "description": "Document is quarantined or non-clean"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -695,6 +2032,138 @@
         ],
         "title": "AccessResponse"
       },
+      "AdminPosting": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "closed",
+              "archived"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "summary",
+          "body",
+          "status",
+          "version",
+          "created_at",
+          "updated_at",
+          "published_at",
+          "closed_at",
+          "archived_at"
+        ],
+        "title": "AdminPosting"
+      },
+      "AdminPostingList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminPosting"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AdminPostingList"
+      },
       "AgentProfileStatus": {
         "type": "string",
         "enum": [
@@ -742,63 +2211,757 @@
         ],
         "title": "AgentTransitionRequest"
       },
-      "CandidateStatus": {
-        "type": "string",
-        "enum": [
-          "prospect",
-          "application_started",
-          "application_submitted",
-          "under_review",
-          "more_information_required",
-          "interview",
-          "conditionally_selected",
-          "declined",
-          "withdrawn",
-          "onboarding_in_progress",
-          "pending_fsra_authorization",
-          "pending_system_provisioning",
-          "active",
-          "suspended",
-          "offboarding",
-          "offboarded"
-        ],
-        "title": "CandidateStatus"
-      },
-      "CandidateStatusResponse": {
+      "ApplicationAction": {
         "properties": {
-          "status": {
-            "$ref": "#/components/schemas/CandidateStatus"
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "status"
+          "expected_revision"
         ],
-        "title": "CandidateStatusResponse"
+        "title": "ApplicationAction"
       },
-      "CandidateTransitionRequest": {
+      "ApplicationDraftUpdate": {
         "properties": {
-          "status": {
-            "$ref": "#/components/schemas/CandidateStatus"
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
           },
-          "reason": {
+          "given_name": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 1000
+                "maxLength": 70
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Reason"
+            "title": "Given Name"
+          },
+          "family_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 70
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Name"
+          },
+          "preferred_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 70
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "preferred_contact_method": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "email",
+                  "phone",
+                  "no_preference"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Contact Method"
+          },
+          "available_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available From"
+          },
+          "referral_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "keeper_website",
+                  "search",
+                  "social_media",
+                  "employee_or_agent_referral",
+                  "event",
+                  "other",
+                  "prefer_not_to_say"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Source"
+          },
+          "referral_detail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Detail"
+          },
+          "interest_statement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Statement"
+          },
+          "relevant_experience": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Experience"
+          },
+          "employment": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EmploymentEntryInput"
+                },
+                "type": "array",
+                "maxItems": 5
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment"
+          },
+          "education": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EducationEntryInput"
+                },
+                "type": "array",
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Education"
+          },
+          "privacy_acknowledged": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Acknowledged"
+          },
+          "information_accuracy_confirmed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Information Accuracy Confirmed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision"
+        ],
+        "title": "ApplicationDraftUpdate"
+      },
+      "ApplicationListResponse": {
+        "properties": {
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateApplicationResponse"
+            },
+            "type": "array",
+            "title": "Applications"
           }
         },
         "type": "object",
         "required": [
-          "status"
+          "applications"
         ],
-        "title": "CandidateTransitionRequest"
+        "title": "ApplicationListResponse"
+      },
+      "Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "file"
+        ],
+        "title": "Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"
+      },
+      "CandidateApplicationResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "recruitment_posting_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Recruitment Posting Id"
+          },
+          "source_posting_slug": {
+            "type": "string",
+            "title": "Source Posting Slug"
+          },
+          "source_posting_title": {
+            "type": "string",
+            "title": "Source Posting Title"
+          },
+          "source_posting_version": {
+            "type": "integer",
+            "title": "Source Posting Version"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "withdrawn"
+            ],
+            "title": "State"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "application_started",
+              "application_submitted",
+              "withdrawn",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "given_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given Name"
+          },
+          "family_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Name"
+          },
+          "preferred_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "preferred_contact_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Contact Method"
+          },
+          "available_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available From"
+          },
+          "referral_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Source"
+          },
+          "referral_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Detail"
+          },
+          "interest_statement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interest Statement"
+          },
+          "relevant_experience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevant Experience"
+          },
+          "employment": {
+            "items": {
+              "$ref": "#/components/schemas/EmploymentEntryResponse"
+            },
+            "type": "array",
+            "title": "Employment"
+          },
+          "education": {
+            "items": {
+              "$ref": "#/components/schemas/EducationEntryResponse"
+            },
+            "type": "array",
+            "title": "Education"
+          },
+          "privacy_acknowledged": {
+            "type": "boolean",
+            "title": "Privacy Acknowledged"
+          },
+          "information_accuracy_confirmed": {
+            "type": "boolean",
+            "title": "Information Accuracy Confirmed"
+          },
+          "privacy_disclosure_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Disclosure Version"
+          },
+          "privacy_acknowledged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Acknowledged At"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "withdrawn_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withdrawn At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "recruitment_posting_id",
+          "source_posting_slug",
+          "source_posting_title",
+          "source_posting_version",
+          "schema_version",
+          "revision",
+          "state",
+          "status",
+          "email",
+          "given_name",
+          "family_name",
+          "preferred_name",
+          "phone",
+          "city",
+          "region",
+          "country_code",
+          "preferred_contact_method",
+          "available_from",
+          "referral_source",
+          "referral_detail",
+          "interest_statement",
+          "relevant_experience",
+          "employment",
+          "education",
+          "privacy_acknowledged",
+          "information_accuracy_confirmed",
+          "privacy_disclosure_version",
+          "privacy_acknowledged_at",
+          "submitted_at",
+          "withdrawn_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CandidateApplicationResponse"
+      },
+      "CandidateDocumentList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateDocumentResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CandidateDocumentList"
+      },
+      "CandidateDocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "resume",
+              "cover_letter"
+            ],
+            "title": "Category"
+          },
+          "original_filename": {
+            "type": "string",
+            "title": "Original Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "scan_status": {
+            "type": "string",
+            "title": "Scan Status"
+          },
+          "quarantined": {
+            "type": "boolean",
+            "title": "Quarantined"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "category",
+          "original_filename",
+          "content_type",
+          "size_bytes",
+          "scan_status",
+          "quarantined",
+          "created_at"
+        ],
+        "title": "CandidateDocumentResponse"
+      },
+      "CandidatePrivacyDisclosureResponse": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "paragraphs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paragraphs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "version",
+          "paragraphs"
+        ],
+        "title": "CandidatePrivacyDisclosureResponse"
+      },
+      "CandidateStatusListResponse": {
+        "properties": {
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateVisibleApplicationStatus"
+            },
+            "type": "array",
+            "title": "Applications"
+          }
+        },
+        "type": "object",
+        "required": [
+          "applications"
+        ],
+        "title": "CandidateStatusListResponse"
+      },
+      "CandidateVisibleApplicationStatus": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "application_started",
+              "application_submitted",
+              "withdrawn",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "messages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "status",
+          "messages"
+        ],
+        "title": "CandidateVisibleApplicationStatus"
       },
       "ConsentState": {
         "properties": {
@@ -861,6 +3024,192 @@
           "database"
         ],
         "title": "DatabaseHealthResponse"
+      },
+      "EducationEntryInput": {
+        "properties": {
+          "institution_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Institution Name"
+          },
+          "program_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Program Name"
+          },
+          "completion_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1900.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Year"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "institution_name",
+          "program_name"
+        ],
+        "title": "EducationEntryInput"
+      },
+      "EducationEntryResponse": {
+        "properties": {
+          "institution_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Institution Name"
+          },
+          "program_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Program Name"
+          },
+          "completion_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1900.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Year"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "institution_name",
+          "program_name"
+        ],
+        "title": "EducationEntryResponse"
+      },
+      "EmploymentEntryInput": {
+        "properties": {
+          "employer_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Employer Name"
+          },
+          "role_title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Role Title"
+          },
+          "start_month": {
+            "type": "string",
+            "pattern": "^(19|20)\\d{2}-(0[1-9]|1[0-2])$",
+            "title": "Start Month"
+          },
+          "currently_employed": {
+            "type": "boolean",
+            "title": "Currently Employed"
+          },
+          "end_month": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(19|20)\\d{2}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Month"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employer_name",
+          "role_title",
+          "start_month",
+          "currently_employed"
+        ],
+        "title": "EmploymentEntryInput"
+      },
+      "EmploymentEntryResponse": {
+        "properties": {
+          "employer_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Employer Name"
+          },
+          "role_title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Role Title"
+          },
+          "start_month": {
+            "type": "string",
+            "pattern": "^(19|20)\\d{2}-(0[1-9]|1[0-2])$",
+            "title": "Start Month"
+          },
+          "currently_employed": {
+            "type": "boolean",
+            "title": "Currently Employed"
+          },
+          "end_month": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(19|20)\\d{2}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Month"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "employer_name",
+          "role_title",
+          "start_month",
+          "currently_employed"
+        ],
+        "title": "EmploymentEntryResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -1154,6 +3503,186 @@
           "offset"
         ],
         "title": "LeadListResponse"
+      },
+      "PostingCreate": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "body"
+        ],
+        "title": "PostingCreate"
+      },
+      "PostingUpdate": {
+        "properties": {
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PostingUpdate"
+      },
+      "PublicPosting": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "body"
+        ],
+        "title": "PublicPosting"
+      },
+      "PublicPostingList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicPostingSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PublicPostingList"
+      },
+      "PublicPostingSummary": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "summary"
+        ],
+        "title": "PublicPostingSummary"
       },
       "ValidationError": {
         "properties": {

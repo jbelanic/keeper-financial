@@ -37,13 +37,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=[
         "Authorization",
         "Content-Type",
         "X-Request-ID",
         "X-Dev-Auth-Sub",
         "X-Dev-Auth-AAL",
+        "X-Dev-Auth-Email",
+        "X-Dev-Auth-Verified",
     ],
 )
 
@@ -83,6 +85,12 @@ async def request_context(
         and request.url.path.endswith("/marketing-consent/withdrawal")
     ):
         response.headers["Cache-Control"] = "no-store"
+    if request.url.path.startswith("/api/v1/admin/"):
+        response.headers["Cache-Control"] = "no-store"
+    if request.url.path.startswith("/api/v1/candidate/") or request.url.path.endswith(
+        "/applications/start"
+    ):
+        response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Request-ID"] = request_id
     logger.info(
         "request completed",

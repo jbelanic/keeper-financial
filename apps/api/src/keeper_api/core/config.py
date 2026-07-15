@@ -11,6 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "staging_non_sensitive", "production"]
 StorageBackend = Literal["local", "r2"]
+MalwareScannerBackend = Literal["local_test", "disabled"]
 
 
 class Settings(BaseSettings):
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
     app_env: Environment = "local"
     app_name: str = "Keeper Financial API"
     debug: bool = False
-    api_host: str = "0.0.0.0"  # noqa: S104 - intended container binding
+    api_host: str = "127.0.0.1"
     api_port: int = 8000
     web_origin: str = "http://localhost:3000"
     cors_origins: str = "http://localhost:3000"
@@ -42,7 +43,11 @@ class Settings(BaseSettings):
     local_storage_path: Path = Path("./storage/dev_uploads")
     public_object_urls_enabled: bool = False
     max_document_bytes: int = 10 * 1024 * 1024
-    allowed_document_mime_types: str = "application/pdf,image/jpeg,image/png"
+    allowed_document_mime_types: str = (
+        "application/pdf,application/msword,"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    malware_scanner_backend: MalwareScannerBackend = "local_test"
     r2_endpoint_url: str | None = None
     r2_access_key_id: str | None = None
     r2_secret_access_key: SecretStr | None = None
@@ -107,6 +112,8 @@ class Settings(BaseSettings):
                 errors.append("REQUIRE_ADMIN_MFA must be true")
             if self.storage_backend != "r2":
                 errors.append("STORAGE_BACKEND must be r2")
+            if self.malware_scanner_backend == "local_test":
+                errors.append("local test malware scanner is prohibited")
             if "*" in self.cors_origin_list:
                 errors.append("wildcard CORS is prohibited")
             for origin in [self.web_origin, *self.cors_origin_list]:
