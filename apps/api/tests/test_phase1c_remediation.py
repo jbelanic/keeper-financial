@@ -15,9 +15,11 @@ from sqlalchemy.orm import Session
 
 from conftest import create_user
 from keeper_api.models.domain import (
+    AgentProfile,
     CandidateApplication,
     RecruitmentPosting,
 )
+from keeper_api.models.statuses import AgentProfileStatus
 
 
 def _published_posting(db: Session, slug: str) -> RecruitmentPosting:
@@ -83,4 +85,51 @@ def test_b1_denied_candidate_lifecycle_cannot_start(
     )
     assert apps == [], (
         f"denied candidate ({denied_status}) must not own any application"
+    )
+
+
+# ---------------------------------------------------------------------------
+# B9 — Medium: premature Phase 1E agent-profile lifecycle transition route
+# must not be operational. The audit finding requires the agent transition
+# route to be unmounted until Phase 1E is scheduled (docs/07, docs/19).
+# Evidence: router.py:22 mounts agents.router; agents.py:15 exposes
+# POST /api/v1/agents/{profile_id}/status (publish/suspend/republish/archive).
+# Mirror the existing unmounted-candidate-transition boundary test
+# (test_recruitment.py::test_phase_1d_candidate_transition_endpoint_is_not_mounted).
+# ---------------------------------------------------------------------------
+
+ADMIN_HEADERS = {"X-Dev-Auth-Sub": "b9-admin", "X-Dev-Auth-AAL": "aal2"}
+
+
+def test_b9_agent_transition_endpoint_is_not_mounted(
+    client: TestClient, db: Session
+):
+    create_user(db, subject="b9-admin", role_code="brokerage_admin")
+    agent, _ = create_user(db, subject="b9-agent")
+    profile = AgentProfile(
+        user_id=agent.id,
+        slug="b9-synthetic-agent",
+        licensed_name="B9 Agent",
+        approved_title="Mortgage Agent",
+        licence_number="B9-SYNTHETIC",
+        status=AgentProfileStatus.PENDING_APPROVAL.value,
+    )
+    db.add(profile)
+    db.commit()
+
+    response = client.post(
+        f"/api/v1/agents/{profile.id}/status",
+        json={"status": "published"},
+        headers=ADMIN_HEADERS,
+    )
+    # Premature Phase 1E operation must be unavailable (safe 404), not 200/409.
+    assert response.status_code == 404, (
+        f"agent lifecycle transition must be unmounted, got {response.status_code}"
+    )
+
+
+def test_b9_agent_transition_absent_from_openapi(client: TestClient):
+    schema = client.get("/openapi.json").json()
+    assert "/api/v1/agents/{profile_id}/status" not in schema.get("paths", {}), (
+        "agent transition path must not appear in the generated OpenAPI contract"
     )

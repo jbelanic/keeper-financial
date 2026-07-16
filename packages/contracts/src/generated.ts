@@ -348,23 +348,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/agents/{profile_id}/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Transition Agent Profile */
-    post: operations["transition_agent_profile_api_v1_agents__profile_id__status_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/documents/{document_id}/download": {
     parameters: {
       query?: never;
@@ -449,26 +432,6 @@ export interface components {
       limit: number;
       /** Offset */
       offset: number;
-    };
-    /**
-     * AgentProfileStatus
-     * @enum {string}
-     */
-    AgentProfileStatus:
-      | "draft"
-      | "pending_approval"
-      | "published"
-      | "suspended"
-      | "archived";
-    /** AgentStatusResponse */
-    AgentStatusResponse: {
-      status: components["schemas"]["AgentProfileStatus"];
-    };
-    /** AgentTransitionRequest */
-    AgentTransitionRequest: {
-      status: components["schemas"]["AgentProfileStatus"];
-      /** Reason */
-      reason?: string | null;
     };
     /** ApplicationAction */
     ApplicationAction: {
@@ -2184,44 +2147,6 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
-      };
-    };
-  };
-  transition_agent_profile_api_v1_agents__profile_id__status_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        profile_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["AgentTransitionRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["AgentStatusResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
       };
     };
   };
