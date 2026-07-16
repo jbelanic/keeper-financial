@@ -49,4 +49,4 @@ Do not replace database-backed authorization tests with UI visibility tests. Hid
 
 ## Before production
 
-Add hosted Supabase JWT/JWKS/callback tests, R2 bucket-policy and signed-URL tests, the selected production malware-scanner adapter/integration tests, multi-replica/edge abuse-control tests, browser accessibility automation plus manual WCAG review, continuous dependency/secret scanning, backup/restore exercises, and deployment health/rollback tests.
+Add local Supabase JWT/JWKS/callback tests, MinIO bucket-policy and signed-URL tests, the selected local malware-scanner adapter/integration tests, deployment-level abuse-control tests, browser accessibility automation plus manual WCAG review, continuous dependency/secret scanning, backup/restore exercises, and local-host deployment health/rollback tests.

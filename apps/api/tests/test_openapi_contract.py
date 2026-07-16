@@ -140,3 +140,81 @@ def test_phase_1d_openapi_operations_enforce_boundaries_and_contracts(
     assert plan_in["additionalProperties"] is False
     decision_in = document["components"]["schemas"]["CandidateDecisionRequest"]
     assert decision_in["additionalProperties"] is False
+
+
+def test_phase_1e_agent_operations_and_public_contracts_are_allowlisted(
+    client: TestClient,
+) -> None:
+    document = client.get("/openapi.json").json()
+    paths = document["paths"]
+
+    expected = {
+        ("/api/v1/agents", "get"): {"200", "422"},
+        ("/api/v1/agents/{slug}", "get"): {"200", "404", "422"},
+        ("/api/v1/admin/agent-profiles", "get"): {"200", "401", "403", "422"},
+        ("/api/v1/admin/agent-profiles", "post"): {
+            "201",
+            "401",
+            "403",
+            "404",
+            "409",
+            "422",
+        },
+        ("/api/v1/admin/agent-profiles/{profile_id}", "get"): {
+            "200",
+            "401",
+            "403",
+            "404",
+            "422",
+        },
+        ("/api/v1/admin/agent-profiles/{profile_id}", "patch"): {
+            "200",
+            "401",
+            "403",
+            "404",
+            "409",
+            "422",
+        },
+        ("/api/v1/agents/{profile_id}/status", "post"): {
+            "200",
+            "401",
+            "403",
+            "404",
+            "409",
+            "422",
+        },
+    }
+    for (path, method), responses in expected.items():
+        assert set(paths[path][method]["responses"]) == responses
+
+    assert "security" not in paths["/api/v1/agents"]["get"]
+    assert "security" not in paths["/api/v1/agents/{slug}"]["get"]
+    for path, method in [
+        ("/api/v1/admin/agent-profiles", "get"),
+        ("/api/v1/admin/agent-profiles", "post"),
+        ("/api/v1/admin/agent-profiles/{profile_id}", "get"),
+        ("/api/v1/admin/agent-profiles/{profile_id}", "patch"),
+        ("/api/v1/agents/{profile_id}/status", "post"),
+    ]:
+        assert paths[path][method]["security"] == [{"HTTPBearer": []}]
+
+    schemas = document["components"]["schemas"]
+    for name in ["AgentProfileCreate", "AgentProfileUpdate", "AgentTransitionRequest"]:
+        assert schemas[name]["additionalProperties"] is False
+
+    public_contract = str(schemas["PublicAgentProfile"]) + str(schemas["PublicAgentProfileSummary"])
+    for forbidden in [
+        "user_id",
+        "status",
+        "version",
+        "approved_by_user_id",
+        "approved_at",
+        "published_at",
+        "created_at",
+        "updated_at",
+        "internal_notes",
+        "actor_user_id",
+        "audit",
+        "reason",
+    ]:
+        assert forbidden not in public_contract

@@ -1,10 +1,13 @@
-.PHONY: bootstrap dev up down api-install api-dev web-dev lint format typecheck test build migrate migrate-check seed openapi
+.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed openapi
 
 bootstrap: api-install
 	npm install
 
+infra:
+	docker compose up -d db minio minio-init
+
 up:
-	docker compose up --build
+	docker compose up --build -d api web
 
 down:
 	docker compose down
@@ -39,10 +42,16 @@ build:
 	npm run build
 
 migrate:
-	cd apps/api && ../../.venv/bin/alembic upgrade head
+	docker compose run --rm api alembic upgrade head
+
+migrate-status:
+	docker compose run --rm api alembic current --check-heads
 
 migrate-check:
-	cd apps/api && ../../.venv/bin/alembic check
+	docker compose run --rm api alembic check
+
+compose-config:
+	KEEPER_ENV_FILE=.env.example docker compose --env-file .env.example config --quiet
 
 seed:
 	APP_ENV=local .venv/bin/python apps/api/scripts/seed_local.py

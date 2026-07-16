@@ -10,6 +10,7 @@ COPY --chown=keeper:keeper apps/api /app/apps/api
 RUN pip install --no-cache-dir /app/apps/api
 COPY --chown=keeper:keeper storage/dev_uploads/.gitkeep /app/storage/dev_uploads/.gitkeep
 
+WORKDIR /app/apps/api
 EXPOSE 8000
 USER keeper
-CMD ["uvicorn", "keeper_api.main:app", "--app-dir", "/app/apps/api/src", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "keeper_api.main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]

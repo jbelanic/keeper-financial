@@ -35,6 +35,28 @@ function controlledHttpsUrl(value: string | undefined, fallback: string) {
   }
 }
 
+function controlledSiteUrl(value: string | undefined, fallback: string) {
+  try {
+    const candidate = new URL(value?.trim() || fallback);
+    const isLiveLocalOrigin =
+      candidate.protocol === "http:" &&
+      ["localhost", "127.0.0.1"].includes(candidate.hostname) &&
+      candidate.port === "3000";
+    if (
+      (candidate.protocol !== "https:" && !isLiveLocalOrigin) ||
+      candidate.username ||
+      candidate.password ||
+      candidate.search ||
+      candidate.hash
+    ) {
+      return fallback;
+    }
+    return candidate.toString();
+  } catch {
+    return fallback;
+  }
+}
+
 function optionalHttpsUrl(value: string | undefined) {
   if (!value?.trim()) return undefined;
   try {
@@ -91,7 +113,7 @@ export function getPublicSiteConfig(environment: Environment = process.env) {
       environment.NEXT_PUBLIC_PUBLIC_EMAIL,
       approvedPublicFacts.email,
     )}`,
-    siteUrl: controlledHttpsUrl(
+    siteUrl: controlledSiteUrl(
       environment.NEXT_PUBLIC_SITE_URL,
       approvedPublicFacts.siteUrl,
     ),

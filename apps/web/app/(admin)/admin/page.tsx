@@ -9,7 +9,7 @@ export default function Page() {
         <h1>Controlled work starts here.</h1>
         <p>
           This shell requires a verified, active local user with the
-          brokerage-admin role. Nonlocal environments also require an MFA
+          brokerage-admin role. Live production access also requires an MFA
           assurance level of AAL2.
         </p>
       </header>

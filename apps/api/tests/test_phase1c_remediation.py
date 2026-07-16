@@ -21,6 +21,7 @@ B6 status (code-verified, not unit-tested here):
   isolated (e.g. per-process file-backed SQLite or a transaction-scoped
   rollback fixture).
 """
+
 import time
 import uuid
 from datetime import UTC, datetime
@@ -95,30 +96,19 @@ def test_b1_denied_candidate_lifecycle_cannot_start(
     assert status_code in (403, 404), (
         f"denied candidate ({denied_status}) should be blocked, got {status_code}"
     )
-    apps = (
-        db.query(CandidateApplication)
-        .filter_by(candidate_id=candidate.id)
-        .all()
-    )
-    assert apps == [], (
-        f"denied candidate ({denied_status}) must not own any application"
-    )
+    apps = db.query(CandidateApplication).filter_by(candidate_id=candidate.id).all()
+    assert apps == [], f"denied candidate ({denied_status}) must not own any application"
 
 
 # ---------------------------------------------------------------------------
-# B9 — Medium: premature Phase 1E agent-profile lifecycle transition route
-# must not be operational. The audit finding requires the agent transition
-# route to be unmounted until Phase 1E is scheduled (docs/07, docs/19).
-# Evidence: router.py:22 mounts agents.router; agents.py:15 exposes
-# POST /api/v1/agents/{profile_id}/status (publish/suspend/republish/archive).
-# Mirror the existing unmounted-candidate-transition boundary test
-# (test_recruitment.py::test_phase_1d_candidate_transition_endpoint_is_not_mounted).
+# B9 — Phase 1C kept this route unmounted. Phase 1E is now scheduled, so the
+# regression boundary becomes explicit authenticated/authorized operation.
 # ---------------------------------------------------------------------------
 
 ADMIN_HEADERS = {"X-Dev-Auth-Sub": "b9-admin", "X-Dev-Auth-AAL": "aal2"}
 
 
-def test_b9_agent_transition_endpoint_is_not_mounted(
+def test_b9_agent_transition_endpoint_is_mounted_only_for_phase1e_admin(
     client: TestClient, db: Session
 ):
     create_user(db, subject="b9-admin", role_code="brokerage_admin")
@@ -139,17 +129,20 @@ def test_b9_agent_transition_endpoint_is_not_mounted(
         json={"status": "published"},
         headers=ADMIN_HEADERS,
     )
-    # Premature Phase 1E operation must be unavailable (safe 404), not 200/409.
-    assert response.status_code == 404, (
-        f"agent lifecycle transition must be unmounted, got {response.status_code}"
+    assert response.status_code == 404
+
+    denied = client.post(
+        f"/api/v1/agents/{profile.id}/status",
+        json={"status": "published"},
     )
+    assert denied.status_code == 401
 
 
-def test_b9_agent_transition_absent_from_openapi(client: TestClient):
+def test_b9_agent_transition_present_in_phase1e_openapi(client: TestClient):
     schema = client.get("/openapi.json").json()
-    assert "/api/v1/agents/{profile_id}/status" not in schema.get("paths", {}), (
-        "agent transition path must not appear in the generated OpenAPI contract"
-    )
+    operation = schema["paths"]["/api/v1/agents/{profile_id}/status"]["post"]
+    assert operation["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403", "404", "409", "422"}.issubset(operation["responses"])
 
 
 # ---------------------------------------------------------------------------
@@ -159,9 +152,7 @@ def test_b9_agent_transition_absent_from_openapi(client: TestClient):
 # ---------------------------------------------------------------------------
 
 
-def test_b5_foreign_document_returns_404_not_403(
-    client: TestClient, db: Session
-):
+def test_b5_foreign_document_returns_404_not_403(client: TestClient, db: Session):
     from sqlalchemy import text
 
     # Ensure a clean slate (StaticPool shares the in-memory DB across tests).
@@ -176,7 +167,7 @@ def test_b5_foreign_document_returns_404_not_403(
         db, subject="b5-stranger", role_code="candidate", candidate_status="application_started"
     )
     posting = RecruitmentPosting(
-        slug=f"b5-{int(time.time()*1000)}-{uuid.uuid4().hex[:8]}",
+        slug=f"b5-{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}",
         title="B5",
         summary="s",
         body="b",
@@ -245,4 +236,3 @@ def test_b8_candidate_text_is_unicode_normalized():
     )
     assert "\u3000" not in entry.employer_name, "full-width space not normalized"
     assert entry.employer_name == "Keeper Financial"
-

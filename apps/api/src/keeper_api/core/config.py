@@ -9,8 +9,8 @@ from urllib.parse import urlparse
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-Environment = Literal["local", "staging_non_sensitive", "production"]
-StorageBackend = Literal["local", "r2"]
+Environment = Literal["local", "production"]
+StorageBackend = Literal["local", "s3"]
 MalwareScannerBackend = Literal["local_test", "disabled"]
 
 
@@ -48,11 +48,12 @@ class Settings(BaseSettings):
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     malware_scanner_backend: MalwareScannerBackend = "local_test"
-    r2_endpoint_url: str | None = None
-    r2_access_key_id: str | None = None
-    r2_secret_access_key: SecretStr | None = None
-    r2_bucket: str | None = None
-    r2_region: str = "auto"
+    s3_endpoint_url: str | None = None
+    s3_public_endpoint_url: str | None = None
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: SecretStr | None = None
+    s3_bucket: str | None = None
+    s3_region: str = "us-east-1"
     signed_url_ttl_seconds: int = Field(default=60, ge=30, le=300)
 
     mortgage_application_provider: str = "disabled"
@@ -102,7 +103,7 @@ class Settings(BaseSettings):
         if self.public_object_urls_enabled:
             raise ValueError("public object URLs are prohibited in every environment")
 
-        if self.app_env != "local":
+        if self.app_env == "production":
             errors: list[str] = []
             if self.debug:
                 errors.append("DEBUG must be false")
@@ -110,68 +111,79 @@ class Settings(BaseSettings):
                 errors.append("DEV_AUTH_ENABLED must be false")
             if not self.require_admin_mfa:
                 errors.append("REQUIRE_ADMIN_MFA must be true")
-            if self.storage_backend != "r2":
-                errors.append("STORAGE_BACKEND must be r2")
+            if self.storage_backend != "s3":
+                errors.append("STORAGE_BACKEND must be s3")
             if self.malware_scanner_backend == "local_test":
                 errors.append("local test malware scanner is prohibited")
             if "*" in self.cors_origin_list:
                 errors.append("wildcard CORS is prohibited")
             for origin in [self.web_origin, *self.cors_origin_list]:
                 parsed = urlparse(origin)
-                if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
-                    errors.append("loopback origins are prohibited")
-                    break
-                if parsed.scheme != "https":
-                    errors.append("nonlocal origins must use HTTPS")
+                if parsed.scheme != "http" or parsed.hostname not in {"localhost", "127.0.0.1"}:
+                    errors.append("live web origins must use local-host HTTP")
                     break
             database = urlparse(self.database_url)
-            if not database.scheme.startswith("postgresql") or database.hostname in {
-                "localhost",
-                "127.0.0.1",
-                "::1",
-            }:
-                errors.append("nonlocal database must be a non-loopback PostgreSQL endpoint")
+            if database.scheme != "postgresql+psycopg" or database.hostname != "db":
+                errors.append("live database must use psycopg and the Compose service name db")
             required = {
                 "SUPABASE_ISSUER": self.supabase_issuer,
                 "SUPABASE_JWKS_URL": self.supabase_jwks_url,
-                "R2_ENDPOINT_URL": self.r2_endpoint_url,
-                "R2_ACCESS_KEY_ID": self.r2_access_key_id,
-                "R2_SECRET_ACCESS_KEY": self.r2_secret_access_key,
-                "R2_BUCKET": self.r2_bucket,
+                "S3_ENDPOINT_URL": self.s3_endpoint_url,
+                "S3_PUBLIC_ENDPOINT_URL": self.s3_public_endpoint_url,
+                "S3_ACCESS_KEY_ID": self.s3_access_key_id,
+                "S3_SECRET_ACCESS_KEY": self.s3_secret_access_key,
+                "S3_BUCKET": self.s3_bucket,
             }
             missing = [name for name, value in required.items() if not value]
             if missing:
                 errors.append(f"required values missing: {', '.join(missing)}")
-            if any(
-                "127.0.0.1" in value or "localhost" in value
-                for value in (self.supabase_issuer, self.supabase_jwks_url)
+            issuer = urlparse(self.supabase_issuer)
+            jwks = urlparse(self.supabase_jwks_url)
+            if (
+                issuer.scheme != "http"
+                or issuer.hostname not in {"localhost", "127.0.0.1"}
+                or issuer.port != 54321
+                or issuer.path.rstrip("/") != "/auth/v1"
             ):
-                errors.append("local Supabase endpoints are prohibited")
-            if any(
-                urlparse(value).scheme != "https"
-                for value in (self.supabase_issuer, self.supabase_jwks_url)
+                errors.append("live Supabase issuer must be the local CLI Auth endpoint")
+            if (
+                jwks.scheme != "http"
+                or jwks.hostname != "host.docker.internal"
+                or jwks.port != 54321
+                or jwks.path != "/auth/v1/.well-known/jwks.json"
             ):
-                errors.append("nonlocal Supabase endpoints must use HTTPS")
-            if self.r2_endpoint_url:
-                r2_endpoint = urlparse(self.r2_endpoint_url)
-                if r2_endpoint.scheme != "https" or r2_endpoint.hostname in {
-                    "localhost",
-                    "127.0.0.1",
-                    "::1",
-                }:
-                    errors.append("nonlocal R2 endpoint must be non-loopback HTTPS")
+                errors.append("live Supabase JWKS must use the local CLI host gateway")
+            if self.s3_endpoint_url:
+                endpoint = urlparse(self.s3_endpoint_url)
+                if (
+                    endpoint.scheme != "http"
+                    or endpoint.hostname != "minio"
+                    or endpoint.port != 9000
+                ):
+                    errors.append("live S3 endpoint must use the MinIO Compose service")
+            if self.s3_public_endpoint_url:
+                public_endpoint = urlparse(self.s3_public_endpoint_url)
+                if (
+                    public_endpoint.scheme != "http"
+                    or public_endpoint.hostname not in {"localhost", "127.0.0.1"}
+                    or public_endpoint.port != 9000
+                ):
+                    errors.append("live signed-object endpoint must use local-host MinIO")
             if errors:
-                raise ValueError("unsafe nonlocal configuration: " + "; ".join(errors))
+                raise ValueError("unsafe live Docker configuration: " + "; ".join(errors))
 
-        if self.storage_backend == "r2":
-            r2_values = [
-                self.r2_endpoint_url,
-                self.r2_access_key_id,
-                self.r2_secret_access_key,
-                self.r2_bucket,
+        if self.storage_backend == "s3":
+            s3_values = [
+                self.s3_endpoint_url,
+                self.s3_public_endpoint_url,
+                self.s3_access_key_id,
+                self.s3_secret_access_key,
+                self.s3_bucket,
             ]
-            if not all(r2_values):
-                raise ValueError("R2 storage requires endpoint, credentials, and a private bucket")
+            if not all(s3_values):
+                raise ValueError(
+                    "S3 storage requires internal/public endpoints, credentials, and a private bucket"
+                )
         return self
 
 

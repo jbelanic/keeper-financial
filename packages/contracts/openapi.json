@@ -1829,6 +1829,508 @@
         }
       }
     },
+    "/api/v1/agents": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "List Public Agent Profiles",
+        "operationId": "list_public_agent_profiles_api_v1_agents_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAgentProfileList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid pagination"
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{slug}": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get Public Agent Profile",
+        "operationId": "get_public_agent_profile_api_v1_agents__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAgentProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Published profile not found"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-profiles": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "List Admin Agent Profiles",
+        "operationId": "list_admin_agent_profiles_api_v1_admin_agent_profiles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfileList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "422": {
+            "description": "Invalid pagination"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Create Admin Agent Profile",
+        "operationId": "create_admin_agent_profile_api_v1_admin_agent_profiles_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentProfileCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "404": {
+            "description": "Active agent relationship not found"
+          },
+          "409": {
+            "description": "Profile user or slug conflict"
+          },
+          "422": {
+            "description": "Invalid profile content"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-profiles/{profile_id}": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get Admin Agent Profile",
+        "operationId": "get_admin_agent_profile_api_v1_admin_agent_profiles__profile_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "404": {
+            "description": "Profile not found"
+          },
+          "422": {
+            "description": "Invalid profile id"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Patch Admin Agent Profile",
+        "operationId": "patch_admin_agent_profile_api_v1_admin_agent_profiles__profile_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "404": {
+            "description": "Profile not found"
+          },
+          "409": {
+            "description": "Profile lifecycle or slug conflict"
+          },
+          "422": {
+            "description": "Invalid profile content"
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{profile_id}/status": {
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Transition Agent Profile",
+        "operationId": "transition_agent_profile_api_v1_agents__profile_id__status_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin, MFA, or approval denied"
+          },
+          "404": {
+            "description": "Profile not found"
+          },
+          "409": {
+            "description": "Invalid profile transition"
+          },
+          "422": {
+            "description": "Invalid transition request"
+          }
+        }
+      }
+    },
     "/api/v1/documents/{document_id}/download": {
       "get": {
         "tags": [
@@ -3558,6 +4060,211 @@
         ],
         "title": "ActivationGateResponse"
       },
+      "AdminAgentProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "title": "Licence Number"
+          },
+          "biography": {
+            "type": "string",
+            "title": "Biography"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSocialLink"
+            },
+            "type": "array",
+            "title": "Social Links"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentProfileStatus"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number",
+          "biography",
+          "languages",
+          "service_areas",
+          "specialties",
+          "photo_url",
+          "photo_alt_text",
+          "public_email",
+          "public_phone",
+          "social_links",
+          "status",
+          "version",
+          "created_at",
+          "updated_at",
+          "approved_at",
+          "published_at"
+        ],
+        "title": "AdminAgentProfile"
+      },
+      "AdminAgentProfileList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminAgentProfile"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AdminAgentProfileList"
+      },
       "AdminPosting": {
         "properties": {
           "id": {
@@ -3689,6 +4396,388 @@
           "offset"
         ],
         "title": "AdminPostingList"
+      },
+      "AgentProfileCreate": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Licence Number"
+          },
+          "biography": {
+            "type": "string",
+            "maxLength": 3000,
+            "title": "Biography",
+            "default": ""
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSocialLink"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Social Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number"
+        ],
+        "title": "AgentProfileCreate"
+      },
+      "AgentProfileStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "pending_approval",
+          "published",
+          "suspended",
+          "archived"
+        ],
+        "title": "AgentProfileStatus"
+      },
+      "AgentProfileUpdate": {
+        "properties": {
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licence Number"
+          },
+          "biography": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 3000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Biography"
+          },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 12
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
+          },
+          "service_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AgentSocialLink"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AgentProfileUpdate"
+      },
+      "AgentSocialLink": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "AgentSocialLink"
+      },
+      "AgentStatusResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AgentProfileStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AgentStatusResponse"
+      },
+      "AgentTransitionRequest": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/AgentProfileStatus"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AgentTransitionRequest"
       },
       "ApplicationAction": {
         "properties": {
@@ -6255,6 +7344,229 @@
         "additionalProperties": false,
         "type": "object",
         "title": "PostingUpdate"
+      },
+      "PublicAgentProfile": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "title": "Licence Number"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "biography": {
+            "type": "string",
+            "title": "Biography"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSocialLink"
+            },
+            "type": "array",
+            "title": "Social Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number",
+          "languages",
+          "service_areas",
+          "specialties",
+          "photo_url",
+          "photo_alt_text",
+          "biography",
+          "public_email",
+          "public_phone",
+          "social_links"
+        ],
+        "title": "PublicAgentProfile"
+      },
+      "PublicAgentProfileList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicAgentProfileSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PublicAgentProfileList"
+      },
+      "PublicAgentProfileSummary": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "title": "Licence Number"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number",
+          "languages",
+          "service_areas",
+          "specialties",
+          "photo_url",
+          "photo_alt_text"
+        ],
+        "title": "PublicAgentProfileSummary"
       },
       "PublicPosting": {
         "properties": {

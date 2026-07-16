@@ -115,9 +115,9 @@ The following are deferred Phase 1D acceptance tests; Phase 1C verifies that the
 
 ## Environment and operations
 
-- Nonlocal startup fails with local storage.
-- Nonlocal startup fails with development auth.
-- Nonlocal startup fails with wildcard CORS.
+- Live production startup fails with local-file storage.
+- Live production startup fails with development auth.
+- Live production startup fails with wildcard CORS or remote infrastructure endpoints.
 - Health endpoint works without exposing secrets.
 - Database health distinguishes API health from database connectivity.
 - Logs do not contain tokens or raw document URLs.

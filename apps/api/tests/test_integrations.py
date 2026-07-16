@@ -2,6 +2,7 @@ import io
 from pathlib import Path
 
 import pytest
+from botocore.config import Config
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -10,7 +11,7 @@ from keeper_api.integrations.mortgage_application import (
     MortgageApplicationAdapter,
     MortgageApplicationUnavailable,
 )
-from keeper_api.services.storage import LocalPrivateStorage, StorageError
+from keeper_api.services.storage import LocalPrivateStorage, S3PrivateStorage, StorageError
 
 
 def configured_settings(**overrides: object) -> Settings:
@@ -147,8 +148,8 @@ def test_redirect_route_never_emits_location_when_disabled_or_unsafe(
     assert "Location" not in response.headers
 
 
-def test_nonlocal_configuration_fails_closed() -> None:
-    with pytest.raises(ValidationError, match="unsafe nonlocal configuration"):
+def test_unsafe_live_docker_configuration_fails_closed() -> None:
+    with pytest.raises(ValidationError, match="unsafe live Docker configuration"):
         Settings(
             _env_file=None,
             app_env="production",
@@ -160,26 +161,69 @@ def test_nonlocal_configuration_fails_closed() -> None:
         )
 
 
-def test_safe_nonlocal_configuration_is_accepted() -> None:
+def test_safe_local_docker_production_configuration_is_accepted() -> None:
     settings = Settings(
         _env_file=None,
-        app_env="staging_non_sensitive",
+        app_env="production",
         debug=False,
         dev_auth_enabled=False,
         require_admin_mfa=True,
-        web_origin="https://staging.keeper.example",
-        cors_origins="https://staging.keeper.example",
-        database_url="postgresql+psycopg://keeper:secret@db.keeper.example/keeper",
-        supabase_issuer="https://identity.keeper.example/auth/v1",
-        supabase_jwks_url="https://identity.keeper.example/auth/v1/.well-known/jwks.json",
-        storage_backend="r2",
+        web_origin="http://localhost:3000",
+        cors_origins="http://localhost:3000",
+        database_url="postgresql+psycopg://keeper:secret@db:5432/keeper",
+        supabase_issuer="http://127.0.0.1:54321/auth/v1",
+        supabase_jwks_url=("http://host.docker.internal:54321/auth/v1/.well-known/jwks.json"),
+        storage_backend="s3",
         malware_scanner_backend="disabled",
-        r2_endpoint_url="https://synthetic-account.r2.cloudflarestorage.com",
-        r2_access_key_id="synthetic-access-id",
-        r2_secret_access_key="synthetic-secret",
-        r2_bucket="keeper-staging-private",
+        s3_endpoint_url="http://minio:9000",
+        s3_public_endpoint_url="http://localhost:9000",
+        s3_access_key_id="synthetic-local-access-id",
+        s3_secret_access_key="synthetic-local-secret",
+        s3_bucket="keeper-private",
     )
-    assert settings.app_env == "staging_non_sensitive"
+    assert settings.app_env == "production"
+
+
+def test_s3_storage_uses_internal_minio_and_public_path_style_presigning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class StubClient:
+        def __init__(self, endpoint_url: str) -> None:
+            self.endpoint_url = endpoint_url
+
+        def generate_presigned_url(self, *_args: object, **_kwargs: object) -> str:
+            return f"{self.endpoint_url}/keeper-private/candidate/synthetic?signed=true"
+
+    def client(service: str, **options: object) -> StubClient:
+        calls.append((service, options))
+        return StubClient(str(options["endpoint_url"]))
+
+    monkeypatch.setattr("keeper_api.services.storage.boto3.client", client)
+    storage = S3PrivateStorage(
+        configured_settings(
+            storage_backend="s3",
+            s3_endpoint_url="http://minio:9000",
+            s3_public_endpoint_url="http://localhost:9000",
+            s3_access_key_id="synthetic-local-access-id",
+            s3_secret_access_key="synthetic-local-secret",
+            s3_bucket="keeper-private",
+        )
+    )
+
+    assert [options["endpoint_url"] for _, options in calls] == [
+        "http://minio:9000",
+        "http://localhost:9000",
+    ]
+    for _, options in calls:
+        config = options["config"]
+        assert isinstance(config, Config)
+        assert config.s3 is not None
+        assert config.s3["addressing_style"] == "path"
+    assert storage.authorized_download("candidate/synthetic").startswith(
+        "http://localhost:9000/keeper-private/"
+    )
 
 
 def test_local_storage_permission_failure_is_a_safe_storage_error(

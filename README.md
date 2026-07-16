@@ -1,80 +1,93 @@
 # Keeper Financial
 
-Phase 1C engineering implementation for Keeper Financial recruitment postings, verified candidate provisioning, posting-specific applications, private candidate documents, status, and withdrawal. The Phase 1B lead flow, Phase 1A public website, and Phase 0 security foundation remain preserved. This repository intentionally does **not** implement candidate review/onboarding decisions, mortgage origination, borrower financial-data collection, lender submission, custom e-signature, commission calculation, or a client CRM.
+Keeper Financial is a Next.js/FastAPI modular monolith. The owner-approved live/production environment is Docker on the local Linux host: Compose PostgreSQL for application data, Compose MinIO for private objects, and the repository-tracked local Supabase CLI stack for Auth. Hosted Supabase, Cloudflare R2, and remote cloud infrastructure are not supported.
 
-`docs/00_PROJECT_SOURCE_OF_TRUTH.md` remains authoritative. Start with [the Phase 1C report](docs/20_PHASE_1C_IMPLEMENTATION_REPORT.md) and the immutable [candidate application policy](docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md). Historical evidence remains in the [Phase 1B](docs/18_PHASE_1B_IMPLEMENTATION_REPORT.md), [Phase 1A](docs/17_PHASE_1A_IMPLEMENTATION_REPORT.md), and [Phase 0](docs/16_PHASE_0_IMPLEMENTATION_REPORT.md) reports.
+`docs/00_PROJECT_SOURCE_OF_TRUTH.md` is authoritative. Product boundaries remain unchanged: this repository does not implement mortgage origination, borrower financial-data/document collection, lender submission, custom e-signature, commissions, or a client CRM.
 
 ## Repository
 
 ```text
 apps/web             Next.js React/TypeScript application
-apps/api             FastAPI modular monolith, SQLAlchemy, Alembic
+apps/api             FastAPI, SQLAlchemy, and Alembic
 packages/ui          Accessible components and design tokens
-packages/contracts   OpenAPI-to-TypeScript generation boundary
-infrastructure       Container definitions
-supabase              Local Supabase CLI configuration
-storage/dev_uploads  Git-ignored local-only private object storage
-docs                  Governing baseline and Phase 0 operating documentation
+packages/contracts   Generated OpenAPI/TypeScript contract boundary
+infrastructure       Application Dockerfiles
+supabase              Local Supabase CLI/Auth configuration
+docs                  Governing architecture and operations documentation
 ```
 
-## Prerequisites
+## Linux prerequisites
 
-- Node.js 22 LTS or newer supported release below 25
-- npm 10+
-- Python 3.12–3.14
-- Docker with Compose
-- Supabase CLI for local identity
+- Docker Engine with Compose
+- Node-invoked Supabase CLI (`npx supabase`; verified with 2.109.1)
+- Node.js 22+ and npm 10+ plus Python 3.12–3.14 only for host-side development/tests
 
-No production credentials belong in this repository.
+If Docker reports socket permission denied, the requested one-line immediate activation is:
 
-## First local run
+```bash
+sudo usermod -aG docker "$USER" && newgrp docker
+```
+
+This repository never runs that command. Logging out and back in after `usermod` is the cleaner persistent group-session activation. Do not put real credentials in the repository. `.env` and `supabase/signing_keys.json` are ignored.
+
+## Live local bootstrap
 
 ```bash
 cp .env.example .env
-make bootstrap
-supabase start
-docker compose up -d db
+${EDITOR:-vi} .env
+(umask 077 && test -e supabase/signing_keys.json || printf '[]\n' > supabase/signing_keys.json)
+npx supabase gen signing-key --algorithm ES256
+npx supabase start
+npx supabase status
+docker compose config --quiet
+make infra
 make migrate
-make seed
-make api-dev
+docker compose run --rm api alembic current --check-heads
+make up
+docker compose ps --all
+curl --fail http://localhost:8000/health
+curl --fail http://localhost:8000/health/db
+curl --fail http://localhost:9000/minio/health/live
 ```
 
-In another terminal:
+Supabase CLI 2.109.1 reads a configured signing-key file before first generation, so the preceding guarded command creates a private-permission, non-secret empty JSON key array only when the ignored file is absent. The exact generation command then replaces it with ES256 key material; never print, inspect, copy, stage, or commit that file. Replace all `.env` `change-me` values, then manually copy only the browser-safe local anon key reported by `npx supabase status` into `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Never put the service-role key, secret key, JWT secret, or signing key in a `NEXT_PUBLIC_*` variable. Rebuild `web` whenever a public value changes because Next.js embeds it during the image build.
 
-```bash
-make web-dev
-```
+`make infra` starts healthchecked PostgreSQL and MinIO plus the idempotent private-bucket initializer. `make migrate` is the explicit, non-destructive-by-default Alembic upgrade command inside the API image. Migrations never run automatically on service startup. Open `http://localhost:3000`; the tracked Compose configuration binds application, database, and object ports to loopback. Recreate older containers before assuming their live bindings match the current file.
 
-Open `http://localhost:3000`; API documentation is local-only at `http://localhost:8000/docs`. The synthetic seed subjects support direct local API authorization-header testing. They are not real Supabase accounts.
+Live evidence on 2026-07-16 confirmed that the tracked Supabase project starts with CLI 2.109.1, Auth health succeeds, and JWKS returns HTTP `200` with exactly one ES256 key. Rebuilt/recreated web and API, PostgreSQL, and MinIO are healthy and loopback-bound; `minio-init` exited `0`; web `/` and `/agents` return success; and API `/health/db` reports reachable. `alembic upgrade head` and `alembic current --check-heads` reached `20260717_0005`; clean-environment API pytest and all 77 Vitest tests passed. `alembic check` is not green: it reports pre-existing Phase 1D model/schema drift involving indexes and foreign-key `ondelete`. Keep it as a diagnostic; it is not a fresh-bootstrap blocker and this deployment update does not rewrite historical schema behavior. Supabase CLI ports still bind broadly and require host-firewall protection; the upstream CLI stack is not production-hardened, local SMTP is capture rather than real delivery, and candidate uploads fail closed until an approved scanner exists.
 
-The local public site uses the owner-supplied Keeper Financial identity, contact details, and allow-listed secure application destination from `.env.example`. Public content is typed and repository-controlled in `apps/web/lib/public-content.ts`; public facts are validated in `apps/web/lib/site-config.ts`. A booking action remains absent unless an owner-supplied HTTPS URL passes the existing fail-closed validation. `/apply?agent=<safe-slug>` may carry only a grammar-checked attribution slug; the API still requires a published profile for lead attribution and a separately configured mapping for redirects.
+The API container database URL has this shape:
 
-To run all containerized application services after creating `.env` and starting local Supabase:
-
-```bash
-docker compose up --build
+```text
+postgresql+psycopg://keeper:<redacted>@db:5432/keeper
 ```
 
 ## Validation
 
+The tracked example can be rendered without reading `.env` or printing its values:
+
 ```bash
-make format
+KEEPER_ENV_FILE=.env.example docker compose --env-file .env.example config --quiet
+```
+
+Host-side application checks remain available:
+
+```bash
+make bootstrap
 make lint
 make typecheck
 make test
-make migrate-check
 make build
-make openapi
+git diff --check
 ```
 
-The exact Phase 1C validation evidence is documented in `docs/20_PHASE_1C_IMPLEMENTATION_REPORT.md`.
+## Shutdown
 
-The API OpenAPI document is exported into `packages/contracts/openapi.json`; `openapi-typescript` then creates and formats `packages/contracts/src/generated.ts`. Regenerate contracts with `make openapi` whenever a route or schema changes.
+```bash
+docker compose down
+npx supabase stop
+```
 
-## Local authorization boundary
+These commands preserve named data volumes. Do not add `--volumes` unless permanent local PostgreSQL/MinIO deletion is intentional.
 
-Supabase proves identity; it never grants portal access by itself. The API also requires an active, verified local `UserIdentity`, the appropriate `Role`/`UserRole`, the required `Candidate` relationship, and an allowed lifecycle state. Development identity headers work only when both `APP_ENV=local` and `DEV_AUTH_ENABLED=true`.
-
-The protected admin and candidate pages obtain the Supabase access token through the supported SDK and call FastAPI with no-store behavior. Candidate registration proves provider identity only; the published-posting start boundary atomically creates the narrow local candidate relationship. Application/document ownership, lifecycle, server-owned privacy evidence, candidate document AAL2, and admin role/AAL2 rules remain API-authoritative.
-
-See [local development](docs/LOCAL_DEVELOPMENT.md), [environment variables](docs/11_ENVIRONMENT_VARIABLES.md), and [known limitations](docs/15_KNOWN_LIMITATIONS.md).
+See [local operations](docs/LOCAL_DEVELOPMENT.md), [environment variables](docs/11_ENVIRONMENT_VARIABLES.md), and [known limitations](docs/15_KNOWN_LIMITATIONS.md).

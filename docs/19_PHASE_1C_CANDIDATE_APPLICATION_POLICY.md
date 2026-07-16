@@ -196,4 +196,4 @@ Additional rules:
 - A document-upload, restricted-document listing that exposes sensitive metadata, or document-view/download action must step up to AAL2 and re-run server-side ownership, relationship, lifecycle, quarantine, and authorization checks.
 - A short-lived URL does not replace AAL2 or authorization. It may be issued only after the checks succeed.
 - AAL2 must be asserted by the managed identity provider; the application must not accept a caller-supplied MFA flag.
-- Brokerage administrators remain subject to the existing mandatory nonlocal AAL2 policy.
+- Brokerage administrators remain subject to the mandatory live-production AAL2 policy.

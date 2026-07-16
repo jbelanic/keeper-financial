@@ -26,4 +26,15 @@ describe("controlled public configuration", () => {
     expect(config.principalBroker).toBeUndefined();
     expect(config.regulatoryText).toBe(approvedPublicFacts.regulatoryText);
   });
+
+  it("accepts only the live loopback HTTP site origin exception", () => {
+    expect(
+      getPublicSiteConfig({ NEXT_PUBLIC_SITE_URL: "http://localhost:3000" })
+        .siteUrl,
+    ).toBe("http://localhost:3000/");
+    expect(
+      getPublicSiteConfig({ NEXT_PUBLIC_SITE_URL: "http://remote.example" })
+        .siteUrl,
+    ).toBe(approvedPublicFacts.siteUrl);
+  });
 });

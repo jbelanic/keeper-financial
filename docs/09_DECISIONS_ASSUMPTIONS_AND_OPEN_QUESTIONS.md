@@ -15,6 +15,7 @@
 11. Use the exact Phase 1C candidate questionnaire, posting-specific application cardinality, optional résumé/cover-letter categories, privacy disclosure version, and candidate MFA policy in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 12. Permit multiple concurrent posting-specific applications, with no more than one nonterminal application per candidate/posting and immutable new attempts for permitted reapplication.
 13. Require candidate AAL2 for document upload and restricted-document access, but not for general portal access, draft saves, or application submission.
+14. Deploy the live/production system only as local Docker containers on the Linux host, with the Compose PostgreSQL database, MinIO object storage, and the repository-tracked local Supabase CLI/Auth stack. Do not use hosted Supabase, Cloudflare R2, or external cloud infrastructure credentials/services.
 
 ## Initial assumptions requiring confirmation
 
@@ -26,8 +27,6 @@
 - Preferred booking tool.
 - Preferred transactional email provider.
 - Preferred e-signature provider.
-- Cloud hosting selection.
-- R2 account and bucket availability.
 - Final retention periods.
 - Whether active-agent resources remain in this portal after onboarding.
 - Who may approve public agent profiles.
@@ -66,3 +65,4 @@ Record approved decisions here with date, owner, rationale, and affected documen
 - 2026-07-14 — Phase 1A content decision: typed repository-controlled content is the approved simplest content mechanism; no CMS or page builder is introduced.
 - 2026-07-14 — Phase boundary decision: `/careers` may present the brokerage but exposes no candidate workflow/posting record; `/agents` exposes a finished empty approved-publication boundary; dynamic slugs return non-public behavior until Phases 1C/1E.
 - 2026-07-15 — Phase 1C candidate policy approved in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: exact questionnaire and validation limits; posting-specific concurrent-application/reapplication rules; optional résumé and cover-letter categories only; immutable privacy disclosure `candidate-privacy-disclosure-2026-07-15-v1`; and candidate AAL2 for uploads and restricted-document access only. No regulatory suitability, licensing, background-check, government-identity, identity-document, or financial questions/documents were introduced.
+- 2026-07-16 — Owner deployment decision: the local Linux Docker containers are the live/production targets. Application data uses the Compose PostgreSQL service, objects use private Compose MinIO, and identity uses the existing local Supabase CLI/Auth configuration because the current auth code requires Supabase semantics. Hosted Supabase, Cloudflare R2, and remote cloud infrastructure are excluded.

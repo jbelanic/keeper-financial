@@ -1,23 +1,22 @@
 # Environment Variable Reference
 
-`.env.example` is the executable reference. `.env` files are ignored. Values prefixed `NEXT_PUBLIC_` are browser-visible and must never contain secrets.
+`.env.example` is the executable reference for the live local Docker stack. Copy it to the ignored `.env` and replace every `change-me` value. Values prefixed `NEXT_PUBLIC_` are browser-visible and must never contain secrets. Compose overrides container-only routes so internal traffic always uses service DNS.
 
 | Group | Variables | Rule |
 |---|---|---|
-| Tier | `APP_ENV`, `DEBUG`, `DEV_AUTH_ENABLED`, `REQUIRE_ADMIN_MFA` | Nonlocal rejects debug/dev auth and requires admin MFA. |
-| Origins | `WEB_ORIGIN`, `CORS_ORIGINS` | Nonlocal requires HTTPS, no loopback, and no wildcard. |
-| Database | `DATABASE_URL` | Application PostgreSQL connection; secret outside local. |
-| Supabase | `SUPABASE_ISSUER`, `SUPABASE_AUDIENCE`, `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ALGORITHMS` | API accepts only configured asymmetric algorithms, issuer, and audience. |
-| Lead abuse guard | `LEAD_RATE_LIMIT_REQUESTS`, `LEAD_RATE_LIMIT_WINDOW_SECONDS`, `LEAD_RATE_LIMIT_TRACKED_CLIENTS` | Always-on, bounded process-local limiter. The API keys only on the direct peer and never trusts forwarding headers. |
-| Web identity | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The anon key is intended for a browser; it is not authorization. |
-| Storage | `STORAGE_BACKEND`, `LOCAL_STORAGE_PATH`, `PUBLIC_OBJECT_URLS_ENABLED`, `MAX_DOCUMENT_BYTES`, `ALLOWED_DOCUMENT_MIME_TYPES` | Local backend only in local. Public object URLs always fail validation. Phase 1C permits only the exact PDF, DOC, and DOCX MIME allow-list and caps files at 10 MiB. |
-| Local Compose storage owner | `LOCAL_UID`, `LOCAL_GID` | Local Docker Compose only. Defaults to `1000:1000`; set to the host `id -u`/`id -g` so the non-root API can write the bind-mounted ignored storage directory without world-writable permissions. |
-| Malware scan | `MALWARE_SCANNER_BACKEND` | `local_test` is deterministic local/test plumbing and is prohibited nonlocally. `disabled` is the only honest nonlocal value until an approved production adapter exists; upload then fails closed before storage/metadata success. |
-| R2 | `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_REGION`, `SIGNED_URL_TTL_SECONDS` | All required for R2. Bucket must be private; TTL is 30–300 seconds. |
-| Mortgage provider | `MORTGAGE_APPLICATION_PROVIDER`, `MORTGAGE_APPLICATION_URL`, `MORTGAGE_APPLICATION_ALLOWED_HOSTS`, `MORTGAGE_APPLICATION_AGENT_LINKS` | The owner-approved brokerage-wide destination is `https://apply.keeperfinancial.ca/`. Destinations require HTTPS, exact allow-list match, and no query/fragment/credentials. Agent links remain empty unless separately approved and are never request-provided destinations. |
-| Deferred providers | `ESIGN_PROVIDER`, `CRM_PROVIDER` | Adapter labels only; `disabled` is the honest default. |
-| Web/API | `API_INTERNAL_URL`, `NEXT_PUBLIC_API_BASE_URL` | Server and browser API locations. |
-| Public site | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME`, `NEXT_PUBLIC_BROKERAGE_LEGAL_NAME`, `NEXT_PUBLIC_BROKERAGE_REGULATORY_TEXT`, `NEXT_PUBLIC_PUBLIC_ADDRESS`, `NEXT_PUBLIC_PUBLIC_EMAIL`, `NEXT_PUBLIC_PUBLIC_PHONE`, `NEXT_PUBLIC_PUBLIC_PHONE_E164`, `NEXT_PUBLIC_MORTGAGE_APPLICATION_URL` | Browser-visible owner-supplied public facts. Source defaults match the supplied approved values; invalid URL overrides fail back to approved configuration. |
-| Optional public values | `NEXT_PUBLIC_BOOKING_URL`, `NEXT_PUBLIC_PRINCIPAL_BROKER` | Empty by default. Invalid/missing booking URLs and blank principal-broker values are not rendered. No booking vendor or principal broker is inferred. |
+| Mode | `APP_ENV`, `DEBUG`, `DEV_AUTH_ENABLED`, `REQUIRE_ADMIN_MFA` | Live Compose uses `production`, disables debug/dev headers, and requires admin MFA. `local` is limited to isolated development/tests. |
+| Origins | `WEB_ORIGIN`, `CORS_ORIGINS` | Live traffic is loopback-only HTTP; wildcards fail validation. |
+| PostgreSQL | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DATABASE_URL` | Compose injects `postgresql+psycopg://…@db:5432/…`; `localhost` is invalid inside the API container. Passwords used in the URL must be URL-safe or percent-encoded. |
+| Supabase Auth | `SUPABASE_ISSUER`, `SUPABASE_AUDIENCE`, `SUPABASE_JWKS_URL`, `SUPABASE_JWT_ALGORITHMS` | Only the local CLI/Auth endpoint is supported. The issuer remains loopback because it is embedded in tokens; Compose routes JWKS through `host.docker.internal`. |
+| Web identity | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The URL and browser-visible local anon key come from `npx supabase status`; copy only the anon key into `.env`. It is identity plumbing, not application authorization. |
+| MinIO | `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET` | Local-only credentials live in ignored `.env`. `minio-init` creates the private bucket idempotently and disables anonymous access; the MinIO server receives the exact loopback origin through `MINIO_API_CORS_ALLOW_ORIGIN`. |
+| S3 adapter | `STORAGE_BACKEND`, `S3_ENDPOINT_URL`, `S3_PUBLIC_ENDPOINT_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_REGION`, `SIGNED_URL_TTL_SECONDS` | Live uses `s3`, internal `http://minio:9000`, public loopback `http://localhost:9000`, and forced path-style signed requests. No R2 settings are supported. |
+| Object policy | `PUBLIC_OBJECT_URLS_ENABLED`, `MAX_DOCUMENT_BYTES`, `ALLOWED_DOCUMENT_MIME_TYPES` | Public object URLs are prohibited. Candidate files retain the PDF/DOC/DOCX allow-list and 10 MiB cap. |
+| Malware scan | `MALWARE_SCANNER_BACKEND` | Live uses `disabled` until an approved local scanner exists, so candidate upload fails closed before storage/metadata success. `local_test` is test plumbing only. |
+| Lead abuse guard | `LEAD_RATE_LIMIT_REQUESTS`, `LEAD_RATE_LIMIT_WINDOW_SECONDS`, `LEAD_RATE_LIMIT_TRACKED_CLIENTS` | Always-on, bounded process-local limiter; forwarding headers are not trusted. |
+| Mortgage provider | `MORTGAGE_APPLICATION_PROVIDER`, `MORTGAGE_APPLICATION_URL`, `MORTGAGE_APPLICATION_ALLOWED_HOSTS`, `MORTGAGE_APPLICATION_AGENT_LINKS` | Existing product redirect boundary only; destinations require HTTPS and exact allow-list matching. |
+| Deferred providers | `ESIGN_PROVIDER`, `CRM_PROVIDER` | Adapter labels only; `disabled` remains the safe default. |
+| Web/API | `API_INTERNAL_URL`, `NEXT_PUBLIC_API_BASE_URL` | Server traffic uses `http://api:8000`; browsers use `http://localhost:8000`. |
+| Public site | `NEXT_PUBLIC_SITE_URL` and the remaining `NEXT_PUBLIC_*` identity/contact values | Browser-visible owner-supplied facts. The web Docker build receives them as build arguments because Next.js embeds public values at build time. |
 
-For `staging_non_sensitive` and `production`, startup fails unless R2 credentials/endpoints, hosted Supabase endpoints, HTTPS origins, disabled development authentication, disabled debug, and mandatory admin MFA are configured safely. Candidate upload additionally requires a future approved nonlocal malware-scanner adapter; the current `disabled` value makes upload unavailable rather than implying scanning. Mortgage, CRM, and e-signature providers may remain disabled; their features then fail explicitly and safely.
+Production startup validation is intentionally topology-specific: it rejects remote database, identity, object-storage, and web origins rather than silently accepting hosted infrastructure. No real credentials belong in the repository.

@@ -480,6 +480,7 @@ class AgentProfile(IdTimestampsMixin, Base):
         status_check(
             "status", [item.value for item in AgentProfileStatus], "ck_agent_profile_status"
         ),
+        Index("ix_agent_profiles_publication", "status", "published_at", "id"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -490,6 +491,17 @@ class AgentProfile(IdTimestampsMixin, Base):
     approved_title: Mapped[str] = mapped_column(String(160))
     licence_number: Mapped[str] = mapped_column(String(80))
     biography: Mapped[str] = mapped_column(String(3000), default="")
+    languages: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
+    service_areas: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
+    specialties: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
+    photo_url: Mapped[str | None] = mapped_column(String(2048), default=None)
+    photo_alt_text: Mapped[str | None] = mapped_column(String(300), default=None)
+    public_email: Mapped[str | None] = mapped_column(String(320), default=None)
+    public_phone: Mapped[str | None] = mapped_column(String(32), default=None)
+    social_links: Mapped[list[dict[str, str]]] = mapped_column(
+        JSON, default=list, server_default="[]"
+    )
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(32), default=AgentProfileStatus.DRAFT.value)
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
