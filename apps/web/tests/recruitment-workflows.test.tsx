@@ -34,7 +34,7 @@ describe("public recruitment postings", () => {
     ).toHaveAttribute("href", "/careers/synthetic-advisor-opportunity");
     expect(fetcher).toHaveBeenCalledWith(
       expect.stringContaining("/api/v1/recruitment/postings?limit=25&offset=0"),
-      expect.objectContaining({ next: { revalidate: 60 } }),
+      expect.objectContaining({ next: { revalidate: 10 } }),
     );
   });
 

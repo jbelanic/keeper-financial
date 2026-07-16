@@ -16,12 +16,14 @@ export type AdminPosting = components["schemas"]["AdminPosting"];
 export type AdminPostingList = components["schemas"]["AdminPostingList"];
 
 export const apiBaseUrl = () =>
-  process.env.API_INTERNAL_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.API_INTERNAL_URL ??
+  "http://localhost:8000";
 
 export async function getPublishedPostings(): Promise<PublicPostingList> {
   const response = await fetch(
     `${apiBaseUrl()}/api/v1/recruitment/postings?limit=25&offset=0`,
-    { next: { revalidate: 60 } },
+    { next: { revalidate: 10 } },
   );
   if (!response.ok) throw new Error("published postings unavailable");
   return (await response.json()) as PublicPostingList;
@@ -34,7 +36,7 @@ export async function getPublishedPosting(
     return null;
   const response = await fetch(
     `${apiBaseUrl()}/api/v1/recruitment/postings/${encodeURIComponent(slug)}`,
-    { next: { revalidate: 60 } },
+    { next: { revalidate: 0 } },
   );
   if (response.status === 404) return null;
   if (!response.ok) throw new Error("published posting unavailable");

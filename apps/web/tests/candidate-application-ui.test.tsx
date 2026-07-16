@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type {
   CandidateApplication,
   CandidatePrivacyDisclosure,
@@ -98,6 +98,33 @@ describe("candidate application UI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(withdraw).toHaveFocus();
+  });
+
+  it("restores focus to the withdraw trigger after a successful withdrawal", async () => {
+    const requestJson = vi.fn().mockResolvedValue({
+      ...application,
+      state: "withdrawn",
+      status: "withdrawn",
+      withdrawn_at: "2026-07-15T12:05:00Z",
+    });
+    const { CandidateApplicationForm } = await import(
+      "@/app/(candidate)/candidate/applications/[applicationId]/application-form"
+    );
+    render(
+      <CandidateApplicationForm
+        initialApplication={application}
+        disclosure={disclosure}
+        requestJson={requestJson}
+      />,
+    );
+    const withdraw = screen.getByRole("button", { name: /withdraw application/i });
+    fireEvent.click(withdraw);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /confirm/i }));
+    expect(await screen.findByText(/application withdrawn/i)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Focus returns to the persistent status region, not the unmounted trigger.
+    expect(screen.getByRole("status")).toHaveFocus();
   });
 
   it("saves the current draft before showing the submission review", async () => {

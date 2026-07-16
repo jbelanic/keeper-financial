@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from datetime import date, datetime
 from typing import Literal
@@ -268,7 +269,7 @@ _MONTH = re.compile(r"^(19|20)\d{2}-(0[1-9]|1[0-2])$")
 def _single(value: str | None) -> str | None:
     if value is None:
         return None
-    clean = value.strip()
+    clean = unicodedata.normalize("NFKC", value).strip()
     if not clean or _CONTROL_SINGLE.search(clean):
         raise ValueError("enter plain single-line text")
     return clean
@@ -277,7 +278,7 @@ def _single(value: str | None) -> str | None:
 def _multi(value: str | None) -> str | None:
     if value is None:
         return None
-    clean = value.strip()
+    clean = unicodedata.normalize("NFKC", value).strip()
     if not clean or _CONTROL_MULTI.search(clean):
         raise ValueError("enter plain text without control characters")
     return clean

@@ -73,6 +73,7 @@ export function CandidateApplicationForm({
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const withdrawButtonRef = useRef<HTMLButtonElement>(null);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const editable = application.state === "draft";
   const fieldError = (prefix: string) =>
@@ -200,6 +201,10 @@ export function CandidateApplicationForm({
       setApplication(updated);
       setNotice("Application withdrawn. The retained record is read-only.");
       setWithdrawOpen(false);
+      // Return focus to the persistent status region so keyboard and
+      // screen-reader users are not stranded after the modal closes and the
+      // withdraw trigger is unmounted.
+      noticeRef.current?.focus();
     } catch {
       setErrors(["The application could not be withdrawn."]);
     } finally {
@@ -227,7 +232,7 @@ export function CandidateApplicationForm({
         Current status:{" "}
         <StatusBadge>{application.status.replaceAll("_", " ")}</StatusBadge>
       </p>
-      <p aria-live="polite" role="status">
+      <p aria-live="polite" role="status" tabIndex={-1} ref={noticeRef}>
         {notice}
       </p>
       <ErrorSummary errors={errors} />

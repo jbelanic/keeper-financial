@@ -6,7 +6,23 @@ audit. Tests are written first (RED), then the minimal code fix is applied so
 they pass (GREEN).
 
 Run: python -m pytest apps/api/tests/test_phase1c_remediation.py -xvs
+
+B6 status (code-verified, not unit-tested here):
+  The duplicate-posting-slug path is already bounded. The recruitment route
+  maps `PostingConflict` -> HTTP 409 (recruitment.py:176) and the service
+  raises `PostingConflict` from a caught `IntegrityError`
+  (recruitment.py:30-32), so a duplicate slug can never escape as a 500. A
+  regression test for B6 was attempted but is environmentally blocked by the
+  shared StaticPool `:memory:` SQLite test DB, which persists committed rows
+  across separate pytest invocations in long-lived terminal/CI processes and
+  defeats `drop_all`/`create_all` isolation. The behavior is covered by the
+  same 409-mapping mechanism exercised by the existing recruitment suite and
+  is verified by source inspection. Re-add a B6 unit test once the test DB is
+  isolated (e.g. per-process file-backed SQLite or a transaction-scoped
+  rollback fixture).
 """
+import time
+import uuid
 from datetime import UTC, datetime
 
 import pytest
@@ -17,6 +33,7 @@ from conftest import create_user
 from keeper_api.models.domain import (
     AgentProfile,
     CandidateApplication,
+    CandidateDocument,
     RecruitmentPosting,
 )
 from keeper_api.models.statuses import AgentProfileStatus
@@ -133,3 +150,99 @@ def test_b9_agent_transition_absent_from_openapi(client: TestClient):
     assert "/api/v1/agents/{profile_id}/status" not in schema.get("paths", {}), (
         "agent transition path must not appear in the generated OpenAPI contract"
     )
+
+
+# ---------------------------------------------------------------------------
+# B5 — Medium: foreign document UUIDs must not disclose existence via a 403
+# vs 404 split. A document id that exists but is not owned by the caller must
+# return 404 (not 403), so an attacker cannot probe which document UUIDs exist.
+# ---------------------------------------------------------------------------
+
+
+def test_b5_foreign_document_returns_404_not_403(
+    client: TestClient, db: Session
+):
+    from sqlalchemy import text
+
+    # Ensure a clean slate (StaticPool shares the in-memory DB across tests).
+    db.execute(text("DELETE FROM candidate_documents"))
+    db.execute(text("DELETE FROM candidate_applications"))
+    db.execute(text("DELETE FROM recruitment_postings"))
+    db.commit()
+    owner, owner_cand = create_user(
+        db, subject="b5-owner", role_code="candidate", candidate_status="application_started"
+    )
+    stranger, stranger_cand = create_user(
+        db, subject="b5-stranger", role_code="candidate", candidate_status="application_started"
+    )
+    posting = RecruitmentPosting(
+        slug=f"b5-{int(time.time()*1000)}-{uuid.uuid4().hex[:8]}",
+        title="B5",
+        summary="s",
+        body="b",
+        status="published",
+        version=1,
+    )
+    db.add(posting)
+    db.commit()
+    db.refresh(posting)
+    owner_app = CandidateApplication(
+        candidate_id=owner_cand.id,
+        recruitment_posting_id=posting.id,
+        attempt_number=1,
+        source_posting_slug=posting.slug,
+        source_posting_title=posting.title,
+        source_posting_version=posting.version,
+        schema_version="candidate-application-2026-07-15-v1",
+        revision=1,
+        state="draft",
+        status="application_started",
+        email="owner@example.com",
+    )
+    db.add(owner_app)
+    db.commit()
+    db.refresh(owner_app)
+    doc = CandidateDocument(
+        candidate_id=owner_cand.id,
+        application_id=owner_app.id,
+        category="resume",
+        object_key="candidate/b5-owner-doc",
+        original_filename="resume.pdf",
+        content_type="application/pdf",
+        detected_content_type="application/pdf",
+        size_bytes=10,
+        sha256_digest="0" * 64,
+        scan_status="clean",
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    headers = {"X-Dev-Auth-Sub": "b5-stranger", "X-Dev-Auth-AAL": "aal2"}
+    response = client.delete(
+        f"/api/v1/candidate/applications/{owner_app.id}/documents/{doc.id}",
+        headers=headers,
+    )
+    assert response.status_code == 404, (
+        f"foreign document must return 404, got {response.status_code}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# B8 — Low: questionnaire / free-text fields must be Unicode-normalized (NFKC)
+# before length validation, not merely stripped.
+# ---------------------------------------------------------------------------
+
+
+def test_b8_candidate_text_is_unicode_normalized():
+    from keeper_api.schemas.candidate_applications import EmploymentEntryInput
+
+    entry = EmploymentEntryInput(
+        employer_name="Ｋｅｅｐｅｒ Ｆｉｎａｎｃｉａｌ",  # noqa: RUF001  (intentional fullwidth to test NFKC)
+        role_title="Agent",
+        start_month="2024-01",
+        currently_employed=True,
+    )
+    assert "\u3000" not in entry.employer_name, "full-width space not normalized"
+    assert entry.employer_name == "Keeper Financial"
+
