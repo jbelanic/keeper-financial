@@ -18,7 +18,7 @@
 | B8 | Low | Fixed | `064ff63` | regression test green |
 | B9 | High | Fixed | `57de54d` | 2/2 tests green |
 | B10 | Medium | Fixed | `064ff63` | web test added + green |
-| Semgrep | Low | Deferred — CI hardening, non-blocking | — | tracked |
+| Semgrep | Low | Fixed — GitHub Actions pinned to commit SHAs | `064ff63`→`ci.yml` | `semgrep --config p/github-actions`: 0 findings |
 
 **Test status:** API suite 136 passed / 1 skipped. Web suite 70/70 passed. `ruff`, `mypy`, `tsc`, and `next build` all clean.
 
@@ -85,11 +85,16 @@ persistent `role="status"` notice region (the withdraw trigger unmounts once
 `ref` + `tabIndex={-1}` to the notice `<p>`. New test asserts focus returns to
 the status region.
 
-### Semgrep — GitHub Actions mutable tags (LOW) — DEFERRED
-`.github/workflows/ci.yml` uses `actions/checkout@v4`, `actions/setup-node@v4`,
-`actions/setup-python@v5`. Pinning to commit SHAs is CI hardening and is
-non-blocking for the application security posture. Tracked as a follow-up
-(Phase 1D CI hardening).
+### Semgrep — GitHub Actions mutable tags (LOW) — FIXED
+`.github/workflows/ci.yml` used mutable major-version tags
+(`actions/checkout@v4`, `actions/setup-node@v4`, `actions/setup-python@v5`).
+All three are now pinned to full commit SHAs (with a `# vX.Y.Z` comment for
+traceability), resolved via `gh api` against each tag ref:
+- `actions/checkout` → `34e114876b0b11c390a56381ad16ebd13914f8d5`
+- `actions/setup-node` → `49933ea5288caeca8642d1e84afbd3f7d6820020`
+- `actions/setup-python` → `a26af69be951a213d495a4c3e4e4022e16d87065`
+
+Verified with `semgrep --config p/github-actions` on the workflow: **0 findings**.
 
 ## Verification commands (all green)
 - API: `.venv/bin/pytest apps/api/tests` → 136 passed, 1 skipped
