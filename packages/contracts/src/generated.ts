@@ -4,2212 +4,3952 @@
  */
 
 export interface paths {
-  "/health": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health */
+        get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Health */
-    get: operations["health_health_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/health/db": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/health/db": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Database Health */
+        get: operations["database_health_health_db_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Database Health */
-    get: operations["database_health_health_db_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/access": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/auth/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portal Access */
+        get: operations["portal_access_api_v1_auth_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Portal Access */
-    get: operations["portal_access_api_v1_auth_access_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/leads": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Leads */
+        get: operations["get_leads_api_v1_leads_get"];
+        put?: never;
+        /** Submit Lead */
+        post: operations["submit_lead_api_v1_leads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Leads */
-    get: operations["get_leads_api_v1_leads_get"];
-    put?: never;
-    /** Submit Lead */
-    post: operations["submit_lead_api_v1_leads_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/leads/{lead_id}/marketing-consent/withdrawal": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/leads/{lead_id}/marketing-consent/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Lead Marketing Consent */
+        post: operations["withdraw_lead_marketing_consent_api_v1_leads__lead_id__marketing_consent_withdrawal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Withdraw Lead Marketing Consent */
-    post: operations["withdraw_lead_marketing_consent_api_v1_leads__lead_id__marketing_consent_withdrawal_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/integrations/mortgage-application": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/integrations/mortgage-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mortgage Application Redirect */
+        get: operations["mortgage_application_redirect_api_v1_integrations_mortgage_application_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Mortgage Application Redirect */
-    get: operations["mortgage_application_redirect_api_v1_integrations_mortgage_application_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/recruitment/postings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/recruitment/postings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Public Postings */
+        get: operations["list_public_postings_api_v1_recruitment_postings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List Public Postings */
-    get: operations["list_public_postings_api_v1_recruitment_postings_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/recruitment/postings/{slug}/applications/start": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/recruitment/postings/{slug}/applications/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Candidate Application */
+        post: operations["start_candidate_application_api_v1_recruitment_postings__slug__applications_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Start Candidate Application */
-    post: operations["start_candidate_application_api_v1_recruitment_postings__slug__applications_start_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/recruitment/postings/{slug}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/recruitment/postings/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Public Posting */
+        get: operations["get_public_posting_api_v1_recruitment_postings__slug__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Public Posting */
-    get: operations["get_public_posting_api_v1_recruitment_postings__slug__get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/admin/recruitment-postings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/admin/recruitment-postings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Admin Postings */
+        get: operations["list_admin_postings_api_v1_admin_recruitment_postings_get"];
+        put?: never;
+        /** Create Admin Posting */
+        post: operations["create_admin_posting_api_v1_admin_recruitment_postings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List Admin Postings */
-    get: operations["list_admin_postings_api_v1_admin_recruitment_postings_get"];
-    put?: never;
-    /** Create Admin Posting */
-    post: operations["create_admin_posting_api_v1_admin_recruitment_postings_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/admin/recruitment-postings/{posting_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/admin/recruitment-postings/{posting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Admin Posting */
+        patch: operations["patch_admin_posting_api_v1_admin_recruitment_postings__posting_id__patch"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Patch Admin Posting */
-    patch: operations["patch_admin_posting_api_v1_admin_recruitment_postings__posting_id__patch"];
-    trace?: never;
-  };
-  "/api/v1/admin/recruitment-postings/{posting_id}/{action}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/admin/recruitment-postings/{posting_id}/{action}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transition Admin Posting */
+        post: operations["transition_admin_posting_api_v1_admin_recruitment_postings__posting_id___action__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Transition Admin Posting */
-    post: operations["transition_admin_posting_api_v1_admin_recruitment_postings__posting_id___action__post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/applications": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Candidate Applications */
+        get: operations["list_candidate_applications_api_v1_candidate_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List Candidate Applications */
-    get: operations["list_candidate_applications_api_v1_candidate_applications_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/applications/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Candidate Status */
+        get: operations["candidate_status_api_v1_candidate_applications_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Candidate Status */
-    get: operations["candidate_status_api_v1_candidate_applications_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/applications/{application_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Candidate Application */
+        get: operations["get_candidate_application_api_v1_candidate_applications__application_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Candidate Application */
+        patch: operations["patch_candidate_application_api_v1_candidate_applications__application_id__patch"];
+        trace?: never;
     };
-    /** Get Candidate Application */
-    get: operations["get_candidate_application_api_v1_candidate_applications__application_id__get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Patch Candidate Application */
-    patch: operations["patch_candidate_application_api_v1_candidate_applications__application_id__patch"];
-    trace?: never;
-  };
-  "/api/v1/candidate/applications/{application_id}/submit": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications/{application_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Candidate Application */
+        post: operations["submit_candidate_application_api_v1_candidate_applications__application_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Submit Candidate Application */
-    post: operations["submit_candidate_application_api_v1_candidate_applications__application_id__submit_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/applications/{application_id}/withdraw": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications/{application_id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw Candidate Application */
+        post: operations["withdraw_candidate_application_api_v1_candidate_applications__application_id__withdraw_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Withdraw Candidate Application */
-    post: operations["withdraw_candidate_application_api_v1_candidate_applications__application_id__withdraw_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/privacy-disclosure": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/privacy-disclosure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Candidate Privacy Disclosure */
+        get: operations["candidate_privacy_disclosure_api_v1_candidate_privacy_disclosure_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Candidate Privacy Disclosure */
-    get: operations["candidate_privacy_disclosure_api_v1_candidate_privacy_disclosure_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/applications/{application_id}/documents": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications/{application_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Candidate Documents */
+        get: operations["list_candidate_documents_api_v1_candidate_applications__application_id__documents_get"];
+        put?: never;
+        /** Upload Candidate Document */
+        post: operations["upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List Candidate Documents */
-    get: operations["list_candidate_documents_api_v1_candidate_applications__application_id__documents_get"];
-    put?: never;
-    /** Upload Candidate Document */
-    post: operations["upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/candidate/applications/{application_id}/documents/{document_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/candidate/applications/{application_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Draft Candidate Document */
+        delete: operations["remove_draft_candidate_document_api_v1_candidate_applications__application_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Remove Draft Candidate Document */
-    delete: operations["remove_draft_candidate_document_api_v1_candidate_applications__application_id__documents__document_id__delete"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/documents/{document_id}/download": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/documents/{document_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Candidate Document */
+        get: operations["download_candidate_document_api_v1_documents__document_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Download Candidate Document */
-    get: operations["download_candidate_document_api_v1_documents__document_id__download_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/api/v1/admin/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Review Queue */
+        get: operations["list_review_queue_api_v1_admin_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/candidates/{candidate_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Candidate Detail */
+        get: operations["get_candidate_detail_api_v1_admin_candidates__candidate_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/candidates/{candidate_id}/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Interview Status */
+        post: operations["set_interview_status_api_v1_admin_candidates__candidate_id__interview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/candidates/{candidate_id}/information-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Information Request */
+        post: operations["create_information_request_api_v1_admin_candidates__candidate_id__information_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/candidates/{candidate_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Candidate Status */
+        post: operations["decide_candidate_status_api_v1_admin_candidates__candidate_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/candidates/{candidate_id}/assign-onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign Onboarding */
+        post: operations["assign_onboarding_api_v1_admin_candidates__candidate_id__assign_onboarding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Plans */
+        get: operations["list_plans_api_v1_admin_onboarding_plans_get"];
+        put?: never;
+        /** Create Plan */
+        post: operations["create_plan_api_v1_admin_onboarding_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Plan */
+        get: operations["get_plan_api_v1_admin_onboarding_plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/tasks/{task_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Candidate Task */
+        post: operations["review_candidate_task_api_v1_admin_onboarding_candidates__candidate_id__tasks__task_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/esign-envelopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link Envelope */
+        post: operations["link_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/esign-envelopes/{envelope_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Envelope */
+        patch: operations["update_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes__envelope_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Satisfy Activation Gate */
+        post: operations["satisfy_activation_gate_api_v1_admin_onboarding_candidates__candidate_id__gates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/onboarding/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Documents */
+        get: operations["list_documents_api_v1_admin_onboarding_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Onboarding Dashboard */
+        get: operations["onboarding_dashboard_api_v1_candidate_onboarding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/onboarding/tasks/{task_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Evidence */
+        post: operations["submit_evidence_api_v1_candidate_onboarding_tasks__task_id__evidence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/onboarding/acknowledgements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge */
+        post: operations["acknowledge_api_v1_candidate_onboarding_acknowledgements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /** AccessResponse */
-    AccessResponse: {
-      /** Allowed */
-      allowed: boolean;
-      /** Area */
-      area: string;
-      /**
-       * User Id
-       * Format: uuid
-       */
-      user_id: string;
-      /** Roles */
-      roles: string[];
+    schemas: {
+        /** AccessResponse */
+        AccessResponse: {
+            /** Allowed */
+            allowed: boolean;
+            /** Area */
+            area: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Roles */
+            roles: string[];
+        };
+        /** ActivationGateResponse */
+        ActivationGateResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            status: components["schemas"]["GateStatus"];
+            /** Satisfied At */
+            satisfied_at: string | null;
+        };
+        /** AdminPosting */
+        AdminPosting: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Body */
+            body: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "closed" | "archived";
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Published At */
+            published_at: string | null;
+            /** Closed At */
+            closed_at: string | null;
+            /** Archived At */
+            archived_at: string | null;
+        };
+        /** AdminPostingList */
+        AdminPostingList: {
+            /** Items */
+            items: components["schemas"]["AdminPosting"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** ApplicationAction */
+        ApplicationAction: {
+            /** Expected Revision */
+            expected_revision: number;
+        };
+        /** ApplicationDraftUpdate */
+        ApplicationDraftUpdate: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Given Name */
+            given_name?: string | null;
+            /** Family Name */
+            family_name?: string | null;
+            /** Preferred Name */
+            preferred_name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** City */
+            city?: string | null;
+            /** Region */
+            region?: string | null;
+            /** Country Code */
+            country_code?: string | null;
+            /** Preferred Contact Method */
+            preferred_contact_method?: ("email" | "phone" | "no_preference") | null;
+            /** Available From */
+            available_from?: string | null;
+            /** Referral Source */
+            referral_source?: ("keeper_website" | "search" | "social_media" | "employee_or_agent_referral" | "event" | "other" | "prefer_not_to_say") | null;
+            /** Referral Detail */
+            referral_detail?: string | null;
+            /** Interest Statement */
+            interest_statement?: string | null;
+            /** Relevant Experience */
+            relevant_experience?: string | null;
+            /** Employment */
+            employment?: components["schemas"]["EmploymentEntryInput"][] | null;
+            /** Education */
+            education?: components["schemas"]["EducationEntryInput"][] | null;
+            /** Privacy Acknowledged */
+            privacy_acknowledged?: boolean | null;
+            /** Information Accuracy Confirmed */
+            information_accuracy_confirmed?: boolean | null;
+        };
+        /** ApplicationListResponse */
+        ApplicationListResponse: {
+            /** Applications */
+            applications: components["schemas"]["CandidateApplicationResponse"][];
+        };
+        /** Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post */
+        Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
+            /** Category */
+            category: string;
+            /** File */
+            file: string;
+        };
+        /** CandidateApplicationResponse */
+        CandidateApplicationResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Recruitment Posting Id
+             * Format: uuid
+             */
+            recruitment_posting_id: string;
+            /** Source Posting Slug */
+            source_posting_slug: string;
+            /** Source Posting Title */
+            source_posting_title: string;
+            /** Source Posting Version */
+            source_posting_version: number;
+            /** Schema Version */
+            schema_version: string;
+            /** Revision */
+            revision: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "draft" | "submitted" | "withdrawn";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "application_started" | "application_submitted" | "withdrawn" | "declined";
+            /** Email */
+            email: string;
+            /** Given Name */
+            given_name: string | null;
+            /** Family Name */
+            family_name: string | null;
+            /** Preferred Name */
+            preferred_name: string | null;
+            /** Phone */
+            phone: string | null;
+            /** City */
+            city: string | null;
+            /** Region */
+            region: string | null;
+            /** Country Code */
+            country_code: string | null;
+            /** Preferred Contact Method */
+            preferred_contact_method: string | null;
+            /** Available From */
+            available_from: string | null;
+            /** Referral Source */
+            referral_source: string | null;
+            /** Referral Detail */
+            referral_detail: string | null;
+            /** Interest Statement */
+            interest_statement: string | null;
+            /** Relevant Experience */
+            relevant_experience: string | null;
+            /** Employment */
+            employment: components["schemas"]["EmploymentEntryResponse"][];
+            /** Education */
+            education: components["schemas"]["EducationEntryResponse"][];
+            /** Privacy Acknowledged */
+            privacy_acknowledged: boolean;
+            /** Information Accuracy Confirmed */
+            information_accuracy_confirmed: boolean;
+            /** Privacy Disclosure Version */
+            privacy_disclosure_version: string | null;
+            /** Privacy Acknowledged At */
+            privacy_acknowledged_at: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Withdrawn At */
+            withdrawn_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CandidateDecisionRequest
+         * @description REV-004/005: select, decline, or withdraw with a required reason where applicable.
+         */
+        CandidateDecisionRequest: {
+            decision: components["schemas"]["CandidateStatus"];
+            /** Reason */
+            reason?: string | null;
+        };
+        /** CandidateDetailResponse */
+        CandidateDetailResponse: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            status: components["schemas"]["CandidateStatus"];
+            /** Given Name */
+            given_name: string | null;
+            /** Family Name */
+            family_name: string | null;
+            /** Email */
+            email: string;
+            interview_status: components["schemas"]["InterviewStatus"] | null;
+            /** Interview Notes */
+            interview_notes: string | null;
+            /** Interview Recorded At */
+            interview_recorded_at: string | null;
+            /** Assigned Onboarding Plan Id */
+            assigned_onboarding_plan_id: string | null;
+            /** Assigned Onboarding At */
+            assigned_onboarding_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CandidateDocumentList */
+        CandidateDocumentList: {
+            /** Items */
+            items: components["schemas"]["CandidateDocumentResponse"][];
+        };
+        /** CandidateDocumentResponse */
+        CandidateDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "resume" | "cover_letter";
+            /** Original Filename */
+            original_filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Scan Status */
+            scan_status: string;
+            /** Quarantined */
+            quarantined: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** CandidateOnboardingDashboard */
+        CandidateOnboardingDashboard: {
+            assignment: components["schemas"]["OnboardingAssignmentResponse"] | null;
+            /** Tasks */
+            tasks: components["schemas"]["CandidateOnboardingTaskResponse"][];
+            /** Gates */
+            gates: components["schemas"]["ActivationGateResponse"][];
+            /** Documents */
+            documents: components["schemas"]["ControlledDocumentResponse"][];
+            /** Acknowledgements */
+            acknowledgements: components["schemas"]["PolicyAcknowledgementResponse"][];
+            /** Esign Envelopes */
+            esign_envelopes: components["schemas"]["EsignEnvelopeResponse"][];
+            /** Activation Ready */
+            activation_ready: boolean;
+        };
+        /** CandidateOnboardingTaskResponse */
+        CandidateOnboardingTaskResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /**
+             * Onboarding Task Id
+             * Format: uuid
+             */
+            onboarding_task_id: string;
+            status: components["schemas"]["OnboardingTaskStatus"];
+            /** Due At */
+            due_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Completed By User Id */
+            completed_by_user_id: string | null;
+            /** Evidence */
+            evidence: string | null;
+            /** Reviewed By User Id */
+            reviewed_by_user_id: string | null;
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Review Notes */
+            review_notes: string | null;
+        };
+        /** CandidatePrivacyDisclosureResponse */
+        CandidatePrivacyDisclosureResponse: {
+            /** Title */
+            title: string;
+            /** Version */
+            version: string;
+            /** Paragraphs */
+            paragraphs: string[];
+        };
+        /** CandidateQueueResponse */
+        CandidateQueueResponse: {
+            /** Items */
+            items: components["schemas"]["CandidateReviewSummary"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** CandidateReviewSummary */
+        CandidateReviewSummary: {
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            status: components["schemas"]["CandidateStatus"];
+            /** Given Name */
+            given_name: string | null;
+            /** Family Name */
+            family_name: string | null;
+            /** Email */
+            email: string;
+            interview_status: components["schemas"]["InterviewStatus"] | null;
+            /** Assigned Onboarding Plan Id */
+            assigned_onboarding_plan_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CandidateStatus
+         * @enum {string}
+         */
+        CandidateStatus: "prospect" | "application_started" | "application_submitted" | "under_review" | "more_information_required" | "interview" | "conditionally_selected" | "declined" | "withdrawn" | "onboarding_in_progress" | "pending_fsra_authorization" | "pending_system_provisioning" | "active" | "suspended" | "offboarding" | "offboarded";
+        /** CandidateStatusListResponse */
+        CandidateStatusListResponse: {
+            /** Applications */
+            applications: components["schemas"]["CandidateVisibleApplicationStatus"][];
+        };
+        /** CandidateVisibleApplicationStatus */
+        CandidateVisibleApplicationStatus: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "application_started" | "application_submitted" | "withdrawn" | "declined";
+            /** Messages */
+            messages: string[];
+        };
+        /** ConsentState */
+        ConsentState: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "granted" | "withdrawn";
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
+            /** Withdrawn At */
+            withdrawn_at: string | null;
+        };
+        /** ControlledDocumentResponse */
+        ControlledDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Requires Acknowledgement */
+            requires_acknowledgement: boolean;
+            current_version?: components["schemas"]["DocumentVersionResponse"] | null;
+        };
+        /** DatabaseHealthResponse */
+        DatabaseHealthResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "unavailable";
+            /**
+             * Database
+             * @enum {string}
+             */
+            database: "reachable" | "unreachable";
+        };
+        /** DocumentVersionResponse */
+        DocumentVersionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Controlled Document Id
+             * Format: uuid
+             */
+            controlled_document_id: string;
+            /** Version Label */
+            version_label: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Sha256 Digest */
+            sha256_digest: string;
+            /** Issued At */
+            issued_at: string | null;
+            /** Superseded At */
+            superseded_at: string | null;
+        };
+        /** EducationEntryInput */
+        EducationEntryInput: {
+            /** Institution Name */
+            institution_name: string;
+            /** Program Name */
+            program_name: string;
+            /** Completion Year */
+            completion_year?: number | null;
+        };
+        /** EducationEntryResponse */
+        EducationEntryResponse: {
+            /** Institution Name */
+            institution_name: string;
+            /** Program Name */
+            program_name: string;
+            /** Completion Year */
+            completion_year?: number | null;
+        };
+        /** EmploymentEntryInput */
+        EmploymentEntryInput: {
+            /** Employer Name */
+            employer_name: string;
+            /** Role Title */
+            role_title: string;
+            /** Start Month */
+            start_month: string;
+            /** Currently Employed */
+            currently_employed: boolean;
+            /** End Month */
+            end_month?: string | null;
+            /** Summary */
+            summary?: string | null;
+        };
+        /** EmploymentEntryResponse */
+        EmploymentEntryResponse: {
+            /** Employer Name */
+            employer_name: string;
+            /** Role Title */
+            role_title: string;
+            /** Start Month */
+            start_month: string;
+            /** Currently Employed */
+            currently_employed: boolean;
+            /** End Month */
+            end_month?: string | null;
+            /** Summary */
+            summary?: string | null;
+        };
+        /** EsignEnvelopeResponse */
+        EsignEnvelopeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /** Document Version Id */
+            document_version_id: string | null;
+            status: components["schemas"]["EsignEnvelopeStatus"];
+            /** Envelope Id */
+            envelope_id: string | null;
+            /** Envelope Url */
+            envelope_url: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * EsignEnvelopeStatus
+         * @enum {string}
+         */
+        EsignEnvelopeStatus: "sent" | "viewed" | "completed" | "voided";
+        /** EsignLinkIn */
+        EsignLinkIn: {
+            /** Envelope Url */
+            envelope_url: string;
+            /** Envelope Id */
+            envelope_id?: string | null;
+            /** Document Version Id */
+            document_version_id?: string | null;
+            status: components["schemas"]["EsignEnvelopeStatus"];
+        };
+        /** EsignUpdateIn */
+        EsignUpdateIn: {
+            /** Envelope Id */
+            envelope_id?: string | null;
+            /** Envelope Url */
+            envelope_url?: string | null;
+            status: components["schemas"]["EsignEnvelopeStatus"];
+        };
+        /** GateSatisfyIn */
+        GateSatisfyIn: {
+            /** Code */
+            code: string;
+        };
+        /**
+         * GateStatus
+         * @enum {string}
+         */
+        GateStatus: "open" | "satisfied";
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "ok";
+            /** Service */
+            service: string;
+        };
+        /** InformationRequestCreate */
+        InformationRequestCreate: {
+            /** Message */
+            message: string;
+        };
+        /** InformationRequestResponse */
+        InformationRequestResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            status: components["schemas"]["InformationRequestStatus"];
+            /** Message */
+            message: string;
+            /** Response */
+            response: string | null;
+            /** Responded At */
+            responded_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * InformationRequestStatus
+         * @enum {string}
+         */
+        InformationRequestStatus: "open" | "responded";
+        /**
+         * InterviewStatus
+         * @enum {string}
+         */
+        InterviewStatus: "scheduled" | "completed" | "cancelled" | "no_show";
+        /** InterviewStatusUpdate */
+        InterviewStatusUpdate: {
+            interview_status: components["schemas"]["InterviewStatus"];
+            /** Notes */
+            notes?: string | null;
+        };
+        /** LeadInquiryCreate */
+        LeadInquiryCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Telephone */
+            telephone: string;
+            /**
+             * Mortgage Objective
+             * @enum {string}
+             */
+            mortgage_objective: "purchase" | "refinance" | "renewal" | "investment" | "other";
+            /**
+             * Preferred Contact Method
+             * @enum {string}
+             */
+            preferred_contact_method: "email" | "telephone";
+            /** Preferred Agent Slug */
+            preferred_agent_slug?: string | null;
+            /** Message */
+            message?: string | null;
+            /** Service Contact Acknowledged */
+            service_contact_acknowledged: boolean;
+            /**
+             * Marketing Consent
+             * @default false
+             */
+            marketing_consent: boolean;
+            /**
+             * Website
+             * @default
+             */
+            website: string;
+        };
+        /** LeadInquiryCreated */
+        LeadInquiryCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /** Marketing Consent Recorded */
+            marketing_consent_recorded: boolean;
+        };
+        /** LeadListItem */
+        LeadListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Telephone */
+            telephone: string;
+            /**
+             * Mortgage Objective
+             * @enum {string}
+             */
+            mortgage_objective: "purchase" | "refinance" | "renewal" | "investment" | "other";
+            /**
+             * Preferred Contact Method
+             * @enum {string}
+             */
+            preferred_contact_method: "email" | "telephone";
+            /** Preferred Agent Slug */
+            preferred_agent_slug: string | null;
+            /** Message */
+            message: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "assigned" | "contacted" | "closed";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            service_consent: components["schemas"]["ConsentState"];
+            marketing_consent: components["schemas"]["ConsentState"] | null;
+        };
+        /** LeadListResponse */
+        LeadListResponse: {
+            /** Items */
+            items: components["schemas"]["LeadListItem"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** OnboardingAssignmentResponse */
+        OnboardingAssignmentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /**
+             * Onboarding Plan Id
+             * Format: uuid
+             */
+            onboarding_plan_id: string;
+            /** Generation */
+            generation: number;
+            status: components["schemas"]["OnboardingAssignmentStatus"];
+            /** Assigned By User Id */
+            assigned_by_user_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * OnboardingAssignmentStatus
+         * @enum {string}
+         */
+        OnboardingAssignmentStatus: "active" | "completed" | "superseded";
+        /** OnboardingTaskResponse */
+        OnboardingTaskResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /** Title */
+            title: string;
+            /** Instructions */
+            instructions: string;
+            /** Sequence */
+            sequence: number;
+            /** Is Required */
+            is_required: boolean;
+        };
+        /**
+         * OnboardingTaskStatus
+         * @enum {string}
+         */
+        OnboardingTaskStatus: "required" | "in_progress" | "submitted" | "completed" | "rejected";
+        /** PlanCreateIn */
+        PlanCreateIn: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Tasks */
+            tasks?: components["schemas"]["TaskTemplateIn"][];
+        };
+        /** PlanSummary */
+        PlanSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Is Active */
+            is_active: boolean;
+        };
+        /** PlanWithTasks */
+        PlanWithTasks: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Tasks */
+            tasks?: components["schemas"]["OnboardingTaskResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PolicyAckIn */
+        PolicyAckIn: {
+            /**
+             * Document Version Id
+             * Format: uuid
+             */
+            document_version_id: string;
+            /** Wording */
+            wording: string;
+        };
+        /** PolicyAcknowledgementResponse */
+        PolicyAcknowledgementResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Candidate Id
+             * Format: uuid
+             */
+            candidate_id: string;
+            /**
+             * Document Version Id
+             * Format: uuid
+             */
+            document_version_id: string;
+            /** Wording */
+            wording: string;
+            /**
+             * Acknowledged At
+             * Format: date-time
+             */
+            acknowledged_at: string;
+        };
+        /** PostingCreate */
+        PostingCreate: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Body */
+            body: string;
+        };
+        /** PostingUpdate */
+        PostingUpdate: {
+            /** Slug */
+            slug?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Body */
+            body?: string | null;
+        };
+        /** PublicPosting */
+        PublicPosting: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+            /** Body */
+            body: string;
+        };
+        /** PublicPostingList */
+        PublicPostingList: {
+            /** Items */
+            items: components["schemas"]["PublicPostingSummary"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** PublicPostingSummary */
+        PublicPostingSummary: {
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Summary */
+            summary: string;
+        };
+        /** TaskEvidenceIn */
+        TaskEvidenceIn: {
+            /** Evidence */
+            evidence: string;
+        };
+        /** TaskReviewIn */
+        TaskReviewIn: {
+            /** Approved */
+            approved: boolean;
+            /** Review Notes */
+            review_notes?: string | null;
+        };
+        /** TaskTemplateIn */
+        TaskTemplateIn: {
+            /** Title */
+            title: string;
+            /**
+             * Instructions
+             * @default
+             */
+            instructions: string;
+            /**
+             * Is Required
+             * @default true
+             */
+            is_required: boolean;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
+        };
     };
-    /** AdminPosting */
-    AdminPosting: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Slug */
-      slug: string;
-      /** Title */
-      title: string;
-      /** Summary */
-      summary: string;
-      /** Body */
-      body: string;
-      /**
-       * Status
-       * @enum {string}
-       */
-      status: "draft" | "published" | "closed" | "archived";
-      /** Version */
-      version: number;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-      /** Published At */
-      published_at: string | null;
-      /** Closed At */
-      closed_at: string | null;
-      /** Archived At */
-      archived_at: string | null;
-    };
-    /** AdminPostingList */
-    AdminPostingList: {
-      /** Items */
-      items: components["schemas"]["AdminPosting"][];
-      /** Total */
-      total: number;
-      /** Limit */
-      limit: number;
-      /** Offset */
-      offset: number;
-    };
-    /** ApplicationAction */
-    ApplicationAction: {
-      /** Expected Revision */
-      expected_revision: number;
-    };
-    /** ApplicationDraftUpdate */
-    ApplicationDraftUpdate: {
-      /** Expected Revision */
-      expected_revision: number;
-      /** Given Name */
-      given_name?: string | null;
-      /** Family Name */
-      family_name?: string | null;
-      /** Preferred Name */
-      preferred_name?: string | null;
-      /** Phone */
-      phone?: string | null;
-      /** City */
-      city?: string | null;
-      /** Region */
-      region?: string | null;
-      /** Country Code */
-      country_code?: string | null;
-      /** Preferred Contact Method */
-      preferred_contact_method?: ("email" | "phone" | "no_preference") | null;
-      /** Available From */
-      available_from?: string | null;
-      /** Referral Source */
-      referral_source?:
-        | (
-            | "keeper_website"
-            | "search"
-            | "social_media"
-            | "employee_or_agent_referral"
-            | "event"
-            | "other"
-            | "prefer_not_to_say"
-          )
-        | null;
-      /** Referral Detail */
-      referral_detail?: string | null;
-      /** Interest Statement */
-      interest_statement?: string | null;
-      /** Relevant Experience */
-      relevant_experience?: string | null;
-      /** Employment */
-      employment?: components["schemas"]["EmploymentEntryInput"][] | null;
-      /** Education */
-      education?: components["schemas"]["EducationEntryInput"][] | null;
-      /** Privacy Acknowledged */
-      privacy_acknowledged?: boolean | null;
-      /** Information Accuracy Confirmed */
-      information_accuracy_confirmed?: boolean | null;
-    };
-    /** ApplicationListResponse */
-    ApplicationListResponse: {
-      /** Applications */
-      applications: components["schemas"]["CandidateApplicationResponse"][];
-    };
-    /** Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post */
-    Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
-      /** Category */
-      category: string;
-      /** File */
-      file: string;
-    };
-    /** CandidateApplicationResponse */
-    CandidateApplicationResponse: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /**
-       * Recruitment Posting Id
-       * Format: uuid
-       */
-      recruitment_posting_id: string;
-      /** Source Posting Slug */
-      source_posting_slug: string;
-      /** Source Posting Title */
-      source_posting_title: string;
-      /** Source Posting Version */
-      source_posting_version: number;
-      /** Schema Version */
-      schema_version: string;
-      /** Revision */
-      revision: number;
-      /**
-       * State
-       * @enum {string}
-       */
-      state: "draft" | "submitted" | "withdrawn";
-      /**
-       * Status
-       * @enum {string}
-       */
-      status:
-        | "application_started"
-        | "application_submitted"
-        | "withdrawn"
-        | "declined";
-      /** Email */
-      email: string;
-      /** Given Name */
-      given_name: string | null;
-      /** Family Name */
-      family_name: string | null;
-      /** Preferred Name */
-      preferred_name: string | null;
-      /** Phone */
-      phone: string | null;
-      /** City */
-      city: string | null;
-      /** Region */
-      region: string | null;
-      /** Country Code */
-      country_code: string | null;
-      /** Preferred Contact Method */
-      preferred_contact_method: string | null;
-      /** Available From */
-      available_from: string | null;
-      /** Referral Source */
-      referral_source: string | null;
-      /** Referral Detail */
-      referral_detail: string | null;
-      /** Interest Statement */
-      interest_statement: string | null;
-      /** Relevant Experience */
-      relevant_experience: string | null;
-      /** Employment */
-      employment: components["schemas"]["EmploymentEntryResponse"][];
-      /** Education */
-      education: components["schemas"]["EducationEntryResponse"][];
-      /** Privacy Acknowledged */
-      privacy_acknowledged: boolean;
-      /** Information Accuracy Confirmed */
-      information_accuracy_confirmed: boolean;
-      /** Privacy Disclosure Version */
-      privacy_disclosure_version: string | null;
-      /** Privacy Acknowledged At */
-      privacy_acknowledged_at: string | null;
-      /** Submitted At */
-      submitted_at: string | null;
-      /** Withdrawn At */
-      withdrawn_at: string | null;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** CandidateDocumentList */
-    CandidateDocumentList: {
-      /** Items */
-      items: components["schemas"]["CandidateDocumentResponse"][];
-    };
-    /** CandidateDocumentResponse */
-    CandidateDocumentResponse: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /**
-       * Application Id
-       * Format: uuid
-       */
-      application_id: string;
-      /**
-       * Category
-       * @enum {string}
-       */
-      category: "resume" | "cover_letter";
-      /** Original Filename */
-      original_filename: string;
-      /** Content Type */
-      content_type: string;
-      /** Size Bytes */
-      size_bytes: number;
-      /** Scan Status */
-      scan_status: string;
-      /** Quarantined */
-      quarantined: boolean;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-    };
-    /** CandidatePrivacyDisclosureResponse */
-    CandidatePrivacyDisclosureResponse: {
-      /** Title */
-      title: string;
-      /** Version */
-      version: string;
-      /** Paragraphs */
-      paragraphs: string[];
-    };
-    /** CandidateStatusListResponse */
-    CandidateStatusListResponse: {
-      /** Applications */
-      applications: components["schemas"]["CandidateVisibleApplicationStatus"][];
-    };
-    /** CandidateVisibleApplicationStatus */
-    CandidateVisibleApplicationStatus: {
-      /**
-       * Application Id
-       * Format: uuid
-       */
-      application_id: string;
-      /**
-       * Status
-       * @enum {string}
-       */
-      status:
-        | "application_started"
-        | "application_submitted"
-        | "withdrawn"
-        | "declined";
-      /** Messages */
-      messages: string[];
-    };
-    /** ConsentState */
-    ConsentState: {
-      /**
-       * State
-       * @enum {string}
-       */
-      state: "granted" | "withdrawn";
-      /**
-       * Granted At
-       * Format: date-time
-       */
-      granted_at: string;
-      /** Withdrawn At */
-      withdrawn_at: string | null;
-    };
-    /** DatabaseHealthResponse */
-    DatabaseHealthResponse: {
-      /**
-       * Status
-       * @enum {string}
-       */
-      status: "ok" | "unavailable";
-      /**
-       * Database
-       * @enum {string}
-       */
-      database: "reachable" | "unreachable";
-    };
-    /** EducationEntryInput */
-    EducationEntryInput: {
-      /** Institution Name */
-      institution_name: string;
-      /** Program Name */
-      program_name: string;
-      /** Completion Year */
-      completion_year?: number | null;
-    };
-    /** EducationEntryResponse */
-    EducationEntryResponse: {
-      /** Institution Name */
-      institution_name: string;
-      /** Program Name */
-      program_name: string;
-      /** Completion Year */
-      completion_year?: number | null;
-    };
-    /** EmploymentEntryInput */
-    EmploymentEntryInput: {
-      /** Employer Name */
-      employer_name: string;
-      /** Role Title */
-      role_title: string;
-      /** Start Month */
-      start_month: string;
-      /** Currently Employed */
-      currently_employed: boolean;
-      /** End Month */
-      end_month?: string | null;
-      /** Summary */
-      summary?: string | null;
-    };
-    /** EmploymentEntryResponse */
-    EmploymentEntryResponse: {
-      /** Employer Name */
-      employer_name: string;
-      /** Role Title */
-      role_title: string;
-      /** Start Month */
-      start_month: string;
-      /** Currently Employed */
-      currently_employed: boolean;
-      /** End Month */
-      end_month?: string | null;
-      /** Summary */
-      summary?: string | null;
-    };
-    /** HTTPValidationError */
-    HTTPValidationError: {
-      /** Detail */
-      detail?: components["schemas"]["ValidationError"][];
-    };
-    /** HealthResponse */
-    HealthResponse: {
-      /**
-       * Status
-       * @constant
-       */
-      status: "ok";
-      /** Service */
-      service: string;
-    };
-    /** LeadInquiryCreate */
-    LeadInquiryCreate: {
-      /** Name */
-      name: string;
-      /**
-       * Email
-       * Format: email
-       */
-      email: string;
-      /** Telephone */
-      telephone: string;
-      /**
-       * Mortgage Objective
-       * @enum {string}
-       */
-      mortgage_objective:
-        | "purchase"
-        | "refinance"
-        | "renewal"
-        | "investment"
-        | "other";
-      /**
-       * Preferred Contact Method
-       * @enum {string}
-       */
-      preferred_contact_method: "email" | "telephone";
-      /** Preferred Agent Slug */
-      preferred_agent_slug?: string | null;
-      /** Message */
-      message?: string | null;
-      /** Service Contact Acknowledged */
-      service_contact_acknowledged: boolean;
-      /**
-       * Marketing Consent
-       * @default false
-       */
-      marketing_consent: boolean;
-      /**
-       * Website
-       * @default
-       */
-      website: string;
-    };
-    /** LeadInquiryCreated */
-    LeadInquiryCreated: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Status */
-      status: string;
-      /** Marketing Consent Recorded */
-      marketing_consent_recorded: boolean;
-    };
-    /** LeadListItem */
-    LeadListItem: {
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Name */
-      name: string;
-      /**
-       * Email
-       * Format: email
-       */
-      email: string;
-      /** Telephone */
-      telephone: string;
-      /**
-       * Mortgage Objective
-       * @enum {string}
-       */
-      mortgage_objective:
-        | "purchase"
-        | "refinance"
-        | "renewal"
-        | "investment"
-        | "other";
-      /**
-       * Preferred Contact Method
-       * @enum {string}
-       */
-      preferred_contact_method: "email" | "telephone";
-      /** Preferred Agent Slug */
-      preferred_agent_slug: string | null;
-      /** Message */
-      message: string | null;
-      /** Source */
-      source: string;
-      /**
-       * Status
-       * @enum {string}
-       */
-      status: "new" | "assigned" | "contacted" | "closed";
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      service_consent: components["schemas"]["ConsentState"];
-      marketing_consent: components["schemas"]["ConsentState"] | null;
-    };
-    /** LeadListResponse */
-    LeadListResponse: {
-      /** Items */
-      items: components["schemas"]["LeadListItem"][];
-      /** Total */
-      total: number;
-      /** Limit */
-      limit: number;
-      /** Offset */
-      offset: number;
-    };
-    /** PostingCreate */
-    PostingCreate: {
-      /** Slug */
-      slug: string;
-      /** Title */
-      title: string;
-      /** Summary */
-      summary: string;
-      /** Body */
-      body: string;
-    };
-    /** PostingUpdate */
-    PostingUpdate: {
-      /** Slug */
-      slug?: string | null;
-      /** Title */
-      title?: string | null;
-      /** Summary */
-      summary?: string | null;
-      /** Body */
-      body?: string | null;
-    };
-    /** PublicPosting */
-    PublicPosting: {
-      /** Slug */
-      slug: string;
-      /** Title */
-      title: string;
-      /** Summary */
-      summary: string;
-      /** Body */
-      body: string;
-    };
-    /** PublicPostingList */
-    PublicPostingList: {
-      /** Items */
-      items: components["schemas"]["PublicPostingSummary"][];
-      /** Total */
-      total: number;
-      /** Limit */
-      limit: number;
-      /** Offset */
-      offset: number;
-    };
-    /** PublicPostingSummary */
-    PublicPostingSummary: {
-      /** Slug */
-      slug: string;
-      /** Title */
-      title: string;
-      /** Summary */
-      summary: string;
-    };
-    /** ValidationError */
-    ValidationError: {
-      /** Location */
-      loc: (string | number)[];
-      /** Message */
-      msg: string;
-      /** Error Type */
-      type: string;
-      /** Input */
-      input?: unknown;
-      /** Context */
-      ctx?: Record<string, never>;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  health_health_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    database_health_health_db_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["HealthResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseHealthResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatabaseHealthResponse"];
+                };
+            };
         };
-      };
     };
-  };
-  database_health_health_db_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    portal_access_api_v1_auth_access_get: {
+        parameters: {
+            query: {
+                area: "candidate" | "admin";
+            };
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_leads_api_v1_leads_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                status?: ("new" | "assigned" | "contacted" | "closed") | null;
+            };
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["DatabaseHealthResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrator access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["DatabaseHealthResponse"];
-        };
-      };
     };
-  };
-  portal_access_api_v1_auth_access_get: {
-    parameters: {
-      query: {
-        area: "candidate" | "admin";
-      };
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
+    submit_lead_api_v1_leads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadInquiryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadInquiryCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Contact submission rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    withdraw_lead_marketing_consent_api_v1_leads__lead_id__marketing_consent_withdrawal_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                lead_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["AccessResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentState"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrator access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Lead or marketing consent unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  get_leads_api_v1_leads_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        offset?: number;
-        status?: ("new" | "assigned" | "contacted" | "closed") | null;
-      };
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
+    mortgage_application_redirect_api_v1_integrations_mortgage_application_get: {
+        parameters: {
+            query?: {
+                agent?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Configured application destination unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    list_public_postings_api_v1_recruitment_postings_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["LeadListResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPostingList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Administrator access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  submit_lead_api_v1_leads_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    start_candidate_application_api_v1_recruitment_postings__slug__applications_start_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-email"?: string | null;
+                "x-dev-auth-verified"?: string;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateApplicationResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Verified identity required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posting unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Identity conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LeadInquiryCreate"];
-      };
+    get_public_posting_api_v1_recruitment_postings__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPosting"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
+    list_admin_postings_api_v1_admin_recruitment_postings_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["LeadInquiryCreated"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPostingList"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-      /** @description Contact submission rate limit exceeded */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  withdraw_lead_marketing_consent_api_v1_leads__lead_id__marketing_consent_withdrawal_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        lead_id: string;
-      };
-      cookie?: never;
+    create_admin_posting_api_v1_admin_recruitment_postings_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPosting"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    patch_admin_posting_api_v1_admin_recruitment_postings__posting_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                posting_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["ConsentState"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostingUpdate"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPosting"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posting not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posting lifecycle or slug conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content?: never;
-      };
-      /** @description Administrator access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Lead or marketing consent unavailable */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  mortgage_application_redirect_api_v1_integrations_mortgage_application_get: {
-    parameters: {
-      query?: {
-        agent?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    transition_admin_posting_api_v1_admin_recruitment_postings__posting_id___action__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                posting_id: string;
+                action: "publish" | "close" | "archive";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPosting"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posting not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Posting lifecycle conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      307: {
-        headers: {
-          [name: string]: unknown;
+    list_candidate_applications_api_v1_candidate_applications_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-      /** @description Configured application destination unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  list_public_postings_api_v1_recruitment_postings_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        offset?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
+    candidate_status_api_v1_candidate_applications_status_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateStatusListResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_candidate_application_api_v1_candidate_applications__application_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["PublicPostingList"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateApplicationResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  start_candidate_application_api_v1_recruitment_postings__slug__applications_start_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-email"?: string | null;
-        "x-dev-auth-verified"?: string;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        slug: string;
-      };
-      cookie?: never;
+    patch_candidate_application_api_v1_candidate_applications__application_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationDraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateApplicationResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Application revision or lifecycle conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Draft validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
+    submit_candidate_application_api_v1_candidate_applications__application_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CandidateApplicationResponse"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationAction"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateApplicationResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Application revision or lifecycle conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Required submission content is incomplete */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description Verified identity required */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Posting unavailable */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Identity conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  get_public_posting_api_v1_recruitment_postings__slug__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        slug: string;
-      };
-      cookie?: never;
+    withdraw_candidate_application_api_v1_candidate_applications__application_id__withdraw_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateApplicationResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Application revision or lifecycle conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    candidate_privacy_disclosure_api_v1_candidate_privacy_disclosure_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["PublicPosting"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatePrivacyDisclosureResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  list_admin_postings_api_v1_admin_recruitment_postings_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        offset?: number;
-      };
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
+    list_candidate_documents_api_v1_candidate_applications__application_id__documents_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateDocumentList"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate ownership or AAL2 denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application or document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["AdminPostingList"];
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateDocumentResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate ownership or AAL2 denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application or document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Application lifecycle or category limit conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document category, name, type, signature, or size rejected */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Private storage or scanning unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description Admin denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  create_admin_posting_api_v1_admin_recruitment_postings_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
+    remove_draft_candidate_document_api_v1_candidate_applications__application_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                application_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate ownership or AAL2 denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Owned application or document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Submitted documents are append-only */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Private storage unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PostingCreate"];
-      };
+    download_candidate_document_api_v1_documents__document_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ownership, role, lifecycle, or AAL2 denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document metadata or private object unavailable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document is quarantined or non-clean */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
+    list_review_queue_api_v1_admin_candidates_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                status?: components["schemas"]["CandidateStatus"] | null;
+            };
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["AdminPosting"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateQueueResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  patch_admin_posting_api_v1_admin_recruitment_postings__posting_id__patch: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        posting_id: string;
-      };
-      cookie?: never;
+    get_candidate_detail_api_v1_admin_candidates__candidate_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied or candidate access unavailable */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PostingUpdate"];
-      };
+    set_interview_status_api_v1_admin_candidates__candidate_id__interview_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterviewStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied or candidate access unavailable */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Lifecycle conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    create_information_request_api_v1_admin_candidates__candidate_id__information_requests_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["AdminPosting"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InformationRequestCreate"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InformationRequestResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied or candidate access unavailable */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Lifecycle conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
-        content?: never;
-      };
-      /** @description Admin denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Posting not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Posting lifecycle or slug conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  transition_admin_posting_api_v1_admin_recruitment_postings__posting_id___action__post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        posting_id: string;
-        action: "publish" | "close" | "archive";
-      };
-      cookie?: never;
+    decide_candidate_status_api_v1_admin_candidates__candidate_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidateDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateDetailResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied or candidate access unavailable */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid transition or required reason missing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    assign_onboarding_api_v1_admin_candidates__candidate_id__assign_onboarding_post: {
+        parameters: {
+            query: {
+                plan_id: string;
+            };
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["AdminPosting"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied or candidate access unavailable */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate or plan not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Assignment conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Admin denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Posting not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Posting lifecycle conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  list_candidate_applications_api_v1_candidate_applications_get: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
+    list_plans_api_v1_admin_onboarding_plans_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSummary"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    create_plan_api_v1_admin_onboarding_plans_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["ApplicationListResponse"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanCreateIn"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanWithTasks"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  candidate_status_api_v1_candidate_applications_status_get: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
+    get_plan_api_v1_admin_onboarding_plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanWithTasks"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    review_candidate_task_api_v1_admin_onboarding_candidates__candidate_id__tasks__task_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+                task_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CandidateStatusListResponse"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskReviewIn"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateOnboardingTaskResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not in a reviewable state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  get_candidate_application_api_v1_candidate_applications__application_id__get: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-      };
-      cookie?: never;
+    link_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EsignLinkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    update_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes__envelope_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+                envelope_id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CandidateApplicationResponse"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EsignUpdateIn"];
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
     };
-  };
-  patch_candidate_application_api_v1_candidate_applications__application_id__patch: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-      };
-      cookie?: never;
+    satisfy_activation_gate_api_v1_admin_onboarding_candidates__candidate_id__gates_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GateSatisfyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown gate */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationDraftUpdate"];
-      };
+    list_documents_api_v1_admin_onboarding_documents_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlledDocumentResponse"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Admin denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    onboarding_dashboard_api_v1_candidate_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["CandidateApplicationResponse"];
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateOnboardingDashboard"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Application revision or lifecycle conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Draft validation failed */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
     };
-  };
-  submit_candidate_application_api_v1_candidate_applications__application_id__submit_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-      };
-      cookie?: never;
+    submit_evidence_api_v1_candidate_onboarding_tasks__task_id__evidence_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskEvidenceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Task not in a submittable state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationAction"];
-      };
+    acknowledge_api_v1_candidate_onboarding_acknowledgements_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-dev-auth-sub"?: string | null;
+                "x-dev-auth-aal"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyAckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Candidate access denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Document version not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot acknowledge */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
     };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CandidateApplicationResponse"];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Application revision or lifecycle conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Required submission content is incomplete */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  withdraw_candidate_application_api_v1_candidate_applications__application_id__withdraw_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ApplicationAction"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CandidateApplicationResponse"];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Application revision or lifecycle conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  candidate_privacy_disclosure_api_v1_candidate_privacy_disclosure_get: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CandidatePrivacyDisclosureResponse"];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate access denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  list_candidate_documents_api_v1_candidate_applications__application_id__documents_get: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CandidateDocumentList"];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate ownership or AAL2 denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application or document not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "multipart/form-data": components["schemas"]["Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CandidateDocumentResponse"];
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate ownership or AAL2 denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application or document not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Application lifecycle or category limit conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Document category, name, type, signature, or size rejected */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Private storage or scanning unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  remove_draft_candidate_document_api_v1_candidate_applications__application_id__documents__document_id__delete: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        application_id: string;
-        document_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Candidate ownership or AAL2 denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Owned application or document not found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Submitted documents are append-only */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-      /** @description Private storage unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  download_candidate_document_api_v1_documents__document_id__download_get: {
-    parameters: {
-      query?: never;
-      header?: {
-        "x-dev-auth-sub"?: string | null;
-        "x-dev-auth-aal"?: string;
-      };
-      path: {
-        document_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-      /** @description Authentication required */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Ownership, role, lifecycle, or AAL2 denied */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Document metadata or private object unavailable */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Document is quarantined or non-clean */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
 }

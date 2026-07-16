@@ -90,3 +90,53 @@ def test_phase_1c_openapi_operations_and_candidate_contracts_are_allowlisted(
         "status",
         "revision",
     }.intersection(draft_schema["properties"])
+
+
+def test_phase_1d_openapi_operations_enforce_boundaries_and_contracts(
+    client: TestClient,
+) -> None:
+    document = client.get("/openapi.json").json()
+    paths = document["paths"]
+
+    # REV-001/004/006: admin candidate review pipeline is admin-only.
+    queue = paths["/api/v1/admin/candidates"]["get"]
+    assert queue["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403", "200"}.issubset(queue["responses"])
+
+    detail = paths["/api/v1/admin/candidates/{candidate_id}"]["get"]
+    assert detail["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403", "404"}.issubset(detail["responses"])
+
+    decision = paths["/api/v1/admin/candidates/{candidate_id}/decision"]["post"]
+    assert decision["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403", "409"}.issubset(decision["responses"])
+
+    # ONB-001/002: plan + assignment are admin-only.
+    plans_post = paths["/api/v1/admin/onboarding/plans"]["post"]
+    assert plans_post["security"] == [{"HTTPBearer": []}]
+    assert "201" in plans_post["responses"]
+
+    assign = paths["/api/v1/admin/candidates/{candidate_id}/assign-onboarding"]["post"]
+    assert assign["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403", "409"}.issubset(assign["responses"])
+
+    # ONB-005/006/008/009: candidate-facing onboarding is candidate-only.
+    dash = paths["/api/v1/candidate/onboarding"]["get"]
+    assert dash["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403"}.issubset(dash["responses"])
+
+    ack = paths["/api/v1/candidate/onboarding/acknowledgements"]["post"]
+    assert ack["security"] == [{"HTTPBearer": []}]
+    assert {"401", "403"}.issubset(ack["responses"])
+
+    # B7: no internal audit fields leak into candidate-facing contract types.
+    dash_schema = document["components"]["schemas"]["CandidateOnboardingDashboard"]
+    serialized = str(dash_schema)
+    for forbidden in ["actor_user_id", "prior_status", "audit", "internal_notes", "reason"]:
+        assert forbidden not in serialized
+
+    # B7: request bodies forbid unknown properties (no silent data capture).
+    plan_in = document["components"]["schemas"]["PlanCreateIn"]
+    assert plan_in["additionalProperties"] is False
+    decision_in = document["components"]["schemas"]["CandidateDecisionRequest"]
+    assert decision_in["additionalProperties"] is False

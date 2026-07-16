@@ -19,10 +19,19 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from keeper_api.db.base import Base
-from keeper_api.models.statuses import AgentProfileStatus, CandidateStatus, DocumentStatus
+from keeper_api.models.statuses import (
+    AgentProfileStatus,
+    CandidateStatus,
+    DocumentStatus,
+    EsignEnvelopeStatus,
+    GateStatus,
+    InformationRequestStatus,
+    OnboardingAssignmentStatus,
+    OnboardingTaskStatus,
+)
 
 
 def status_check(column: str, values: list[str], name: str) -> CheckConstraint:
@@ -84,6 +93,18 @@ class Candidate(IdTimestampsMixin, Base):
         ForeignKey("users.id", ondelete="RESTRICT"), unique=True, index=True
     )
     status: Mapped[str] = mapped_column(String(48), default=CandidateStatus.PROSPECT.value)
+    # Phase 1D review support
+    interview_status: Mapped[str | None] = mapped_column(String(32), default=None)
+    interview_notes: Mapped[str | None] = mapped_column(String(1000), default=None)
+    interview_recorded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+    assigned_onboarding_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("onboarding_plans.id", ondelete="SET NULL"), default=None, index=True
+    )
+    assigned_onboarding_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
 
 class RecruitmentPosting(IdTimestampsMixin, Base):
@@ -224,6 +245,10 @@ class OnboardingPlan(IdTimestampsMixin, Base):
     description: Mapped[str] = mapped_column(String(1000), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    tasks: Mapped[list[OnboardingTask]] = relationship(
+        "OnboardingTask", back_populates="plan", order_by="OnboardingTask.sequence"
+    )
+
 
 class OnboardingTask(IdTimestampsMixin, Base):
     __tablename__ = "onboarding_tasks"
@@ -237,22 +262,58 @@ class OnboardingTask(IdTimestampsMixin, Base):
     sequence: Mapped[int] = mapped_column(Integer)
     is_required: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    plan: Mapped[OnboardingPlan] = relationship("OnboardingPlan", back_populates="tasks")
+
 
 class CandidateOnboardingTask(IdTimestampsMixin, Base):
     __tablename__ = "candidate_onboarding_tasks"
     __table_args__ = (
         status_check(
-            "status", [item.value for item in DocumentStatus], "ck_candidate_onboarding_task_status"
+            "status",
+            [item.value for item in OnboardingTaskStatus],
+            "ck_candidate_onboarding_task_status",
         ),
         UniqueConstraint("candidate_id", "onboarding_task_id"),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
-    onboarding_task_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("onboarding_tasks.id"))
-    status: Mapped[str] = mapped_column(String(32), default=DocumentStatus.REQUIRED.value)
+    onboarding_task_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("onboarding_tasks.id", ondelete="CASCADE")
+    )
+    status: Mapped[str] = mapped_column(String(32), default=OnboardingTaskStatus.REQUIRED.value)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    evidence: Mapped[str | None] = mapped_column(String(2000), default=None)
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_notes: Mapped[str | None] = mapped_column(String(1000), default=None)
+
+
+class CandidateOnboardingAssignment(IdTimestampsMixin, Base):
+    __tablename__ = "candidate_onboarding_assignments"
+    __table_args__ = (
+        status_check(
+            "status",
+            [item.value for item in OnboardingAssignmentStatus],
+            "ck_candidate_onboarding_assignment_status",
+        ),
+        UniqueConstraint("candidate_id", "onboarding_plan_id", "generation"),
+    )
+
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    onboarding_plan_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("onboarding_plans.id", ondelete="RESTRICT")
+    )
+    generation: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(32), default=OnboardingAssignmentStatus.ACTIVE.value)
+    assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
 
 class ControlledDocument(IdTimestampsMixin, Base):
@@ -261,6 +322,11 @@ class ControlledDocument(IdTimestampsMixin, Base):
     key: Mapped[str] = mapped_column(String(100), unique=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(String(1000), default="")
+    requires_acknowledgement: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    versions: Mapped[list[DocumentVersion]] = relationship(
+        "DocumentVersion", back_populates="document", order_by="DocumentVersion.issued_at"
+    )
 
 
 class DocumentVersion(IdTimestampsMixin, Base):
@@ -277,6 +343,10 @@ class DocumentVersion(IdTimestampsMixin, Base):
     size_bytes: Mapped[int] = mapped_column(Integer)
     issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    document: Mapped[ControlledDocument] = relationship(
+        "ControlledDocument", back_populates="versions"
+    )
 
 
 class CandidateDocument(IdTimestampsMixin, Base):
@@ -318,10 +388,89 @@ class PolicyAcknowledgement(IdTimestampsMixin, Base):
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
-    document_version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("document_versions.id"))
+    document_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_versions.id", ondelete="RESTRICT")
+    )
     wording: Mapped[str] = mapped_column(String(1000))
     acknowledged_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class CandidateInformationRequest(IdTimestampsMixin, Base):
+    __tablename__ = "candidate_information_requests"
+    __table_args__ = (
+        status_check(
+            "status",
+            [item.value for item in InformationRequestStatus],
+            "ck_candidate_information_request_status",
+        ),
+        Index(
+            "ix_candidate_information_requests_candidate_open",
+            "candidate_id",
+            "created_at",
+            "id",
+        ),
+    )
+
+    candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
+    )
+    requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    status: Mapped[str] = mapped_column(String(32), default=InformationRequestStatus.OPEN.value)
+    message: Mapped[str] = mapped_column(String(2000))
+    response: Mapped[str | None] = mapped_column(String(2000), default=None)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CandidateEsignEnvelope(IdTimestampsMixin, Base):
+    __tablename__ = "candidate_esign_envelopes"
+    __table_args__ = (
+        status_check(
+            "status",
+            [item.value for item in EsignEnvelopeStatus],
+            "ck_candidate_esign_envelope_status",
+        ),
+        Index(
+            "ix_candidate_esign_envelopes_candidate",
+            "candidate_id",
+            "created_at",
+            "id",
+        ),
+    )
+
+    candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    document_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("document_versions.id", ondelete="SET NULL")
+    )
+    status: Mapped[str] = mapped_column(String(32), default=EsignEnvelopeStatus.SENT.value)
+    envelope_id: Mapped[str | None] = mapped_column(String(255), default=None)
+    envelope_url: Mapped[str | None] = mapped_column(String(2048), default=None)
+
+
+class ProgrammaticGate(IdTimestampsMixin, Base):
+    __tablename__ = "programmatic_gates"
+    __table_args__ = (
+        status_check("status", [item.value for item in GateStatus], "ck_programmatic_gate_status"),
+        UniqueConstraint("candidate_id", "code"),
+    )
+
+    candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
+    )
+    code: Mapped[str] = mapped_column(String(64))
+    label: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(32), default=GateStatus.OPEN.value)
+    satisfied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    satisfied_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
     )
 
 
@@ -408,6 +557,9 @@ __all__ = [
     "CandidateDocument",
     "CandidateEducationEntry",
     "CandidateEmploymentEntry",
+    "CandidateEsignEnvelope",
+    "CandidateInformationRequest",
+    "CandidateOnboardingAssignment",
     "CandidateOnboardingTask",
     "CandidateStatusHistory",
     "ConsentRecord",
@@ -417,6 +569,7 @@ __all__ = [
     "OnboardingPlan",
     "OnboardingTask",
     "PolicyAcknowledgement",
+    "ProgrammaticGate",
     "RecruitmentPosting",
     "Role",
     "User",

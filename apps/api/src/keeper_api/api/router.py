@@ -4,10 +4,13 @@ from keeper_api.api.routes import (
     auth,
     candidate_applications,
     candidate_documents,
+    candidate_onboarding,
     documents,
     integrations,
     leads,
+    onboarding,
     recruitment,
+    review,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -24,3 +27,6 @@ api_router.include_router(candidate_documents.router)
 # (see docs/07 delivery plan and docs/19 Phase 1C policy boundary). Mounting
 # it prematurely was Phase 1C audit finding B9.
 api_router.include_router(documents.router)
+api_router.include_router(review.router)
+api_router.include_router(onboarding.router)
+api_router.include_router(candidate_onboarding.router)
