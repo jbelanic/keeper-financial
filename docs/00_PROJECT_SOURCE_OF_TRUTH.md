@@ -72,6 +72,7 @@ Preferred foundation:
 - Identity: the repository-tracked local Supabase CLI/Auth stack; no hosted Supabase.
 - Authorization authority: application database roles and lifecycle state.
 - Object storage: private local S3-compatible MinIO with path-style addressing.
+- Malware scanning: local ClamAV `clamd` in Docker Compose; validation and a clean scan are required before private-object persistence.
 - Local file storage: test/development fallback only; never the live object store.
 - Live/production runtime: Docker Compose on the local Linux host. The local containers are the deployment targets.
 - Infrastructure boundary: no hosted Supabase, Cloudflare R2, or external cloud infrastructure keys/services.

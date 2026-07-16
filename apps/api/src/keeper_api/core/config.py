@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "production"]
 StorageBackend = Literal["local", "s3"]
-MalwareScannerBackend = Literal["local_test", "disabled"]
+MalwareScannerBackend = Literal["clamav", "local_test", "disabled"]
 
 
 class Settings(BaseSettings):
@@ -42,12 +42,20 @@ class Settings(BaseSettings):
     storage_backend: StorageBackend = "local"
     local_storage_path: Path = Path("./storage/dev_uploads")
     public_object_urls_enabled: bool = False
-    max_document_bytes: int = 10 * 1024 * 1024
+    max_document_bytes: int = Field(default=10 * 1024 * 1024, ge=1, le=10 * 1024 * 1024)
     allowed_document_mime_types: str = (
         "application/pdf,application/msword,"
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     malware_scanner_backend: MalwareScannerBackend = "local_test"
+    malware_scanner_fail_closed: bool = True
+    document_scan_max_concurrency: int = Field(default=4, ge=1, le=32)
+    clamav_host: str = Field(default="127.0.0.1", min_length=1, max_length=253)
+    clamav_port: int = Field(default=3310, ge=1, le=65535)
+    clamav_connect_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
+    clamav_read_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
+    clamav_max_chunks: int = Field(default=256, ge=1, le=4096)
+    clamav_max_response_bytes: int = Field(default=4096, ge=64, le=65536)
     s3_endpoint_url: str | None = None
     s3_public_endpoint_url: str | None = None
     s3_access_key_id: str | None = None
@@ -102,6 +110,8 @@ class Settings(BaseSettings):
             raise ValueError("SUPABASE_JWT_ALGORITHMS must use only ES256 or RS256")
         if self.public_object_urls_enabled:
             raise ValueError("public object URLs are prohibited in every environment")
+        if not self.malware_scanner_fail_closed:
+            raise ValueError("malware scanning must fail closed in every environment")
 
         if self.app_env == "production":
             errors: list[str] = []
@@ -113,8 +123,12 @@ class Settings(BaseSettings):
                 errors.append("REQUIRE_ADMIN_MFA must be true")
             if self.storage_backend != "s3":
                 errors.append("STORAGE_BACKEND must be s3")
-            if self.malware_scanner_backend == "local_test":
-                errors.append("local test malware scanner is prohibited")
+            if self.malware_scanner_backend != "clamav":
+                errors.append("live malware scanner must use clamav")
+                if self.malware_scanner_backend == "local_test":
+                    errors.append("local test malware scanner is prohibited")
+            if self.clamav_host != "clamav" or self.clamav_port != 3310:
+                errors.append("live ClamAV must use the Compose service clamav:3310")
             if "*" in self.cors_origin_list:
                 errors.append("wildcard CORS is prohibited")
             for origin in [self.web_origin, *self.cors_origin_list]:

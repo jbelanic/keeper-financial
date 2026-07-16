@@ -14,6 +14,13 @@ from keeper_api.api.router import api_router
 from keeper_api.api.routes.health import router as health_router
 from keeper_api.core.config import get_settings
 from keeper_api.core.logging import configure_logging
+from keeper_api.middleware.sensitive_uploads import (
+    SensitiveUploadMiddleware,
+    UploadRouteLimit,
+    configure_multipart_spooling,
+)
+from keeper_api.services.candidate_files import FIVE_MIB
+from keeper_api.services.document_scan_gate import ProcessLocalDocumentScanGate
 from keeper_api.services.submission_guard import LeadSubmissionGuard, SubmissionRateLimited
 
 settings = get_settings()
@@ -33,6 +40,10 @@ app.state.lead_submission_guard = LeadSubmissionGuard(
     window_seconds=settings.lead_rate_limit_window_seconds,
     tracked_clients=settings.lead_rate_limit_tracked_clients,
 )
+app.state.document_scan_gate = ProcessLocalDocumentScanGate(
+    settings.document_scan_max_concurrency
+)
+configure_multipart_spooling(max(FIVE_MIB, settings.max_document_bytes))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -87,7 +98,9 @@ async def request_context(
         response.headers["Cache-Control"] = "no-store"
     if request.url.path.startswith("/api/v1/admin/"):
         response.headers["Cache-Control"] = "no-store"
-    if request.url.path.startswith("/api/v1/candidate/") or request.url.path.endswith(
+    if request.url.path == "/api/v1/upload-document":
+        response.headers["Cache-Control"] = "no-store"
+    elif request.url.path.startswith("/api/v1/candidate/") or request.url.path.endswith(
         "/applications/start"
     ):
         response.headers["Cache-Control"] = "private, no-store"
@@ -104,6 +117,20 @@ async def request_context(
         },
     )
     return response
+
+
+app.add_middleware(
+    SensitiveUploadMiddleware,
+    route_limits=(
+        UploadRouteLimit.exact("/api/v1/upload-document", maximum_file_bytes=FIVE_MIB),
+        UploadRouteLimit.pattern(
+            r"^/api/v1/candidate/applications/[^/]+/documents$",
+            maximum_file_bytes=settings.max_document_bytes,
+            private=True,
+        ),
+    ),
+    multipart_overhead_bytes=64 * 1024,
+)
 
 
 app.include_router(health_router)

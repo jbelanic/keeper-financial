@@ -725,6 +725,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/upload-document": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Upload Document */
+    post: operations["upload_document_api_v1_upload_document_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1036,6 +1053,11 @@ export interface components {
     Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
       /** Category */
       category: string;
+      /** File */
+      file: string;
+    };
+    /** Body_upload_document_api_v1_upload_document_post */
+    Body_upload_document_api_v1_upload_document_post: {
       /** File */
       file: string;
     };
@@ -1397,6 +1419,14 @@ export interface components {
        * @enum {string}
        */
       database: "reachable" | "unreachable";
+    };
+    /** DocumentScanResponse */
+    DocumentScanResponse: {
+      /**
+       * Status
+       * @constant
+       */
+      status: "clean";
     };
     /** DocumentVersionResponse */
     DocumentVersionResponse: {
@@ -4662,6 +4692,75 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
         };
+      };
+    };
+  };
+  upload_document_api_v1_upload_document_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_document_api_v1_upload_document_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentScanResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Candidate role, lifecycle, or AAL2 denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Document exceeds exactly 5 MiB */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Document type or type relationship is unsupported */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Document is empty, malformed, or contains malware */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Malware scanner is unavailable or returned an invalid response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

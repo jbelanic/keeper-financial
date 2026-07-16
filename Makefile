@@ -4,7 +4,7 @@ bootstrap: api-install
 	npm install
 
 infra:
-	docker compose up -d db minio minio-init
+	docker compose up -d db minio minio-init clamav
 
 up:
 	docker compose up --build -d api web

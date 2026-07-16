@@ -103,9 +103,7 @@ def test_compose_uses_supported_minio_cors_configuration() -> None:
 
 def test_compose_uses_the_db_service_for_the_api_database_url() -> None:
     compose = (PROJECT_ROOT / "compose.yaml").read_text()
-    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split(
-        "\n  web:\n", maxsplit=1
-    )[0]
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
 
     assert (
         "DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-keeper}:"
@@ -113,3 +111,33 @@ def test_compose_uses_the_db_service_for_the_api_database_url() -> None:
         "${POSTGRES_DB:-keeper}"
     ) in api_service
     assert "@localhost:5432" not in api_service
+
+
+def test_compose_runs_healthchecked_loopback_only_clamav_with_persistent_definitions() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    clamav_service = compose.split("\n  clamav:\n", maxsplit=1)[1].split("\n  api:\n", maxsplit=1)[
+        0
+    ]
+
+    assert "image: clamav/clamav:stable" in clamav_service
+    assert "127.0.0.1:3310:3310" in clamav_service
+    assert "keeper_clamav:/var/lib/clamav" in clamav_service
+    assert "/usr/local/bin/clamdcheck.sh" in clamav_service
+    assert "start_period: 10m" in clamav_service
+    assert "privileged:" not in clamav_service
+    assert "/var/run/docker.sock" not in clamav_service
+    assert "keeper_clamav:" in compose
+
+
+def test_compose_api_waits_for_clamav_and_uses_internal_fail_closed_scanner() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
+
+    assert "MALWARE_SCANNER_BACKEND: clamav" in api_service
+    assert 'MALWARE_SCANNER_FAIL_CLOSED: "true"' in api_service
+    assert "CLAMAV_HOST: clamav" in api_service
+    assert "CLAMAV_PORT: 3310" in api_service
+    assert "CLAMAV_CONNECT_TIMEOUT_SECONDS: 2" in api_service
+    assert "CLAMAV_READ_TIMEOUT_SECONDS: 15" in api_service
+    assert "clamav:\n        condition: service_healthy" in api_service
+    assert "MALWARE_SCANNER_BACKEND: disabled" not in api_service

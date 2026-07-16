@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import uuid
 from typing import Any
 
@@ -30,6 +31,7 @@ from keeper_api.services.malware_scanner import MalwareScannerUnavailable, build
 from keeper_api.services.storage import StorageError, build_storage
 
 router = APIRouter(prefix="/candidate/applications", tags=["candidate documents"])
+logger = logging.getLogger("keeper_api.candidate_documents")
 NO_STORE = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"}
 AUTH_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Authentication required"},
@@ -111,148 +113,165 @@ def upload_candidate_document(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> CandidateDocumentResponse:
-    application = _application(db, application_id, principal)
-    if application.state not in {"draft", "submitted"} or application.status in {
-        "withdrawn",
-        "declined",
-    }:
-        raise HTTPException(
-            status_code=409, detail="document uploads are unavailable", headers=NO_STORE
-        )
     try:
-        validated = validate_candidate_file(
-            file.file,
-            category=category,
-            original_filename=file.filename,
-            declared_content_type=file.content_type,
-            maximum=min(settings.max_document_bytes, 10 * 1024 * 1024),
-        )
-    except CandidateFileRejected as exc:
-        _rejection_audit(
-            db,
-            application.id,
-            principal,
-            request,
-            category=category,
-            reason=exc.code,
-        )
-        raise HTTPException(
-            status_code=422, detail="candidate document was rejected", headers=NO_STORE
-        ) from exc
-    count = (
-        db.scalar(
-            select(func.count())
-            .select_from(CandidateDocument)
-            .where(
-                CandidateDocument.application_id == application.id,
-                CandidateDocument.category == category,
+        application = _application(db, application_id, principal)
+        if application.state not in {"draft", "submitted"} or application.status in {
+            "withdrawn",
+            "declined",
+        }:
+            raise HTTPException(
+                status_code=409, detail="document uploads are unavailable", headers=NO_STORE
             )
-        )
-        or 0
-    )
-    if count >= 5:
-        raise HTTPException(
-            status_code=409, detail="document category limit reached", headers=NO_STORE
-        )
-    try:
-        scanner = build_malware_scanner(settings)
-    except MalwareScannerUnavailable as exc:
-        _rejection_audit(
-            db,
-            application.id,
-            principal,
-            request,
-            category=category,
-            reason="scanner_unavailable",
-            event_type="candidate_document.scan_decision",
-        )
-        raise HTTPException(
-            status_code=503, detail="document scanning is unavailable", headers=NO_STORE
-        ) from exc
-    try:
-        storage = build_storage(settings)
-    except StorageError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="private document storage is unavailable",
-            headers=NO_STORE,
-        ) from exc
-    stored = None
-    document = None
-    scan_rejected = False
-    try:
-        stored = storage.put(io.BytesIO(validated.content), content_type=validated.content_type)
-        document = CandidateDocument(
-            candidate_id=application.candidate_id,
-            application_id=application.id,
-            category=category,
-            object_key=stored.object_key,
-            original_filename=validated.filename,
-            content_type=validated.content_type,
-            detected_content_type=validated.content_type,
-            size_bytes=stored.size_bytes,
-            sha256_digest=stored.sha256_digest,
-            status="uploaded",
-            scan_status="pending",
-            is_current=True,
-        )
-        db.add(document)
-        db.flush()
-        AuditService(db).record(
-            "candidate_document.uploaded",
-            "candidate_document",
-            document.id,
-            actor_user_id=principal.user_id,
-            request_id=request.state.request_id,
-            safe_metadata={"category": category, "status": "uploaded"},
-        )
-        decision = scanner.scan(validated.content)
-        document.scan_status = decision.status
-        AuditService(db).record(
-            "candidate_document.scan_decision",
-            "candidate_document",
-            document.id,
-            actor_user_id=principal.user_id,
-            request_id=request.state.request_id,
-            safe_metadata={
-                "category": category,
-                "decision": decision.status,
-                "source": decision.source,
-            },
-        )
-        scan_rejected = decision.status != "clean"
-        if scan_rejected:
+        try:
+            with request.app.state.document_scan_gate.slot():
+                validated = validate_candidate_file(
+                    file.file,
+                    category=category,
+                    original_filename=file.filename,
+                    declared_content_type=file.content_type,
+                    maximum=min(settings.max_document_bytes, 10 * 1024 * 1024),
+                )
+                count = (
+                    db.scalar(
+                        select(func.count())
+                        .select_from(CandidateDocument)
+                        .where(
+                            CandidateDocument.application_id == application.id,
+                            CandidateDocument.category == category,
+                        )
+                    )
+                    or 0
+                )
+                if count >= 5:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="document category limit reached",
+                        headers=NO_STORE,
+                    )
+                scanner = build_malware_scanner(settings)
+                decision = scanner.scan(validated.content)
+        except CandidateFileRejected as exc:
+            _rejection_audit(
+                db,
+                application.id,
+                principal,
+                request,
+                category=category,
+                reason=exc.code,
+            )
+            raise HTTPException(
+                status_code=422, detail="candidate document was rejected", headers=NO_STORE
+            ) from exc
+        except MalwareScannerUnavailable as exc:
+            _rejection_audit(
+                db,
+                application.id,
+                principal,
+                request,
+                category=category,
+                reason="scanner_unavailable",
+                event_type="candidate_document.scan_decision",
+            )
+            raise HTTPException(
+                status_code=503, detail="document scanning is unavailable", headers=NO_STORE
+            ) from exc
+        if decision.status != "clean":
+            _rejection_audit(
+                db,
+                application.id,
+                principal,
+                request,
+                category=category,
+                reason="rejected",
+                event_type="candidate_document.scan_decision",
+            )
+            _rejection_audit(
+                db,
+                application.id,
+                principal,
+                request,
+                category=category,
+                reason="scanner_rejected",
+            )
+            raise HTTPException(
+                status_code=422, detail="candidate document was rejected", headers=NO_STORE
+            )
+        try:
+            storage = build_storage(settings)
+        except StorageError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="private document storage is unavailable",
+                headers=NO_STORE,
+            ) from exc
+        stored = None
+        document = None
+        commit_attempted = False
+        try:
+            stored = storage.put(io.BytesIO(validated.content), content_type=validated.content_type)
+            document = CandidateDocument(
+                candidate_id=application.candidate_id,
+                application_id=application.id,
+                category=category,
+                object_key=stored.object_key,
+                original_filename=validated.filename,
+                content_type=validated.content_type,
+                detected_content_type=validated.detected_content_type,
+                size_bytes=stored.size_bytes,
+                sha256_digest=stored.sha256_digest,
+                status="uploaded",
+                scan_status="clean",
+                is_current=True,
+            )
+            db.add(document)
+            db.flush()
             AuditService(db).record(
-                "candidate_document.rejected",
+                "candidate_document.uploaded",
                 "candidate_document",
                 document.id,
                 actor_user_id=principal.user_id,
                 request_id=request.state.request_id,
-                safe_metadata={"category": category, "decision": "scanner_rejected"},
+                safe_metadata={"category": category, "status": "uploaded"},
             )
-        db.commit()
-        db.refresh(document)
-    except StorageError as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=503, detail="private document storage is unavailable", headers=NO_STORE
-        ) from exc
-    except Exception:
-        db.rollback()
-        if stored is not None:
-            storage.delete(stored.object_key)
-        raise
-    if scan_rejected:
-        raise HTTPException(
-            status_code=422, detail="candidate document was rejected", headers=NO_STORE
-        )
-    if document is None:
-        raise HTTPException(
-            status_code=503,
-            detail="candidate document persistence failed",
-            headers=NO_STORE,
-        )
-    return _document(document)
+            AuditService(db).record(
+                "candidate_document.scan_decision",
+                "candidate_document",
+                document.id,
+                actor_user_id=principal.user_id,
+                request_id=request.state.request_id,
+                safe_metadata={
+                    "category": category,
+                    "decision": decision.status,
+                    "source": decision.source,
+                },
+            )
+            db.refresh(document)
+            commit_attempted = True
+            db.commit()
+        except StorageError as exc:
+            db.rollback()
+            raise HTTPException(
+                status_code=503,
+                detail="private document storage is unavailable",
+                headers=NO_STORE,
+            ) from exc
+        except Exception:
+            db.rollback()
+            if stored is not None and not commit_attempted:
+                try:
+                    storage.delete(stored.object_key)
+                except Exception:
+                    logger.exception("pre-commit candidate object cleanup failed")
+            raise
+        if document is None:
+            raise HTTPException(
+                status_code=503,
+                detail="candidate document persistence failed",
+                headers=NO_STORE,
+            )
+        return _document(document)
+    finally:
+        file.file.close()
 
 
 @router.get(

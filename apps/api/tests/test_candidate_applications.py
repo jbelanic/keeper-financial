@@ -62,7 +62,11 @@ def start_headers(
 
 
 def candidate_headers(subject: str = "new-candidate", aal: str = "aal1") -> dict[str, str]:
-    return {"X-Dev-Auth-Sub": subject, "X-Dev-Auth-AAL": aal}
+    return {
+        "Authorization": "Bearer local-dev-test-token",
+        "X-Dev-Auth-Sub": subject,
+        "X-Dev-Auth-AAL": aal,
+    }
 
 
 def start_application(

@@ -31,12 +31,13 @@
 | GET, POST  | `/api/v1/admin/agent-profiles`                                | Brokerage admin                     | No-store eligible-profile list and public-safe draft creation.                                                         |
 | GET, PATCH | `/api/v1/admin/agent-profiles/{id}`                           | Brokerage admin                     | No-store eligible-profile detail and bounded update; editing published content returns it to pending approval.         |
 | GET        | `/api/v1/documents/{id}/download`                             | Owning candidate or brokerage admin | Authorized, audited local response or short-lived private MinIO redirect; quarantine denied.                           |
+| POST       | `/api/v1/upload-document`                                     | Active candidate at AAL2            | No-store, non-persisting PDF/JPEG/PNG validation and ClamAV scan; exactly 5 MiB maximum.                                |
 
 Production disables OpenAPI. Local and controlled non-production expose `/openapi.json` and `/docs`.
 
 ## Live data services
 
-The authoritative live environment is the local Linux Docker Compose stack. Application/authorization data uses the durable `db` PostgreSQL service. Private object bytes use the durable `minio` service and initialized private bucket; metadata remains in PostgreSQL. The local Supabase CLI stack supplies identity only and has its own separate internal database. No hosted Supabase or Cloudflare R2 inventory exists.
+The authoritative live environment is the local Linux Docker Compose stack. Application/authorization data uses durable `db` PostgreSQL, private object bytes use durable `minio`, and malware decisions use healthchecked local `clamav` with persistent signatures. Metadata remains in PostgreSQL. The local Supabase CLI stack supplies identity only and has its own separate internal database. No hosted Supabase or Cloudflare R2 inventory exists.
 
 ## Database models
 

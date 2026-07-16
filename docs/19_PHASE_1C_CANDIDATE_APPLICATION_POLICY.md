@@ -147,7 +147,7 @@ Document rules:
 - A candidate may retain at most five files in each category per application attempt.
 - Before submission, candidates may remove their own uploads. After submission, uploads are append-only: a newer file may be marked current, but earlier metadata and audit evidence are retained and the submitted record is not silently replaced.
 - After-submission upload is allowed only for nonterminal application states and requires AAL2. It ends on withdrawal or decline.
-- Files remain private, quarantined until the production malware-scanning control accepts them, and inaccessible through public object URLs.
+- Type/structure validation and the live malware scan must succeed before bytes or metadata are persisted. Rejected or unavailable-scan bytes never reach object storage; accepted files remain private and inaccessible through public object URLs.
 - Phase 1C must not add identity documents, background checks, credit reports, financial records, licensing evidence, suitability evidence, or a generic “other” upload category.
 
 ## 4. Approved candidate privacy disclosure

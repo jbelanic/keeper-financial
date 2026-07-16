@@ -174,7 +174,9 @@ def test_safe_local_docker_production_configuration_is_accepted() -> None:
         supabase_issuer="http://127.0.0.1:54321/auth/v1",
         supabase_jwks_url=("http://host.docker.internal:54321/auth/v1/.well-known/jwks.json"),
         storage_backend="s3",
-        malware_scanner_backend="disabled",
+        malware_scanner_backend="clamav",
+        clamav_host="clamav",
+        clamav_port=3310,
         s3_endpoint_url="http://minio:9000",
         s3_public_endpoint_url="http://localhost:9000",
         s3_access_key_id="synthetic-local-access-id",
@@ -182,6 +184,8 @@ def test_safe_local_docker_production_configuration_is_accepted() -> None:
         s3_bucket="keeper-private",
     )
     assert settings.app_env == "production"
+    assert settings.malware_scanner_backend == "clamav"
+    assert settings.malware_scanner_fail_closed is True
 
 
 def test_s3_storage_uses_internal_minio_and_public_path_style_presigning(

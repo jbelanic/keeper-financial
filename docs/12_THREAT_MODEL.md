@@ -9,7 +9,7 @@ This is an engineering threat model, not a legal or compliance certification.
 - Candidate and onboarding data is personal; candidate files and executed agreements are restricted.
 - PostgreSQL holds roles, lifecycle, consent, and audit evidence.
 - Local filesystem is test/development-only. Private local MinIO is the live object boundary.
-- Mortgage application, CRM, e-signature, email, and future malware scanning are external-provider boundaries.
+- Local ClamAV is a separate container trust boundary; mortgage application, CRM, e-signature, and email remain provider boundaries.
 
 ## Primary threats and controls
 
@@ -18,7 +18,8 @@ This is an engineering threat model, not a legal or compliance certification.
 | Valid token used as automatic portal access | JWT verification plus verified local identity, active user, role, relationship, lifecycle, and MFA policy | Session revocation integration and operational access review. |
 | Candidate accesses another application or file | Posting-specific local relationship, opaque UUID, ownership check on read/save/submit/withdraw/upload/list/download, random object key, application linkage, AAL2 for restricted documents, safe `404` cross-owner behavior, audit event | Local Supabase/MinIO adversarial integration and production access review. |
 | Public/private object exposure | No public object route or URL, local-only filesystem guard, private MinIO S3 adapter, short signed retrieval | MinIO bucket-policy review and live probe. |
-| Unsafe file | Exact category/extension/declared-MIME/signature agreement, streaming size limit, sanitized filename metadata, random key, pending quarantine, scanner adapter, non-clean download denial, orphan cleanup, safe rejection/scan audits | Select and validate a local production malware-scanning provider; until then live upload fails closed. |
+| Unsafe file | Bounded reads; extension, declared MIME, libmagic MIME, and structural agreement; Pillow decompression-bomb limits; strict PDF parsing; ClamAV `INSTREAM` before persistence; bounded socket protocol/timeouts; safe scan audits; non-clean download denial | Signature freshness/quality monitoring, adversarial corpus testing, and ongoing parser/ClamAV patching. Scanning reduces risk but cannot prove a document benign. |
+| Clamd abused as an unauthenticated scan oracle | Both upload routes require an active candidate role and AAL2; the scan-only route never persists bytes; clamd is reachable only on the Compose network and host loopback | Any local process can reach the loopback TCP port; preserve host access controls and never publish 3310 on a public interface. |
 | Verified token self-provisions privileged access | Dedicated published-posting start boundary validates signed verified subject/email, rejects link conflicts, grants only candidate role, creates only candidate/application relationships, and remains atomic/idempotent | Local Supabase end-to-end and account-recovery/session-revocation tests. |
 | Candidate changes posting, privacy evidence, lifecycle, or submitted answers | Extra-forbid typed schemas, server-owned source snapshot/schema/disclosure/revision/state/timestamps, row locks and revision checks, immutable submitted questionnaire | Operational review of retention/deletion and future controlled reopen design in Phase 1D. |
 | Draft/closed/archived posting becomes public | Explicit lifecycle map, published-only indexed queries, direct-slug indistinguishable `404`, plain-text bounded fields, admin role/AAL2, publication actor/time/audit | Production cache/proxy probes and operational approval process. |

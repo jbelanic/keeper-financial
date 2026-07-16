@@ -88,6 +88,8 @@ The current web and API code genuinely depends on Supabase Auth token/session se
 
 The live object store is the `minio` service in `compose.yaml`. PostgreSQL stores metadata; MinIO stores bytes. The API uses the S3-compatible interface with path-style addressing, the `minio` service name for container traffic, and a loopback host endpoint only when producing short-lived browser download URLs. Local filesystem storage remains a test/development fallback only.
 
+The live malware-scanning boundary is the `clamav` Compose service. The API sends bounded in-memory bytes to `clamd` over the internal `clamav:3310` TCP endpoint using framed `INSTREAM`; port 3310 is published on loopback only for operator verification. Candidate bytes are not written to MinIO until type/structure validation and a clean scan both succeed.
+
 Required:
 
 - Private bucket.

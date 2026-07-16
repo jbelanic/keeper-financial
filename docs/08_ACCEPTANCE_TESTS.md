@@ -84,7 +84,8 @@ The following are deferred Phase 1D acceptance tests; Phase 1C verifies that the
 ## Documents
 
 - Only optional `resume` and `cover_letter` categories exist in Phase 1C; there is no generic or regulated-document category and neither category gates submission.
-- Upload accepts only `.pdf`, `.doc`, and `.docx` with the exact matching approved MIME/signature and rejects files over 10 MiB.
+- Candidate upload accepts only `.pdf`, `.doc`, and `.docx` under the approved 10 MiB policy, requires extension/declared MIME/libmagic/structure agreement, and completes a clean ClamAV scan before object persistence.
+- `/api/v1/upload-document` accepts one authenticated candidate-AAL2 PDF/JPEG/PNG up to exactly 5 MiB, never persists bytes, and returns safe 413/415/422/503 failures.
 - Candidate document upload requires AAL2 before and after submission; after-submission uploads are append-only and limited to active application states.
 - Private object cannot be fetched anonymously.
 - Authorized retrieval is short-lived or proxied.
