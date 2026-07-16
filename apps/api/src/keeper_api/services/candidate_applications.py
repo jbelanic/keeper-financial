@@ -19,6 +19,7 @@ from keeper_api.models.domain import (
     UserIdentity,
     UserRole,
 )
+from keeper_api.models.statuses import CandidateStatus
 from keeper_api.schemas.candidate_applications import (
     ApplicationDraftUpdate,
     CandidateApplicationResponse,
@@ -156,6 +157,16 @@ def provision_application(
             candidate = Candidate(user_id=user.id, status="application_started")
             db.add(candidate)
             db.flush()
+        # Mirror the denied candidate-lifecycle enforcement that authorize_portal
+        # applies to the candidate portal. The anonymous provisioning boundary must
+        # not let a suspended/offboarding/offboarded candidate start applications
+        # even when the account itself remains active (B1).
+        elif CandidateStatus(candidate.status) in (
+            CandidateStatus.SUSPENDED,
+            CandidateStatus.OFFBOARDING,
+            CandidateStatus.OFFBOARDED,
+        ):
+            raise PermissionError("candidate access is unavailable")
         existing = db.scalar(
             select(CandidateApplication).where(
                 CandidateApplication.candidate_id == candidate.id,
