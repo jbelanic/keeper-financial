@@ -25,7 +25,9 @@ enabled = false
 enabled = false
 
 [studio]
-enabled = false
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
 
 # Auth confirmation mail is captured locally; no external SMTP service is used.
 [local_smtp]

@@ -1,4 +1,4 @@
-# Phase 1C Threat Model Summary
+# Phase 1 Threat Model Summary
 
 This is an engineering threat model, not a legal or compliance certification.
 
@@ -10,6 +10,8 @@ This is an engineering threat model, not a legal or compliance certification.
 - PostgreSQL holds roles, lifecycle, consent, and audit evidence.
 - Local filesystem is test/development-only. Private local MinIO is the live object boundary.
 - Local ClamAV is a separate container trust boundary; mortgage application, CRM, e-signature, and email remain provider boundaries.
+- Phase 1D review/onboarding routes cross authenticated admin/candidate boundaries and operate on personal or restricted records.
+- Phase 1E admin profile routes cross a brokerage-approval boundary; public agent routes expose only approved projections.
 
 ## Primary threats and controls
 
@@ -21,16 +23,17 @@ This is an engineering threat model, not a legal or compliance certification.
 | Unsafe file | Bounded reads; extension, declared MIME, libmagic MIME, and structural agreement; Pillow decompression-bomb limits; strict PDF parsing; ClamAV `INSTREAM` before persistence; bounded socket protocol/timeouts; safe scan audits; non-clean download denial | Signature freshness/quality monitoring, adversarial corpus testing, and ongoing parser/ClamAV patching. Scanning reduces risk but cannot prove a document benign. |
 | Clamd abused as an unauthenticated scan oracle | Both upload routes require an active candidate role and AAL2; the scan-only route never persists bytes; clamd is reachable only on the Compose network and host loopback | Any local process can reach the loopback TCP port; preserve host access controls and never publish 3310 on a public interface. |
 | Verified token self-provisions privileged access | Dedicated published-posting start boundary validates signed verified subject/email, rejects link conflicts, grants only candidate role, creates only candidate/application relationships, and remains atomic/idempotent | Local Supabase end-to-end and account-recovery/session-revocation tests. |
-| Candidate changes posting, privacy evidence, lifecycle, or submitted answers | Extra-forbid typed schemas, server-owned source snapshot/schema/disclosure/revision/state/timestamps, row locks and revision checks, immutable submitted questionnaire | Operational review of retention/deletion and future controlled reopen design in Phase 1D. |
+| Candidate changes posting, privacy evidence, lifecycle, or submitted answers | Extra-forbid typed schemas, server-owned source snapshot/schema/disclosure/revision/state/timestamps, row locks and revision checks, immutable submitted questionnaire; Phase 1D information requests do not overwrite submitted revisions | Operational review of retention/deletion and any later separately approved controlled-revision workflow. |
 | Draft/closed/archived posting becomes public | Explicit lifecycle map, published-only indexed queries, direct-slug indistinguishable `404`, plain-text bounded fields, admin role/AAL2, publication actor/time/audit | Production cache/proxy probes and operational approval process. |
 | Open redirect or sensitive redirect query | Configuration-only destination, HTTPS and exact-host allow-list, query/fragment/credential rejection, safe slug grammar, and approved agent mapping | Vendor URL/map approval and controlled operational update process. |
 | Contact form becomes a mortgage application or abuse target | Explicit field allow-list, extra/control/sensitive-field rejection, length limits, prominent/adjacent UI warnings, zero-length automation trap, and bounded direct-peer rate limiter that fails closed | Legal/privacy approval of draft wording; deployment-level aggregate limiting, trusted-proxy design, monitoring, and tuning before production. |
 | Caller rewrites consent evidence | Immutable server registry owns exact draft engineering wording versions, privacy version, source, and capture source; override fields are forbidden | Final legal/privacy wording and immutable version approval. |
 | Consent bundled with service or withdrawal damages service evidence | Required service acknowledgement, separately optional marketing record, row-locked/idempotent admin withdrawal, and safe first-withdrawal audit | Customer-facing withdrawal channel/process, retention/deletion policy, and concurrency integration test on PostgreSQL. |
 | Lead/contact data leaks through admin URLs or caches | Server-protected layout, FastAPI `require_admin`, live-production AAL2, no-store API/server fetch, safe page/status URL filters only, bounded response | Browser/proxy cache probes and production access review. |
-| Unauthorized lifecycle/publication change | Backend transition maps, admin role/AAL2, publication evidence, application-specific candidate withdrawal, audit event; premature Phase 1D candidate transitions are unmounted | Phase 1D review/decision and activation-gate implementation after policy approval. |
+| Unauthorized review, onboarding, or lifecycle change | Implemented Phase 1D admin role/AAL2 boundary, candidate ownership, backend transition maps, required reasons, eligible-plan assignment, task/evidence review, exact-version acknowledgement, allow-listed gates, and audit events | Operational access review, exception policy, and end-to-end AAL2 exercises. |
+| Draft, suspended, archived, or ineligible agent becomes public | Implemented Phase 1E approval lifecycle, active-agent eligibility, authorized transitions, reason requirement for suspension, published-only projections, safe `404`, and audit evidence | Profile-approval operating procedure, final regulatory/content approval, and public cache probes. |
 | Tokens or personal payloads leak through logs/audits | Structured request logs contain method/path/status/IDs only; recruitment audits contain safe IDs, lifecycle/source/category/decision/version values only and exclude answers, contacts, filenames, tokens, URLs, and contents | Central log pipeline tests and redaction review. |
-| Unsafe deployment configuration | Pydantic production validation rejects local-file storage, dev auth, debug, wildcard/remote origins, missing MinIO/Supabase settings, non-Compose database/storage hosts, and missing admin MFA | Live local-host deployment-policy probe and host hardening review. |
+| Unsafe deployment configuration | Pydantic production validation rejects local-file storage, dev auth, debug, wildcard/remote origins, missing MinIO/Supabase/ClamAV settings, non-Compose database/storage/scanner hosts, non-fail-closed scanning, and missing admin MFA | Linux Mint host hardening, local-only Studio access control, firewall review, and release probe. |
 | Audit evidence altered | No general update/delete API; append-oriented service | Database privileges, retention, immutable export/storage decision. |
 
 ## Abuse cases explicitly excluded

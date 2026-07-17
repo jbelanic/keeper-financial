@@ -12,7 +12,6 @@ from keeper_api.middleware.sensitive_uploads import (
     UploadRouteLimit,
 )
 
-
 Scope = dict[str, Any]
 Message = dict[str, Any]
 

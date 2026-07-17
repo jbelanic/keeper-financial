@@ -45,11 +45,22 @@ def test_supabase_config_is_local_auth_only_with_es256_mfa() -> None:
     assert config["local_smtp"]["enabled"] is True
     assert config["local_smtp"]["port"] == 54324
     assert config["realtime"]["enabled"] is False
-    assert config["studio"]["enabled"] is False
+
+    # Studio is allowed only as local operator tooling. It is not an
+    # application dependency and must remain bound to the approved local port.
+    assert config["studio"] == {
+        "enabled": True,
+        "port": 54323,
+        "api_url": "http://127.0.0.1",
+    }
+
+    # Supabase Storage remains disabled. MinIO is the only approved application
+    # object store, and the S3 protocol must not be enabled as an alternate path.
     assert config["storage"]["enabled"] is False
     assert config["storage"]["s3_protocol"]["enabled"] is False
     assert config["storage"]["analytics"]["enabled"] is False
     assert config["storage"]["vector"]["enabled"] is False
+
     assert config["edge_runtime"]["enabled"] is False
     assert config["analytics"]["enabled"] is False
 

@@ -4,6 +4,22 @@ The local Linux Docker deployment is the live/production target. PostgreSQL (`db
 
 Compose publishes PostgreSQL, MinIO, clamd, API, and web ports on loopback only. Clamd TCP has no authentication or encryption, so port 3310 must remain loopback-only. The Supabase CLI manages its own port bindings; protect them with the Linux host firewall and do not expose any stack service to an untrusted network. [Upstream Supabase documentation](https://supabase.com/docs/guides/local-development/cli-workflows) describes its CLI stack as development-only rather than production-hardened; this is an explicit limitation of the owner-selected local-only model, not an implied security certification. [ClamAV's Docker documentation](https://docs.clamav.net/manual/Installing/Docker.html) documents the official image, `/var/lib/clamav` signature database, TCP 3310, and daemon health behavior.
 
+## Linux Mint continuation and portability
+
+The current checkpoint has been reconstructed and operated successfully on Linux Mint. Use Docker Engine with the Compose plugin, not assumptions tied to Docker Desktop. Run from the repository checkout on the Linux filesystem, confirm the current user can access the Docker socket, and retain the `host.docker.internal:host-gateway` mapping used by the API to reach local Supabase JWKS.
+
+Linux Mint portability requirements:
+
+- loopback ports `3000`, `5432`, `8000`, `9000`, `9001`, and `3310` must be available for the Compose stack;
+- the configured local Supabase ports, including Auth/API `54321`, Studio `54323` when enabled, and Mailpit `54324`, must remain host-local and firewall-protected;
+- named Docker volumes must be preserved across ordinary shutdown/restart;
+- initial ClamAV signature population may delay health for several minutes and must not be bypassed;
+- `npx supabase` is the supported CLI invocation; no global Supabase binary is required;
+- application objects always use private MinIO. Supabase Storage and its S3 protocol remain disabled;
+- Studio is optional local operator tooling only. Enabling it does not make it an application dependency or authorize network exposure.
+
+For a fresh Mint reconstruction, verify Docker/Compose, Node/npm, Python, Git, and `npx supabase --version` before bootstrap. A distribution upgrade, Docker data-root move, firewall change, or checkout relocation requires rerunning the complete validation section below.
+
 ## Bootstrap
 
 From the repository root on Linux:
@@ -25,7 +41,7 @@ docker compose up --build -d api web
 
 CLI 2.109.1 is verified through `npx`; no global `supabase` binary is required or currently available. This CLI reads a configured signing-key file before first generation, so the guarded command creates a mode-`0600`, non-secret empty JSON array only when ignored `supabase/signing_keys.json` is absent. The exact `npx supabase gen signing-key --algorithm ES256` command then writes the private key there. Never display, copy, stage, or commit that file. Replace every `.env` `change-me` value, then manually copy only the browser-safe local anon key line from `npx supabase status` to `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Do not copy service-role, secret, JWT-secret, or signing-key values into browser-visible variables. The API reaches local Supabase JWKS through the Linux `host.docker.internal` gateway while validating the loopback issuer embedded in tokens.
 
-The Supabase CLI database on port `54322` is internal to Auth and remains separate from application PostgreSQL on Compose service `db`/host port `5432`. The tracked Auth stack enables email confirmation and local mail capture, exact loopback callbacks, ES256 signing, and TOTP enrollment/verification. Supabase Storage, Studio, Analytics, Edge Runtime/functions, Realtime, and vector services are disabled. The `[api]` switch stays enabled because CLI 2.109.1 otherwise removes the gateway that exposes the browser-facing Auth route.
+The Supabase CLI database on port `54322` is internal to Auth and remains separate from application PostgreSQL on Compose service `db`/host port `5432`. The tracked Auth stack enables email confirmation and local Mailpit capture, exact loopback callbacks, ES256 signing, and TOTP enrollment/verification. Supabase Studio may be enabled only for local operator use. Supabase Storage and its S3 protocol, Analytics, Edge Runtime/functions, Realtime, and vector services remain disabled. The `[api]` switch stays enabled because CLI 2.109.1 otherwise removes the gateway that exposes the browser-facing Auth route.
 
 The one-shot `minio-init` service waits for healthy MinIO, creates `MINIO_BUCKET` with `--ignore-existing`, and enforces anonymous access `none`. MinIO API CORS is configured directly on the server with `MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:3000`; no bucket CORS XML or unsupported `mc cors set` step is used. ClamAV persists signatures in `keeper_clamav` at `/var/lib/clamav`; a new volume may require several minutes for initial definitions. Its healthcheck sends a real clamd `PING` and requires `PONG`. The API waits for healthy PostgreSQL, MinIO, and ClamAV plus successful bucket initialization. No service runs Alembic automatically: migration remains a deliberate operator command after infrastructure health and before normal application startup.
 
@@ -41,7 +57,14 @@ curl --fail http://localhost:9000/minio/health/live
 .venv/bin/python apps/api/scripts/verify_clamav.py --host 127.0.0.1 --port 3310
 docker compose logs --tail=100 db minio minio-init clamav api web
 npx supabase status
+curl --fail http://127.0.0.1:54321/auth/v1/health
+curl --fail http://127.0.0.1:54321/auth/v1/.well-known/jwks.json
+curl --fail http://127.0.0.1:54323/
+curl --fail http://127.0.0.1:54324/
+curl --fail http://localhost:3000/
 ```
+
+The Studio probe applies only when Studio is intentionally enabled for the local operator. The Mailpit probe confirms local capture UI reachability, not external delivery. The tracked `supabase/config.toml` must continue to set `[storage].enabled = false` and `[storage.s3_protocol].enabled = false`. Do not enable Supabase Storage or its S3 protocol to satisfy an application-storage check. MinIO remains the only approved application object store.
 
 Live evidence on 2026-07-16: `clamav/clamav:stable` pulled at digest `sha256:7f5389ccaa2368c383fa80e167ccfe44348d71e685f926fce4755eed1757673a`; a fresh persistent signature volume reached real PING/PONG health in 45 seconds. The rebuilt API imported libmagic/Pillow/pypdf, resolved fail-closed `clamav:3310`, stayed healthy with zero restarts, reached PostgreSQL, and reported migration head `20260717_0005`. PostgreSQL, MinIO, ClamAV, API, and web were running; healthchecked services were healthy. The in-memory verifier returned `clean: OK` and `EICAR: FOUND`. Real-clamd endpoint integration passed for synthetic authenticated candidate/AAL2 PDF, JPEG, and PNG requests. The isolated API run collected 252 tests (251 passed, one PostgreSQL-only skip), all 77 web tests passed, lint/type/build passed, Python/npm audits found no known dependency vulnerabilities after upgrades, and Trivy found no fixable high/critical findings in the API or mandated ClamAV images.
 
@@ -68,6 +91,23 @@ git diff --check
 ## Authentication and authorization
 
 Supabase proves identity only. An identity still needs an active verified local `UserIdentity`, application role, and permitted relationship/lifecycle state. Production disables development identity headers and requires AAL2 for administrators. The seed script creates no Supabase users.
+
+### Safe manual candidate and onboarding journey
+
+Seeded local `User`, `UserIdentity`, candidate, admin, posting, plan, and related application rows are fixtures only. They are not automatically real Supabase login identities, and matching a seeded email address does not safely link the records. Do not create an Auth user with a seeded email, edit Auth/application tables in Studio, or hand-link subjects merely to make a manual test pass.
+
+Use this procedure only with synthetic local data and the loopback-only stack:
+
+1. Start the tracked Supabase and application services, apply the issued migrations, load the documented local synthetic fixtures, and confirm Auth health, Mailpit, API health, and the published synthetic posting. Do not use a real applicant's email or data.
+2. Open the published synthetic opportunity from `http://localhost:3000/careers`. Start there rather than navigating directly to a generic Auth URL so the validated posting context is present.
+3. Register a new unique Supabase account, for example an operator-controlled `+candidate-<timestamp>` address accepted by local Mailpit. Use a password created only for this disposable local identity. Do not reuse a seeded fixture email or a real production credential.
+4. Open the confirmation message only in local Mailpit and follow its loopback callback. Record whether the callback returns to the selected posting-specific application and whether a subsequent fresh browser request retains candidate access. Never copy access/refresh tokens, callback codes, cookies, or confirmation URLs into reports or logs.
+5. Return to the published posting with the confirmed account to assess existing-user entry. At the current checkpoint the posting exposes no sign-in action and generic `/auth/sign-in` loses the posting slug. If callback provisioning failed and left the identity locally unmapped, the expected result is fail-closed denial with no supported recovery. Do not manufacture that state or work around the denial by changing database or Auth records.
+6. Exercise refresh, expiry/revocation, and a new browser request only after the posting-bound path exists. A valid refresh must preserve the mapped session; invalid or revoked sessions must return to sign-in without provisioning or leaking credentials.
+
+Administrative onboarding verification has additional preconditions. The operator must use a genuine, already approved local Supabase identity that maps to an active application `UserIdentity` with the `brokerage_admin` role and must complete a real local TOTP ceremony so the token is AAL2. Seeded admin rows and development headers are insufficient for the browser E2E gate. If no approved admin bootstrap/mapping exists, stop and record that prerequisite rather than editing Studio or PostgreSQL manually.
+
+Before assigning onboarding, the selected application attempt—not merely another application for the same candidate—must have completed the approved review transitions and be `conditionally_selected`; the onboarding plan must exist and be active. Use only supported admin operations to assign the plan, then verify that candidate and admin onboarding are discoverable in their navigation, the candidate sees only assigned tasks/documents, and acknowledgement rejects any version not assigned through that active assignment. At the current checkpoint these lifecycle, active-plan, navigation, and acknowledgement conditions are known defects, so manual testing records the breakpoint and must not relabel the journey as passed. Satisfying all gates may produce `activation_ready=true`; it does not perform final activation.
 
 Local source-level/API tests may still use `APP_ENV=local`, local filesystem fixtures, `MALWARE_SCANNER_BACKEND=local_test`, and documented development headers. Those are not live Compose settings. The live stack uses MinIO and `MALWARE_SCANNER_BACKEND=clamav`; production startup rejects `local_test` and `disabled`. Scanner connection, timeout, protocol, or daemon failures return safe 503 responses and never fall back to accepting or storing bytes.
 

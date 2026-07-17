@@ -76,6 +76,10 @@ The page must present both options without making either look secondary.
 
 ## Candidate portal
 
+- Every published posting must present two equally clear candidate entry actions: create an account and sign in with an existing account. Both actions must preserve the validated posting slug through authentication and return to that posting-specific application start.
+- Registration confirmation and existing-user sign-in must converge on a supported posting-bound provisioning orchestration that invokes the narrow application-start boundary. Generic sign-in remains non-provisioning and must not infer a posting or grant candidate access.
+- If a user is already confirmed in Supabase but has no local mapping/application relationship, the posting-bound entry flow must explain the denial safely and offer recovery by returning to a published posting and signing in with that preserved posting context. It must not create a candidate relationship without an explicit published-posting start.
+- Authentication errors must retain safe posting context, avoid account-enumeration detail, and provide a visible route back to the selected opportunity.
 - Persistent progress indicator.
 - Save status.
 - Clear required/optional labels.
@@ -84,12 +88,14 @@ The page must present both options without making either look secondary.
 - Status timeline.
 - Task-oriented onboarding dashboard.
 - Document version and completion state.
+- Candidate portal navigation must expose onboarding when an onboarding assignment is available; the direct route must remain authorization- and lifecycle-protected even when the navigation item is absent or ineligible.
 
 ## Admin portal
 
 - Queue first.
 - Filters by status, owner, age, and missing requirements.
 - Candidate detail organized into application, documents, review, onboarding, activity.
+- Administration navigation must expose onboarding plan/assignment/task/gate operations to authorized administrators.
 - Clear destructive-action confirmation.
 - Reason required for high-risk status changes.
 - No hidden status changes.
