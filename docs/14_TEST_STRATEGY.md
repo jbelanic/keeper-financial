@@ -98,10 +98,18 @@ The 2026-07-18 live synthetic run passed both enabled candidate-auth cases: Mail
 
 ## Migrations and generated contracts
 
-- Run `alembic upgrade head`, `alembic current --check-heads`, and `alembic check` against PostgreSQL. Reaching head and autogeneration drift are separate results; the known Phase 1D model/schema drift remains a Phase 1F blocker.
+- Run `alembic upgrade head`, `alembic current --check-heads`, and `alembic check` against PostgreSQL. Reaching head and autogeneration drift are separate results.
 - Run `make openapi` twice and compare output hashes. OpenAPI, generated TypeScript declarations, runtime routes, schemas, and frontend types must change together.
 - Never rewrite an issued migration to silence drift; add a reviewed forward migration when remediation is approved.
-- Candidate remediation migration `20260717_0006` has focused upgrade-shape/head tests. Its result must be recorded separately from the pre-existing general Phase 1D autogeneration drift.
+- Candidate remediation migration `20260717_0006` and schema-drift migration
+  `20260718_0007` have separate focused coverage; the latter pins issued-file
+  hashes, the single head, authoritative model metadata, exact PostgreSQL index
+  columns/order, and exact FK delete actions.
+- Run the Step 9 PostgreSQL tests with
+  `KEEPER_RUN_SCHEMA_MIGRATION_E2E=1`. They use randomly named temporary local
+  databases to prove `0006 → 0007 → 0006 → 0007`, direct fresh upgrade to head,
+  representative evidence survival, deletion restrictions, nullable unreviewed
+  tasks, catalog/metadata agreement, and clean `alembic check`.
 
 ## Security regression validation
 

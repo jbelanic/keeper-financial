@@ -141,8 +141,16 @@ Forward migration `20260717_0006` adds application provenance for review and
 onboarding, application-bound assignment/task/history relationships, and the
 exact assignment/document-version join. Legacy rows remain nullable when the
 correct application or assignment cannot be proved; new mutation paths reject
-that ambiguity. This migration is separate from and does not resolve the known
-general Phase 1D Alembic index/`ondelete` drift.
+that ambiguity.
+
+Forward migration `20260718_0007` resolves the bounded Phase 1D metadata/schema
+drift without rewriting `0001` through `0006` or changing API behavior. It
+preserves candidate-first creation-order indexes for e-sign envelopes,
+information requests, and programmatic gates; removes only the assignment
+index duplicated exactly by the assignment-generation unique constraint; and
+expresses `ON DELETE RESTRICT` for candidate-task templates, populated task
+reviewers, and acknowledged document versions. Reviewer nullability remains
+available for unreviewed tasks.
 
 ## Contract generation
 

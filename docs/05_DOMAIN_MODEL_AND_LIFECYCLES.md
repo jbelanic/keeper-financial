@@ -176,6 +176,25 @@ Rules:
 - Rejected uploads retain evidence of rejection and replacement.
 - Deleted object data must not silently erase required audit metadata.
 
+## Step 9 schema-retention controls
+
+- An onboarding task template referenced by a candidate task cannot be hard
+  deleted. Plans and templates use their application lifecycle, and PostgreSQL
+  `ON DELETE RESTRICT` protects completed or reviewed candidate-task evidence.
+- `reviewed_by_user_id` remains nullable for tasks that have not been reviewed.
+  Once populated, the referenced user cannot be hard deleted; operator
+  offboarding uses user deactivation so reviewer attribution remains intact.
+- A document version referenced by a policy acknowledgement cannot be deleted.
+  The acknowledgement retains an explicit `ON DELETE RESTRICT` link to the
+  exact immutable version accepted.
+- Candidate e-sign envelopes, information requests, and programmatic gates keep
+  their candidate-first creation-order indexes. A candidate-only index is not
+  added when that left prefix already supports the query.
+- Assignment generation uniqueness on
+  `(candidate_id, onboarding_plan_id, generation)` supplies the same PostgreSQL
+  btree needed for candidate/plan lookup and generation ordering; a second
+  non-unique index on those exact columns is intentionally absent.
+
 ## Lead lifecycle
 
 Initial minimal lifecycle:

@@ -292,7 +292,11 @@ class CandidateOnboardingTask(IdTimestampsMixin, Base):
         default=None,
     )
     onboarding_task_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("onboarding_tasks.id", ondelete="CASCADE")
+        ForeignKey(
+            "onboarding_tasks.id",
+            name="candidate_onboarding_tasks_onboarding_task_id_fkey",
+            ondelete="RESTRICT",
+        )
     )
     status: Mapped[str] = mapped_column(String(32), default=OnboardingTaskStatus.REQUIRED.value)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -302,7 +306,11 @@ class CandidateOnboardingTask(IdTimestampsMixin, Base):
     )
     evidence: Mapped[str | None] = mapped_column(String(2000), default=None)
     reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL")
+        ForeignKey(
+            "users.id",
+            name="candidate_onboarding_tasks_reviewed_by_user_id_fkey",
+            ondelete="RESTRICT",
+        )
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     review_notes: Mapped[str | None] = mapped_column(String(1000), default=None)
@@ -441,7 +449,11 @@ class PolicyAcknowledgement(IdTimestampsMixin, Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     document_version_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("document_versions.id", ondelete="RESTRICT")
+        ForeignKey(
+            "document_versions.id",
+            name="policy_acknowledgements_document_version_id_fkey",
+            ondelete="RESTRICT",
+        )
     )
     wording: Mapped[str] = mapped_column(String(1000))
     acknowledged_at: Mapped[datetime] = mapped_column(
@@ -465,9 +477,7 @@ class CandidateInformationRequest(IdTimestampsMixin, Base):
         ),
     )
 
-    candidate_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
-    )
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
     application_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("candidate_applications.id", ondelete="RESTRICT"), index=True, default=None
     )
@@ -496,9 +506,7 @@ class CandidateEsignEnvelope(IdTimestampsMixin, Base):
         ),
     )
 
-    candidate_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
-    )
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -515,11 +523,10 @@ class ProgrammaticGate(IdTimestampsMixin, Base):
     __table_args__ = (
         status_check("status", [item.value for item in GateStatus], "ck_programmatic_gate_status"),
         UniqueConstraint("candidate_id", "code"),
+        Index("ix_programmatic_gates_candidate", "candidate_id", "created_at", "id"),
     )
 
-    candidate_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
-    )
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
     code: Mapped[str] = mapped_column(String(64))
     label: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(32), default=GateStatus.OPEN.value)
