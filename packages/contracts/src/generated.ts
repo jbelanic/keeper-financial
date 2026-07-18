@@ -674,6 +674,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/candidate/onboarding/availability": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Onboarding Availability */
+    get: operations["onboarding_availability_api_v1_candidate_onboarding_availability_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/candidate/onboarding": {
     parameters: {
       query?: never;
@@ -1095,6 +1112,17 @@ export interface components {
       status:
         | "application_started"
         | "application_submitted"
+        | "under_review"
+        | "more_information_required"
+        | "interview"
+        | "conditionally_selected"
+        | "onboarding_in_progress"
+        | "pending_fsra_authorization"
+        | "pending_system_provisioning"
+        | "active"
+        | "suspended"
+        | "offboarding"
+        | "offboarded"
         | "withdrawn"
         | "declined";
       /** Email */
@@ -1157,6 +1185,11 @@ export interface components {
      * @description REV-004/005: select, decline, or withdraw with a required reason where applicable.
      */
     CandidateDecisionRequest: {
+      /**
+       * Application Id
+       * Format: uuid
+       */
+      application_id: string;
       decision: components["schemas"]["CandidateStatus"];
       /** Reason */
       reason?: string | null;
@@ -1168,6 +1201,17 @@ export interface components {
        * Format: uuid
        */
       candidate_id: string;
+      /**
+       * Application Id
+       * Format: uuid
+       */
+      application_id: string;
+      /** Attempt Number */
+      attempt_number: number;
+      /** Source Posting Slug */
+      source_posting_slug: string;
+      /** Source Posting Title */
+      source_posting_title: string;
       status: components["schemas"]["CandidateStatus"];
       /** Given Name */
       given_name: string | null;
@@ -1233,6 +1277,11 @@ export interface components {
        */
       created_at: string;
     };
+    /** CandidateOnboardingAvailability */
+    CandidateOnboardingAvailability: {
+      /** Available */
+      available: boolean;
+    };
     /** CandidateOnboardingDashboard */
     CandidateOnboardingDashboard: {
       assignment: components["schemas"]["OnboardingAssignmentResponse"] | null;
@@ -1261,6 +1310,8 @@ export interface components {
        * Format: uuid
        */
       candidate_id: string;
+      /** Assignment Id */
+      assignment_id: string | null;
       /**
        * Onboarding Task Id
        * Format: uuid
@@ -1309,6 +1360,17 @@ export interface components {
        * Format: uuid
        */
       candidate_id: string;
+      /**
+       * Application Id
+       * Format: uuid
+       */
+      application_id: string;
+      /** Attempt Number */
+      attempt_number: number;
+      /** Source Posting Slug */
+      source_posting_slug: string;
+      /** Source Posting Title */
+      source_posting_title: string;
       status: components["schemas"]["CandidateStatus"];
       /** Given Name */
       given_name: string | null;
@@ -1370,6 +1432,17 @@ export interface components {
       status:
         | "application_started"
         | "application_submitted"
+        | "under_review"
+        | "more_information_required"
+        | "interview"
+        | "conditionally_selected"
+        | "onboarding_in_progress"
+        | "pending_fsra_authorization"
+        | "pending_system_provisioning"
+        | "active"
+        | "suspended"
+        | "offboarding"
+        | "offboarded"
         | "withdrawn"
         | "declined";
       /** Messages */
@@ -1581,6 +1654,11 @@ export interface components {
     };
     /** InformationRequestCreate */
     InformationRequestCreate: {
+      /**
+       * Application Id
+       * Format: uuid
+       */
+      application_id: string;
       /** Message */
       message: string;
     };
@@ -1596,6 +1674,8 @@ export interface components {
        * Format: uuid
        */
       candidate_id: string;
+      /** Application Id */
+      application_id: string | null;
       status: components["schemas"]["InformationRequestStatus"];
       /** Message */
       message: string;
@@ -1626,6 +1706,11 @@ export interface components {
     InterviewStatus: "scheduled" | "completed" | "cancelled" | "no_show";
     /** InterviewStatusUpdate */
     InterviewStatusUpdate: {
+      /**
+       * Application Id
+       * Format: uuid
+       */
+      application_id: string;
       interview_status: components["schemas"]["InterviewStatus"];
       /** Notes */
       notes?: string | null;
@@ -1758,6 +1843,8 @@ export interface components {
        * Format: uuid
        */
       candidate_id: string;
+      /** Application Id */
+      application_id: string | null;
       /**
        * Onboarding Plan Id
        * Format: uuid
@@ -1889,6 +1976,8 @@ export interface components {
        * Format: uuid
        */
       candidate_id: string;
+      /** Assignment Id */
+      assignment_id: string | null;
       /**
        * Document Version Id
        * Format: uuid
@@ -2422,6 +2511,13 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
         };
+      };
+      /** @description Identity verification unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -3188,14 +3284,14 @@ export interface operations {
         };
         content?: never;
       };
-      /** @description Document category, name, type, signature, or size rejected */
+      /** @description Safe document validation or malware rejection category; no object is persisted */
       422: {
         headers: {
           [name: string]: unknown;
         };
         content?: never;
       };
-      /** @description Private storage or scanning unavailable */
+      /** @description Safe scanner_unavailable or storage_unavailable category; no success is reported */
       503: {
         headers: {
           [name: string]: unknown;
@@ -3742,7 +3838,9 @@ export interface operations {
   };
   get_candidate_detail_api_v1_admin_candidates__candidate_id__get: {
     parameters: {
-      query?: never;
+      query: {
+        application_id: string;
+      };
       header?: {
         "x-dev-auth-sub"?: string | null;
         "x-dev-auth-aal"?: string;
@@ -3995,6 +4093,7 @@ export interface operations {
     parameters: {
       query: {
         plan_id: string;
+        application_id: string;
       };
       header?: {
         "x-dev-auth-sub"?: string | null;
@@ -4515,6 +4614,52 @@ export interface operations {
       };
     };
   };
+  onboarding_availability_api_v1_candidate_onboarding_availability_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CandidateOnboardingAvailability"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Candidate access denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   onboarding_dashboard_api_v1_candidate_onboarding_get: {
     parameters: {
       query?: never;
@@ -4651,9 +4796,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
+          "application/json": components["schemas"]["PolicyAcknowledgementResponse"];
         };
       };
       /** @description Authentication required */

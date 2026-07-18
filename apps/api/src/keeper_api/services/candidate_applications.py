@@ -39,6 +39,18 @@ class CandidateApplicationInvalid(ValueError):
     pass
 
 
+NONTERMINAL_APPLICATION_STATUSES: tuple[str, ...] = tuple(
+    status.value
+    for status in CandidateStatus
+    if status
+    not in {
+        CandidateStatus.PROSPECT,
+        CandidateStatus.WITHDRAWN,
+        CandidateStatus.DECLINED,
+    }
+)
+
+
 def candidate_application_response(
     db: Session, application: CandidateApplication
 ) -> CandidateApplicationResponse:
@@ -171,7 +183,7 @@ def provision_application(
             select(CandidateApplication).where(
                 CandidateApplication.candidate_id == candidate.id,
                 CandidateApplication.recruitment_posting_id == posting.id,
-                CandidateApplication.status.in_(["application_started", "application_submitted"]),
+                CandidateApplication.status.in_(NONTERMINAL_APPLICATION_STATUSES),
             )
         )
         if existing is not None:
@@ -245,9 +257,7 @@ def provision_application(
                     select(CandidateApplication).where(
                         CandidateApplication.candidate_id == candidate.id,
                         CandidateApplication.recruitment_posting_id == posting.id,
-                        CandidateApplication.status.in_(
-                            ["application_started", "application_submitted"]
-                        ),
+                        CandidateApplication.status.in_(NONTERMINAL_APPLICATION_STATUSES),
                     )
                 )
                 if existing is not None:

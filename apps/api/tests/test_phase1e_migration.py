@@ -35,7 +35,9 @@ class OperationRecorder:
 
 
 def _migration_module() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("phase1e_agent_profiles_migration", MIGRATION_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "phase1e_agent_profiles_migration", MIGRATION_PATH
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -46,9 +48,11 @@ def test_phase1e_migration_alters_foundational_agent_profiles_without_destroying
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260717_0005"]
+    assert script.get_heads() == ["20260717_0006"]
 
     migration = _migration_module()
+    assert migration.revision == "20260717_0005"  # type: ignore[attr-defined]
+    assert migration.down_revision == "20260716_0004"  # type: ignore[attr-defined]
     upgrade = OperationRecorder()
     migration.op = upgrade  # type: ignore[attr-defined]
     migration.upgrade()  # type: ignore[attr-defined]
@@ -60,9 +64,9 @@ def test_phase1e_migration_alters_foundational_agent_profiles_without_destroying
         for name, args, _ in upgrade.calls
         if name == "add_column" and args[0] == "agent_profiles"
     } == NEW_COLUMNS
-    assert [
-        args[0] for name, args, _ in upgrade.calls if name == "create_index"
-    ] == ["ix_agent_profiles_publication"]
+    assert [args[0] for name, args, _ in upgrade.calls if name == "create_index"] == [
+        "ix_agent_profiles_publication"
+    ]
 
     downgrade = OperationRecorder()
     migration.op = downgrade  # type: ignore[attr-defined]

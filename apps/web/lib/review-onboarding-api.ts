@@ -20,6 +20,8 @@ export type PlanWithTasks = components["schemas"]["PlanWithTasks"];
 export type PlanCreateIn = components["schemas"]["PlanCreateIn"];
 export type CandidateOnboardingDashboard =
   components["schemas"]["CandidateOnboardingDashboard"];
+export type CandidateOnboardingAvailability =
+  components["schemas"]["CandidateOnboardingAvailability"];
 export type CandidateOnboardingTaskResponse =
   components["schemas"]["CandidateOnboardingTaskResponse"];
 export type ActivationGateResponse =

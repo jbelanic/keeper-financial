@@ -173,6 +173,8 @@ def test_safe_local_docker_production_configuration_is_accepted() -> None:
         database_url="postgresql+psycopg://keeper:secret@db:5432/keeper",
         supabase_issuer="http://127.0.0.1:54321/auth/v1",
         supabase_jwks_url=("http://host.docker.internal:54321/auth/v1/.well-known/jwks.json"),
+        supabase_user_url="http://host.docker.internal:54321/auth/v1/user",
+        supabase_anon_key="synthetic-local-anon-key",
         storage_backend="s3",
         malware_scanner_backend="clamav",
         clamav_host="clamav",

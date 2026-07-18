@@ -144,6 +144,12 @@ Document rules:
 
 - The candidate must select a category; there is no `other` category.
 - Extension, declared MIME type, and detected file signature must agree. Renaming a file does not make it acceptable.
+- The multipart declared MIME remains the exact format MIME in the table. A
+  structurally valid DOCX may be detected by libmagic as either the official
+  DOCX MIME or a bounded ZIP-family MIME; ZIP detection is acceptable only
+  after the package proves the required Office Open XML/WordprocessingML
+  structure. An arbitrary ZIP, OLE container, or PDF-like prefix is not a
+  permitted document.
 - A candidate may retain at most five files in each category per application attempt.
 - Before submission, candidates may remove their own uploads. After submission, uploads are append-only: a newer file may be marked current, but earlier metadata and audit evidence are retained and the submitted record is not silently replaced.
 - After-submission upload is allowed only for nonterminal application states and requires AAL2. It ends on withdrawal or decline.

@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     supabase_issuer: str = "http://127.0.0.1:54321/auth/v1"
     supabase_audience: str = "authenticated"
     supabase_jwks_url: str = "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json"
+    supabase_user_url: str = "http://127.0.0.1:54321/auth/v1/user"
+    supabase_anon_key: SecretStr | None = None
+    # The local web client already needs this browser-safe public key. Accepting
+    # the same value avoids a second local secret-shaped setting while keeping
+    # service-role credentials out of the application-start boundary.
+    next_public_supabase_anon_key: SecretStr | None = None
+    supabase_user_timeout_seconds: float = Field(default=5, gt=0, le=15)
     supabase_jwt_algorithms: str = "ES256"
     dev_auth_enabled: bool = True
     require_admin_mfa: bool = False
@@ -104,6 +111,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_tier_safety(self) -> Self:
+        if self.supabase_anon_key is None and self.next_public_supabase_anon_key is not None:
+            self.supabase_anon_key = self.next_public_supabase_anon_key
         if not self.jwt_algorithm_list or not set(self.jwt_algorithm_list).issubset(
             {"ES256", "RS256"}
         ):
@@ -142,6 +151,8 @@ class Settings(BaseSettings):
             required = {
                 "SUPABASE_ISSUER": self.supabase_issuer,
                 "SUPABASE_JWKS_URL": self.supabase_jwks_url,
+                "SUPABASE_USER_URL": self.supabase_user_url,
+                "SUPABASE_ANON_KEY": self.supabase_anon_key,
                 "S3_ENDPOINT_URL": self.s3_endpoint_url,
                 "S3_PUBLIC_ENDPOINT_URL": self.s3_public_endpoint_url,
                 "S3_ACCESS_KEY_ID": self.s3_access_key_id,
@@ -153,6 +164,7 @@ class Settings(BaseSettings):
                 errors.append(f"required values missing: {', '.join(missing)}")
             issuer = urlparse(self.supabase_issuer)
             jwks = urlparse(self.supabase_jwks_url)
+            user_endpoint = urlparse(self.supabase_user_url)
             if (
                 issuer.scheme != "http"
                 or issuer.hostname not in {"localhost", "127.0.0.1"}
@@ -167,6 +179,13 @@ class Settings(BaseSettings):
                 or jwks.path != "/auth/v1/.well-known/jwks.json"
             ):
                 errors.append("live Supabase JWKS must use the local CLI host gateway")
+            if (
+                user_endpoint.scheme != "http"
+                or user_endpoint.hostname != "host.docker.internal"
+                or user_endpoint.port != 54321
+                or user_endpoint.path != "/auth/v1/user"
+            ):
+                errors.append("live Supabase user verification must use the local CLI host gateway")
             if self.s3_endpoint_url:
                 endpoint = urlparse(self.s3_endpoint_url)
                 if (

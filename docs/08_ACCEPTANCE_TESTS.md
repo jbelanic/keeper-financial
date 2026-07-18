@@ -13,6 +13,10 @@
 - Draft/suspended/archived agent profiles return non-public behavior.
 - Closed recruitment postings are not listed publicly.
 - Mobile layout remains usable at 320 CSS pixels.
+- At 100% zoom, 320, 375, 768, 1024, 1280, 1366, 1536, and 1920 CSS-pixel
+  viewports have no horizontal overflow; header, hero, trust strip, and
+  following content share coherent centered alignment, and the hero focal
+  content remains visible.
 - Public navigation uses keyboard-native controls and all public actions remain real links or native controls.
 - Mockup-only people, ratings, lender counts, rates, licence examples, testimonials, and portal metrics do not appear in public source.
 
@@ -48,6 +52,10 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 
 ## Authentication and authorization
 
+The 2026-07-17 remediation adds focused API/web coverage for the following
+criteria plus an opt-in genuine local Supabase/Mailpit integration journey.
+The integration journey is not replaced by mocked component assertions.
+
 - Anonymous user cannot access candidate or admin routes.
 - Authenticated identity without local application access is denied.
 - Every published posting exposes both registration and existing-user sign-in, and each path preserves the validated posting slug through authentication to the posting-specific application-start operation.
@@ -55,17 +63,28 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 - Posting-bound password sign-in authenticates the existing Supabase identity, then invokes the same narrow application-start operation for the preserved published posting; retries are idempotent and do not duplicate the local user, role, candidate, or application attempt.
 - Generic sign-in remains non-provisioning: without a posting context, a confirmed but locally unmapped identity is denied candidate access and receives no local user, role, candidate, or application relationship.
 - A confirmed but locally unmapped existing user can recover only by returning to a published posting and using its posting-bound sign-in path; closed, archived, unknown, or malformed posting context fails closed without provisioning.
+- Posting-bound start does not require a pre-existing `UserIdentity`, candidate role, or `Candidate`. It first validates ES256/JWKS signature, exact issuer/audience, expiry, UUID subject, and signed email, then confirms the same subject/email and `email_confirmed_at` through local Supabase Auth `/user`. User-editable metadata is not verification evidence; mismatch or provider ambiguity fails closed before the atomic local transaction.
 - Session cookies survive the callback and subsequent server/browser requests; valid refresh rotates cookies without losing authorization, while expired, revoked, or invalid sessions return to sign-in without leaking tokens or granting access.
 - Candidate can access only own record and documents.
 - Candidate cannot access internal notes.
 - Candidate cannot access another candidate by changing an identifier.
 - Admin action requires correct role.
+- Local admin identity linking requires explicit `APP_ENV=local`, a normalized existing active admin email, an existing exact `brokerage_admin` grant, one existing Supabase identity whose subject is the known seeded placeholder, and an explicit valid Supabase UUID. It is transactional and idempotent; it rejects a duplicate subject, genuine non-placeholder replacement, invalid input, missing prerequisites, and non-local execution.
+- `/auth/sign-in?returnTo=/admin` is discoverable and may select only the allow-listed admin portal root. Return intent never creates an application user, identity, role, or relationship and never elevates a candidate, identity-only, or unmapped account.
+- An authenticated local admin at AAL1 is directed through the browser TOTP enrollment/challenge workflow and remains denied by `/api/v1/auth/access?area=admin` and protected admin operations. Only an active verified local `brokerage_admin` whose current token is AAL2 succeeds.
+- TOTP enrollment and verification use only the authenticated browser session and public Supabase client configuration; service-role credentials, provider payloads, tokens, cookies, and setup secrets are not logged. Provider failures render bounded recovery guidance.
 - Suspended/offboarded account is denied.
 - Role revocation takes effect.
 
 ## Candidate application
 
 - Candidate saves draft.
+- Saving disables duplicate action, preserves the visible scroll/focus
+  context, and announces saving/saved/validation/network/stale-revision status
+  beside the controls through `aria-live="polite"`.
+- The application section outline is nonsticky informational content unless it
+  is implemented as real accessible navigation; noninteractive sticky text is
+  prohibited.
 - Questionnaire sections, fields, formats, lengths, repeat limits, optionality, prose allow-list, and server-owned fields exactly match `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 - Required Opportunity, Contact information, Application details, and Privacy and declaration sections prevent submission when incomplete; Employment history, Education and training, and documents remain optional.
 - Submission creates status history and audit event.
@@ -78,6 +97,9 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 - A withdrawn candidate retains read-only access to their submitted application and eligible uploaded documents while records are retained, but cannot edit or upload.
 
 ## Review
+
+These criteria now apply to `CandidateApplication` attempts rather than the
+candidate relationship row.
 
 - Review queue/detail denies unauthorized, inactive, suspended, and wrong-role callers and excludes terminal states.
 - Interview status and bounded notes are recorded through an authorized admin operation.
@@ -92,9 +114,28 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 
 - Only optional `resume` and `cover_letter` categories exist in Phase 1C; there is no generic or regulated-document category and neither category gates submission.
 - Candidate upload accepts only `.pdf`, `.doc`, and `.docx` under the approved 10 MiB policy, requires extension/declared MIME/libmagic/structure agreement, and completes a clean ClamAV scan before object persistence.
+- Common readable PDFs may contain bounded printable PDF comments after the
+  final EOF marker; binary/polyglot tails, missing/truncated structure, unreadable
+  pages, and encryption remain rejected. DOCX accepts the official detected MIME
+  or bounded ZIP-family detection only when strict OPC/WordprocessingML proof
+  succeeds, including safe paths, required parts, bounded expansion, no
+  encryption, and no macro-enabled content.
+- Candidate upload failures expose only the safe categories
+  `unsupported_extension`, `declared_mime_mismatch`,
+  `detected_mime_mismatch`, `pdf_structure_invalid`,
+  `docx_structure_invalid`, `legacy_doc_invalid`, `file_too_large`,
+  `malware_detected`, `scanner_unavailable`, and `storage_unavailable` (plus
+  bounded category/name/empty-file input categories). Validation, scanning, or
+  storage failure never reports success or leaves candidate metadata/private
+  object bytes.
 - `/api/v1/upload-document` accepts one authenticated candidate-AAL2 PDF/JPEG/PNG up to exactly 5 MiB, never persists bytes, and returns safe 413/415/422/503 failures.
 - Scanner unavailability, timeout, malformed response, or non-clean result fails closed and persists no candidate object bytes or metadata.
 - Candidate document upload requires AAL2 before and after submission; after-submission uploads are append-only and limited to active application states.
+- Confirmed AAL2 automatically loads owned document metadata into an explicit
+  loading/list/empty/retry state. Clean upload refreshes that list, prevents
+  duplicates while pending, preserves category, and resets only the file
+  input. Invalid files, malware, scanner outage, storage outage, and MFA denial
+  have distinct bounded responses without false success.
 - Private object cannot be fetched anonymously.
 - Authorized retrieval is short-lived or proxied.
 - Candidate restricted-document view/download requires AAL2 in addition to ownership and lifecycle authorization.
@@ -105,6 +146,10 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 - Acceptance/rejection creates audit evidence.
 
 ## Onboarding
+
+The current assignment contract carries both `application_id` and
+`assignment_id`; task and acknowledgement evidence is evaluated within that
+assignment generation.
 
 - Authorized admin can create/list onboarding plans and inspect their task templates.
 - Candidate portal navigation exposes the onboarding destination when the candidate has an eligible assignment, and admin portal navigation exposes onboarding administration to authorized administrators; direct routes retain server-side authorization.
@@ -139,3 +184,11 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 - Logs do not contain tokens or raw document URLs.
 - Live production requires private MinIO and fail-closed ClamAV; local filesystem storage and non-production scanner backends are rejected.
 - Supabase Studio, when enabled, is local-operator-only; Supabase Storage and its S3 protocol remain disabled.
+
+## 2026-07-18 browser-completion acceptance addendum
+
+- A candidate without an onboarding assignment receives `available=false` and an empty stable onboarding projection, can continue using the application portal, and does not enter a full-dashboard request/render loop. Onboarding navigation appears only after an authorized current assignment.
+- Every material frontend rule is visible before submission; the interest minimum is counted, employment months are canonical `YYYY-MM`, ineligible referral detail cannot remain hidden in the payload, and safe API `422` details map to linked field errors while preserving values.
+- Candidate document AAL1 exposes candidate-scoped TOTP enrollment or challenge, refreshes the session after verification, proves AAL2, and returns only to the exact allow-listed owned application document section. Candidate MFA never grants admin authorization.
+- Information request requires the exact selected `application_id`, is enabled only for `under_review` or `interview`, transitions only that attempt, and returns an operation-specific conflict for all other states. Candidate status exposes only the bounded open request message for that application, never internal interview notes.
+- Permanent onboarding authorization/not-found responses are not automatically retried. Transient direct-dashboard failures expose one bounded manual retry.

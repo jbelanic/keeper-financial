@@ -152,3 +152,19 @@ def test_compose_api_waits_for_clamav_and_uses_internal_fail_closed_scanner() ->
     assert "CLAMAV_READ_TIMEOUT_SECONDS: 15" in api_service
     assert "clamav:\n        condition: service_healthy" in api_service
     assert "MALWARE_SCANNER_BACKEND: disabled" not in api_service
+
+
+def test_host_run_api_uses_loopback_clamav_and_minio_endpoints() -> None:
+    makefile = (PROJECT_ROOT / "Makefile").read_text()
+    api_dev = makefile.split("\napi-dev:\n", maxsplit=1)[1].split("\n\nweb-dev:", maxsplit=1)[0]
+
+    assert ".venv/bin/python apps/api/scripts/run_local_api.py" in api_dev
+
+    launcher = (PROJECT_ROOT / "apps/api/scripts/run_local_api.py").read_text()
+    assert 'os.environ["CLAMAV_HOST"] = "127.0.0.1"' in launcher
+    assert 'os.environ["S3_ENDPOINT_URL"] = "http://127.0.0.1:9000"' in launcher
+    assert 'os.environ["S3_ACCESS_KEY_ID"] = _required("MINIO_ROOT_USER")' in launcher
+    assert 'os.environ["S3_SECRET_ACCESS_KEY"] = _required("MINIO_ROOT_PASSWORD")' in launcher
+    assert 'os.environ["S3_BUCKET"] = os.environ["MINIO_BUCKET"]' in launcher
+    assert "CLAMAV_HOST=clamav" not in launcher
+    assert "S3_ENDPOINT_URL=http://minio:9000" not in launcher

@@ -82,7 +82,12 @@ async def upload_document(
                 validate_and_scan,
             )
         except DocumentRejected as exc:
-            unsupported = exc.code in {"extension", "mime", "detected_mime", "filename"}
+            unsupported = exc.code in {
+                "declared_mime_mismatch",
+                "detected_mime_mismatch",
+                "invalid_filename",
+                "unsupported_extension",
+            }
             raise HTTPException(
                 status_code=415 if unsupported else 422,
                 detail="document type is unsupported" if unsupported else "document was rejected",

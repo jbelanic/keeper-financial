@@ -100,8 +100,16 @@ def _rejection_audit(
     responses={
         **AUTH_RESPONSES,
         409: {"description": "Application lifecycle or category limit conflict"},
-        422: {"description": "Document category, name, type, signature, or size rejected"},
-        503: {"description": "Private storage or scanning unavailable"},
+        422: {
+            "description": (
+                "Safe document validation or malware rejection category; no object is persisted"
+            )
+        },
+        503: {
+            "description": (
+                "Safe scanner_unavailable or storage_unavailable category; no success is reported"
+            )
+        },
     },
 )
 def upload_candidate_document(
@@ -160,7 +168,9 @@ def upload_candidate_document(
                 reason=exc.code,
             )
             raise HTTPException(
-                status_code=422, detail="candidate document was rejected", headers=NO_STORE
+                status_code=422,
+                detail=exc.code,
+                headers=NO_STORE,
             ) from exc
         except MalwareScannerUnavailable as exc:
             _rejection_audit(
@@ -173,7 +183,9 @@ def upload_candidate_document(
                 event_type="candidate_document.scan_decision",
             )
             raise HTTPException(
-                status_code=503, detail="document scanning is unavailable", headers=NO_STORE
+                status_code=503,
+                detail="scanner_unavailable",
+                headers=NO_STORE,
             ) from exc
         if decision.status != "clean":
             _rejection_audit(
@@ -194,14 +206,16 @@ def upload_candidate_document(
                 reason="scanner_rejected",
             )
             raise HTTPException(
-                status_code=422, detail="candidate document was rejected", headers=NO_STORE
+                status_code=422,
+                detail="malware_detected",
+                headers=NO_STORE,
             )
         try:
             storage = build_storage(settings)
         except StorageError as exc:
             raise HTTPException(
                 status_code=503,
-                detail="private document storage is unavailable",
+                detail="storage_unavailable",
                 headers=NO_STORE,
             ) from exc
         stored = None
@@ -252,7 +266,7 @@ def upload_candidate_document(
             db.rollback()
             raise HTTPException(
                 status_code=503,
-                detail="private document storage is unavailable",
+                detail="storage_unavailable",
                 headers=NO_STORE,
             ) from exc
         except Exception:

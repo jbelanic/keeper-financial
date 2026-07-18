@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card } from "@keeper/ui";
+import { getPublishedPosting } from "@/lib/recruitment-api";
 import { CandidateRegistrationForm } from "./registration-form";
 
 export const metadata: Metadata = {
@@ -11,12 +12,25 @@ export const metadata: Metadata = {
 export default async function CandidateRegistrationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ posting?: string }>;
+  searchParams: Promise<{ posting?: string | string[] }>;
 }) {
-  const { posting = "" } = await searchParams;
+  const params = await searchParams;
+  const posting = typeof params.posting === "string" ? params.posting : "";
+  let publishedPosting = null;
+  try {
+    publishedPosting = await getPublishedPosting(posting);
+  } catch {
+    // Fail closed when current publication cannot be proved.
+  }
   return (
     <main id="main-content" className="container section">
-      <Link href="/careers">← Return to opportunities</Link>
+      <Link
+        href={
+          publishedPosting ? `/careers/${publishedPosting.slug}` : "/careers"
+        }
+      >
+        ← Return to {publishedPosting ? "the opportunity" : "opportunities"}
+      </Link>
       <header className="foundation-header">
         <p className="eyebrow">Candidate account</p>
         <h1>Create your candidate account</h1>
@@ -26,7 +40,30 @@ export default async function CandidateRegistrationPage({
         </p>
       </header>
       <Card>
-        <CandidateRegistrationForm posting={posting} />
+        {publishedPosting ? (
+          <>
+            <p>
+              Applying for <strong>{publishedPosting.title}</strong>
+            </p>
+            <CandidateRegistrationForm posting={publishedPosting.slug} />
+            <p>
+              Already have an account?{" "}
+              <Link
+                href={`/auth/sign-in?posting=${encodeURIComponent(publishedPosting.slug)}`}
+              >
+                Sign in and continue this application
+              </Link>
+              .
+            </p>
+          </>
+        ) : (
+          <section role="alert" className="error-summary">
+            <h2>This application link is unavailable</h2>
+            <p>
+              Return to careers and select a currently published opportunity.
+            </p>
+          </section>
+        )}
       </Card>
     </main>
   );

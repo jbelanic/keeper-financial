@@ -1,40 +1,34 @@
-"use client";
-
-import { createBrowserClient } from "@supabase/ssr";
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
 import { Button, ErrorSummary, FormField } from "@keeper/ui";
 
-function safeReturnTo(value: string | null): string {
-  return value === "/admin" || value === "/candidate" ? value : "/candidate";
-}
+const ERROR_MESSAGES: Record<string, string> = {
+  credentials:
+    "Sign-in failed. Check your credentials and verified account access.",
+  "application-access":
+    "Your identity was verified, but application access could not be prepared. Try again from this opportunity or contact support.",
+  "posting-unavailable":
+    "That opportunity is no longer available. Return to careers and select a published opportunity.",
+  "admin-access":
+    "This authenticated account does not have authorized brokerage administration access.",
+  verification:
+    "Account verification could not be completed. Retry from the selected opportunity.",
+  session: "Your session is no longer valid. Sign in again to continue.",
+};
 
-export function SignInForm() {
-  const searchParams = useSearchParams();
-  const [errors, setErrors] = useState<string[]>([]);
-  async function signIn(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setErrors([]);
-    const form = new FormData(event.currentTarget);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
-    );
-    const { error } = await supabase.auth.signInWithPassword({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
-    if (error) {
-      setErrors([
-        "Sign-in failed. Check your credentials and verified account access.",
-      ]);
-      return;
-    }
-    window.location.assign(safeReturnTo(searchParams.get("returnTo")));
-  }
+export function SignInForm({
+  posting,
+  returnTo,
+  error,
+}: {
+  posting?: string;
+  returnTo: "/candidate" | "/admin";
+  error?: string;
+}) {
+  const message = error ? ERROR_MESSAGES[error] : undefined;
   return (
-    <form onSubmit={signIn}>
-      <ErrorSummary errors={errors} />
+    <form method="post" action="/auth/sign-in/submit">
+      <ErrorSummary errors={message ? [message] : []} />
+      {posting ? <input type="hidden" name="posting" value={posting} /> : null}
+      <input type="hidden" name="returnTo" value={returnTo} />
       <FormField id="email" label="Email">
         <input
           id="email"

@@ -36,14 +36,19 @@
 - Application tests cover extra-forbid server fields, exact formats/lengths/repeat limits, ownership, cross-candidate denial, optimistic revisions, immutable provenance, submission requirements/privacy evidence, repeat submission, submitted immutability, minimal status, and application-specific withdrawal.
 - Document tests cover candidate AAL2, category/extension/MIME/magic agreement, empty/double-extension/malformed/oversize rejection, random/private storage, clean and quarantined decisions, scanner absence, storage/database failure cleanup, category count, draft deletion, submitted append-only behavior, cross-owner denial, owner/admin retrieval, and safe audits.
 - An opt-in isolated PostgreSQL test runs two concurrent application starts and submissions, proving one application, one history, and one submission audit. SQLite remains the fast boundary suite.
-- Web tests cover published/error/empty recruitment rendering, Supabase registration and safe callback provisioning bridge, persistent progress, explicit required/optional labels, linked/focused errors, save-before-review, disclosure visibility, duplicate guards, withdrawal focus restoration, AAL2 document announcements/quarantine, and admin lifecycle UI.
+- Web tests cover published/error/empty recruitment rendering, Supabase registration and safe callback provisioning bridge, a nonobstructing section outline, explicit required/optional labels, linked/focused errors, in-place polite save feedback, save-before-review, disclosure visibility, duplicate guards, withdrawal focus restoration, automatic AAL2 document list/empty/retry states, distinct upload errors/list refresh, and admin lifecycle UI.
 - OpenAPI tests pin Phase 1C security declarations, route inventory, internal-field exclusions, and server-owned draft exclusions. Generation is run twice and hashes must remain stable.
 
 ## Phase 1F candidate-entry readiness additions
 
+The 2026-07-17 candidate-completion remediation implements the source-level
+and opt-in integration coverage below. The live-stack cases use
+`KEEPER_RUN_LOCAL_AUTH_E2E=1` and synthetic local identities only; absence of
+that explicit flag skips rather than mocks the external-state journey.
+
 - Run callback tests against the genuine local Supabase Auth service: create a unique account from a published synthetic posting, consume the Mailpit confirmation link, exchange the real callback code, and prove exactly-once posting-bound application start.
 - Add password sign-in tests for both modes: posting-bound existing-user sign-in must preserve the safe posting slug and invoke narrow provisioning; generic sign-in must remain non-provisioning and deny an unmapped identity.
-- Verify API authorization with genuine locally issued Supabase ES256 JWTs and the live local JWKS endpoint, including issuer, audience, signature, verified-email, AAL1/AAL2, expiry, key mismatch, and unmapped-subject cases. Development identity headers are not acceptable evidence for this gate.
+- Verify API authorization with genuine locally issued Supabase ES256 JWTs, the live local JWKS endpoint, and bearer-authenticated local Auth `/user` confirmation, including issuer, audience, signature, authoritative confirmed email, AAL1/AAL2, expiry, key mismatch, invalid/unmapped subject, and provider-unavailability cases. User-editable metadata is not confirmation evidence, and development identity headers are not acceptable evidence for this gate.
 - Exercise Supabase SSR cookies through callback, server component, browser request, refresh-token rotation, cross-request persistence, expiry, revocation, and sign-in redirection. Assert that tokens and cookie values never enter logs, URLs, rendered output, or audit metadata.
 - Add browser E2E coverage from the published posting through registration and through existing-user sign-in to the posting-specific application. Include confirmation via Mailpit, retry/idempotency, closed/unknown posting failure, unmapped-user recovery, refresh, and return after a new browser request.
 - Add navigation tests proving eligible candidates can discover candidate onboarding and authorized admins can discover onboarding administration, while direct routes retain server-side authorization and ineligible users receive no unauthorized data.
@@ -51,6 +56,16 @@
 - Add onboarding assignment tests that require the intended application to be `conditionally_selected`, reject selection that belongs only to another application, reject inactive/unknown plans, and preserve an existing valid assignment on failure.
 - Add acknowledgement authorization tests that permit only the exact issued document version assigned through the candidate's active onboarding assignment and reject arbitrary, unassigned, superseded-only, and cross-candidate versions.
 - Keep activation tests bounded to allow-listed gate satisfaction and `activation_ready`. Assert that readiness does not create an active agent relationship or perform final activation.
+
+The 2026-07-18 live synthetic run passed both enabled candidate-auth cases: Mailpit confirmation exchanged the PKCE callback and entered the posting-specific application with a persistent cookie session; a separately confirmed unmapped identity remained denied after generic sign-in and provisioned only after posting-bound existing-user sign-in. The ordinary isolated suite still skips these live cases unless explicitly enabled.
+
+### Local administrator bootstrap and AAL2 additions
+
+- Run the linker's database-backed unit tests for placeholder replacement, same-subject idempotency, inactive/wrong-role/missing-identity rejection, genuine-subject protection, duplicate-subject rejection, invalid email/UUID, explicit non-local refusal, and transaction rollback.
+- Keep command tests free of the current application database. Unit sessions use synthetic isolated databases; no test creates a Supabase Auth user or exercises service-role credentials.
+- Exercise the browser TOTP states for a verified factor challenge, new factor enrollment, already-AAL2 session, and bounded provider failure. Assert that the workflow does not expose raw provider errors.
+- Run the admin authorization matrix with MFA enforcement enabled: linked admin AAL1 fails the access probe and protected admin route, linked admin AAL2 succeeds, and candidate/unmapped AAL2 identities remain denied. An admin `returnTo` value must remain non-provisioning and incapable of elevation.
+- The genuine local operator procedure creates and auto-verifies a synthetic Auth user in loopback-only Studio, links only its UUID through the approved command, completes browser TOTP, and proves admin access. The 2026-07-18 implementation report records the successful live ceremony separately from deterministic tests; future release-host validation must repeat it with disposable local data.
 
 ## Phase 1D additions
 
@@ -67,14 +82,26 @@
 ## ClamAV and upload validation
 
 - Scanner unit tests cover framed `INSTREAM`, bounded chunks/responses, clean and detection results, connection/timeouts/protocol failures, and fail-closed configuration.
-- Upload tests cover AAL2, exact size limits, declared/detected type and structure agreement, malformed and decompression-bomb inputs, safe errors, scan-only non-persistence, clean-before-MinIO ordering, and database/storage cleanup.
+- Upload tests cover AAL2/ownership, exact size limits, declared/detected type
+  and structure agreement, common readable PDFs, standard Office-generated and
+  streaming-data-descriptor DOCX, official/ZIP libmagic results, narrow valid
+  legacy DOC, malformed/truncated/polyglot input, missing DOCX parts, traversal,
+  encryption, macros, expansion/ratio limits, arbitrary ZIP/OLE rejection, safe
+  error categories, scan-only non-persistence, clean-before-MinIO ordering, and
+  database/storage cleanup.
 - The in-memory verifier checks both a clean sample and the standard antivirus test marker without writing sample bytes to disk.
+- The opt-in local journey may receive operator-controlled synthetic PDF/DOCX
+  paths through process-only test variables. It performs real browser file
+  selection, TOTP/AAL2, ClamAV/MinIO upload, metadata refresh, invalid-structure
+  rejection, unauthenticated download denial, and factor cleanup without
+  printing credentials, setup secrets, file names, or object keys.
 
 ## Migrations and generated contracts
 
 - Run `alembic upgrade head`, `alembic current --check-heads`, and `alembic check` against PostgreSQL. Reaching head and autogeneration drift are separate results; the known Phase 1D model/schema drift remains a Phase 1F blocker.
 - Run `make openapi` twice and compare output hashes. OpenAPI, generated TypeScript declarations, runtime routes, schemas, and frontend types must change together.
 - Never rewrite an issued migration to silence drift; add a reviewed forward migration when remediation is approved.
+- Candidate remediation migration `20260717_0006` has focused upgrade-shape/head tests. Its result must be recorded separately from the pre-existing general Phase 1D autogeneration drift.
 
 ## Security regression validation
 
@@ -100,3 +127,17 @@ Do not replace database-backed authorization tests with UI visibility tests. Hid
 ## Before production
 
 Complete the Phase 1F candidate-entry readiness tests above; add MinIO bucket-policy and signed-URL tests, expanded adversarial document-corpus tests, deployment-level abuse-control tests, browser accessibility automation plus manual WCAG review, continuous dependency/secret scanning, backup/restore exercises, and Linux Mint deployment health/rollback tests.
+
+## 2026-07-18 browser-completion additions
+
+- Candidate-shell tests prove the shared layout calls only the minimal availability endpoint once, hides onboarding before assignment, shows it after an application-bound assignment, maps no assignment to a stable dashboard, and offers only a manual retry for transient dashboard failure.
+- Form tests pin visible Phase 1C limits, canonical month controls, referral-detail clearing, client preflight, safe API `422` path mapping, linked error summaries, value preservation, valid draft/revision behavior, immutable submission, and stale-revision denial.
+- Candidate MFA tests cover no factor, verified factor at AAL1, already AAL2, incomplete-factor cleanup, bounded provider/challenge failures, session refresh plus post-refresh AAL2 proof, exact document return, invalid-return fallback, cross-owner denial, and no admin elevation.
+- Admin tests select one exact posting/attempt, require its `application_id`, enforce the information-request lifecycle matrix, reject candidate/application mismatch, preserve other attempts, and pin operation-specific conflict text plus application history/audit evidence.
+- The opt-in genuine Firefox case closes and recreates the candidate tab three
+  times, performs ordinary posting-bound sign-in without focus/visibility/
+  resize assistance, requires a terminal application or bounded error state,
+  saves near the bottom with stable scroll and focus, and then exercises real
+  candidate TOTP/AAL2 plus clean ClamAV/MinIO upload and metadata refresh.
+- Responsive browser evidence measures overflow and shared container geometry
+  at 320, 375, 768, 1024, 1280, 1366, 1536, and 1920 CSS pixels at normal zoom.

@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from keeper_api.db.session import get_db
-from keeper_api.models.domain import CandidateApplication
+from keeper_api.models.domain import CandidateApplication, CandidateInformationRequest
 from keeper_api.schemas.candidate_applications import (
     ApplicationAction,
     ApplicationDraftUpdate,
@@ -106,10 +106,34 @@ def candidate_status(
         .where(CandidateApplication.candidate_id == principal.candidate_id)
         .order_by(CandidateApplication.created_at, CandidateApplication.id)
     ).all()
+    application_ids = [item.id for item in rows]
+    open_requests = (
+        db.scalars(
+            select(CandidateInformationRequest)
+            .where(
+                CandidateInformationRequest.application_id.in_(application_ids),
+                CandidateInformationRequest.status == "open",
+            )
+            .order_by(
+                CandidateInformationRequest.created_at,
+                CandidateInformationRequest.id,
+            )
+        ).all()
+        if application_ids
+        else []
+    )
+    messages_by_application: dict[uuid.UUID, list[str]] = {}
+    for information_request in open_requests:
+        if information_request.application_id is not None:
+            messages_by_application.setdefault(information_request.application_id, []).append(
+                information_request.message
+            )
     return CandidateStatusListResponse(
         applications=[
             CandidateVisibleApplicationStatus(
-                application_id=item.id, status=item.status, messages=[]
+                application_id=item.id,
+                status=item.status,
+                messages=messages_by_application.get(item.id, []),
             )
             for item in rows
         ]

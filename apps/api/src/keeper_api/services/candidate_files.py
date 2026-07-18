@@ -23,6 +23,8 @@ FIVE_MIB = 5 * 1024 * 1024
 TEN_MIB = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 20_000_000
 PDF_TRAILING_WHITESPACE = b"\x00\x09\x0a\x0c\x0d\x20"
+PDF_MAX_TRAILING_COMMENT_BYTES = 4096
+PDF_HEADER = re.compile(rb"\A%PDF-(?:1\.[0-7]|2\.0)(?:\r\n|\r|\n)")
 PNG_IEND = b"\x00\x00\x00\x00IEND\xaeB\x60\x82"
 DOCX_MAX_ENTRIES = 256
 DOCX_MAX_ENTRY_BYTES = 8 * 1024 * 1024
@@ -45,9 +47,23 @@ OFFICE_DOCUMENT_RELATIONSHIPS = frozenset(
         "http://purl.oclc.org/ooxml/officeDocument/relationships/officeDocument",
     }
 )
+HYPERLINK_RELATIONSHIPS = frozenset(
+    {
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        "http://purl.oclc.org/ooxml/officeDocument/relationships/hyperlink",
+    }
+)
 RELATIONSHIPS_CONTENT_TYPE = "application/vnd.openxmlformats-package.relationships+xml"
 WORD_DOCUMENT_CONTENT_TYPE = (
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+)
+DOCX_DETECTED_MIME_TYPES = frozenset(
+    {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/zip",
+        "application/x-zip",
+        "application/x-zip-compressed",
+    }
 )
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
@@ -108,10 +124,10 @@ def _read_bounded(stream: BinaryIO, maximum: int) -> bytes:
         chunks.append(chunk)
         size += len(chunk)
         if size > maximum:
-            raise CandidateFileRejected("oversized")
+            raise CandidateFileRejected("file_too_large")
     data = b"".join(chunks)
     if not data:
-        raise CandidateFileRejected("empty")
+        raise CandidateFileRejected("empty_file")
     return data
 
 
@@ -119,11 +135,11 @@ def _safe_filename(original_filename: str | None) -> tuple[str, str]:
     raw_name = (original_filename or "").replace("\\", "/").split("/")[-1]
     clean_name = re.sub(r"[\x00-\x1f\x7f]", "", raw_name).strip()
     if not clean_name or len(clean_name) > 200:
-        raise DocumentRejected("filename")
+        raise DocumentRejected("invalid_filename")
     path = PurePath(clean_name)
     extension = path.suffix.lower()
     if "." in path.stem:
-        raise DocumentRejected("extension")
+        raise DocumentRejected("unsupported_extension")
     return clean_name, extension
 
 
@@ -131,22 +147,35 @@ def _detected_mime(content: bytes) -> str:
     try:
         detected = magic.from_buffer(content, mime=True)
     except magic.MagicException as exc:
-        raise DocumentRejected("detected_mime") from exc
+        raise DocumentRejected("detected_mime_mismatch") from exc
     if not isinstance(detected, str):
-        raise DocumentRejected("detected_mime")
+        raise DocumentRejected("detected_mime_mismatch")
     return detected.lower()
 
 
 def _validate_pdf(content: bytes) -> None:
+    if PDF_HEADER.match(content) is None:
+        raise DocumentRejected("pdf_structure_invalid")
     eof = content.rfind(b"%%EOF")
-    if eof < 0 or any(byte not in PDF_TRAILING_WHITESPACE for byte in content[eof + 5 :]):
-        raise DocumentRejected("malformed")
+    if eof < 0:
+        raise DocumentRejected("pdf_structure_invalid")
+    trailing = content[eof + 5 :]
+    if len(trailing) > PDF_MAX_TRAILING_COMMENT_BYTES:
+        raise DocumentRejected("pdf_structure_invalid")
+    for line in trailing.splitlines():
+        stripped = line.strip(PDF_TRAILING_WHITESPACE)
+        if not stripped:
+            continue
+        if not stripped.startswith(b"%") or any(
+            byte != 0x09 and not 0x20 <= byte <= 0x7E for byte in stripped
+        ):
+            raise DocumentRejected("pdf_structure_invalid")
     try:
-        reader = PdfReader(io.BytesIO(content), strict=True)
+        reader = PdfReader(io.BytesIO(content), strict=False)
         if reader.is_encrypted or len(reader.pages) < 1:
-            raise DocumentRejected("malformed")
+            raise DocumentRejected("pdf_structure_invalid")
     except (OSError, PyPdfError, ValueError) as exc:
-        raise DocumentRejected("malformed") from exc
+        raise DocumentRejected("pdf_structure_invalid") from exc
 
 
 def _validate_image(content: bytes, expected_mime: str) -> None:
@@ -177,19 +206,19 @@ def _validate_doc(content: bytes) -> None:
         or len(content) < 512
         or len(content) % 512 != 0
     ):
-        raise DocumentRejected("malformed")
+        raise DocumentRejected("legacy_doc_invalid")
     try:
         with olefile.OleFileIO(
             io.BytesIO(content), raise_defects=olefile.DEFECT_INCORRECT
         ) as archive:
             if archive.parsing_issues or not archive.exists("WordDocument"):
-                raise DocumentRejected("malformed")
+                raise DocumentRejected("legacy_doc_invalid")
             if archive.get_type("WordDocument") != olefile.STGTY_STREAM:
-                raise DocumentRejected("malformed")
+                raise DocumentRejected("legacy_doc_invalid")
             word_stream = archive.openstream("WordDocument")
             fib = word_stream.read(32)
             if len(fib) != 32 or struct.unpack_from("<H", fib)[0] != 0xA5EC:
-                raise DocumentRejected("malformed")
+                raise DocumentRejected("legacy_doc_invalid")
             flags = struct.unpack_from("<H", fib, 10)[0]
             table_name = "1Table" if flags & 0x0200 else "0Table"
             if (
@@ -197,9 +226,11 @@ def _validate_doc(content: bytes) -> None:
                 or archive.get_type(table_name) != olefile.STGTY_STREAM
                 or archive.get_size(table_name) < 1
             ):
-                raise DocumentRejected("malformed")
+                raise DocumentRejected("legacy_doc_invalid")
     except (OSError, TypeError, ValueError, struct.error) as exc:
-        raise DocumentRejected("malformed") from exc
+        if isinstance(exc, DocumentRejected):
+            raise
+        raise DocumentRejected("legacy_doc_invalid") from exc
 
 
 def _validate_zip_layout(content: bytes, entries: list[zipfile.ZipInfo]) -> None:
@@ -244,13 +275,59 @@ def _validate_zip_layout(content: bytes, entries: list[zipfile.ZipInfo]) -> None
             raise DocumentRejected("malformed") from exc
         if (
             local[0] != b"PK\x03\x04"
-            or local[2] & 0x08
             or local[2] != entry.flag_bits
-            or local[7] != entry.compress_size
-            or local[8] != entry.file_size
+            or local[3] != entry.compress_type
         ):
             raise DocumentRejected("malformed")
-        expected_offset += 30 + local[9] + local[10] + entry.compress_size
+        name_start = expected_offset + 30
+        name_end = name_start + local[9]
+        payload_start = name_end + local[10]
+        payload_end = payload_start + entry.compress_size
+        if payload_end > central_offset:
+            raise DocumentRejected("malformed")
+        try:
+            local_name = content[name_start:name_end].decode(
+                "utf-8" if local[2] & 0x800 else "cp437"
+            )
+        except UnicodeDecodeError as exc:
+            raise DocumentRejected("malformed") from exc
+        if local_name != entry.filename:
+            raise DocumentRejected("malformed")
+        if local[2] & 0x08:
+            descriptor_offset = payload_end
+            has_signature = content[descriptor_offset : descriptor_offset + 4] == b"PK\x07\x08"
+            descriptor_size = 16 if has_signature else 12
+            if descriptor_offset + descriptor_size > central_offset:
+                raise DocumentRejected("malformed")
+            try:
+                if has_signature:
+                    signature, crc, compressed_size, file_size = struct.unpack_from(
+                        "<4s3L", content, descriptor_offset
+                    )
+                    if signature != b"PK\x07\x08":
+                        raise DocumentRejected("malformed")
+                else:
+                    crc, compressed_size, file_size = struct.unpack_from(
+                        "<3L", content, descriptor_offset
+                    )
+            except struct.error as exc:
+                raise DocumentRejected("malformed") from exc
+            if (
+                crc != entry.CRC
+                or compressed_size != entry.compress_size
+                or file_size != entry.file_size
+                or local[6:9] != (0, 0, 0)
+            ):
+                raise DocumentRejected("malformed")
+            expected_offset = descriptor_offset + descriptor_size
+        else:
+            if (
+                local[6] != entry.CRC
+                or local[7] != entry.compress_size
+                or local[8] != entry.file_size
+            ):
+                raise DocumentRejected("malformed")
+            expected_offset = payload_end
     if expected_offset != central_offset:
         raise DocumentRejected("malformed")
 
@@ -317,6 +394,17 @@ def _relationship_target(relationships_name: str, target: str) -> str:
     return resolved
 
 
+def _valid_external_hyperlink(target: str) -> bool:
+    if not target or len(target) > 2048 or any(ord(character) < 32 for character in target):
+        return False
+    parsed = urlsplit(target)
+    if parsed.scheme in {"http", "https"}:
+        return bool(parsed.netloc) and parsed.username is None and parsed.password is None
+    if parsed.scheme == "mailto":
+        return bool(parsed.path) and not parsed.netloc
+    return False
+
+
 def _validate_docx_relationships(
     relationships_name: str,
     records: list[tuple[str, dict[str, str]]],
@@ -324,7 +412,11 @@ def _validate_docx_relationships(
 ) -> bool:
     root = f"{{{RELATIONSHIPS_NS}}}Relationships"
     relationship = f"{{{RELATIONSHIPS_NS}}}Relationship"
-    if not records or records[0][0] != root or any(tag not in {root, relationship} for tag, _ in records):
+    if (
+        not records
+        or records[0][0] != root
+        or any(tag not in {root, relationship} for tag, _ in records)
+    ):
         raise DocumentRejected("malformed")
     identifiers: set[str] = set()
     office_document = False
@@ -334,13 +426,18 @@ def _validate_docx_relationships(
         identifier = attributes.get("Id", "")
         relationship_type = attributes.get("Type", "")
         target = attributes.get("Target", "")
-        if (
-            not identifier
-            or identifier in identifiers
-            or attributes.get("TargetMode", "Internal") != "Internal"
-        ):
+        target_mode = attributes.get("TargetMode", "Internal")
+        if not identifier or identifier in identifiers:
             raise DocumentRejected("malformed")
         identifiers.add(identifier)
+        if target_mode == "External":
+            if relationship_type not in HYPERLINK_RELATIONSHIPS or not _valid_external_hyperlink(
+                target
+            ):
+                raise DocumentRejected("malformed")
+            continue
+        if target_mode != "Internal":
+            raise DocumentRejected("malformed")
         resolved = _relationship_target(relationships_name, target)
         if resolved not in names:
             raise DocumentRejected("malformed")
@@ -353,7 +450,7 @@ def _validate_docx_relationships(
 
 def _validate_docx(content: bytes) -> None:
     if not content.startswith(b"PK\x03\x04"):
-        raise DocumentRejected("malformed")
+        raise DocumentRejected("docx_structure_invalid")
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as archive:
             entries = archive.infolist()
@@ -402,7 +499,11 @@ def _validate_docx(content: bytes) -> None:
             overrides: dict[str, str] = {}
             for tag, attributes in content_records[1:]:
                 content_type = attributes.get("ContentType", "")
-                if not content_type or "macroenabled" in content_type.casefold() or "vba" in content_type.casefold():
+                if (
+                    not content_type
+                    or "macroenabled" in content_type.casefold()
+                    or "vba" in content_type.casefold()
+                ):
                     raise DocumentRejected("malformed")
                 if tag == default_tag:
                     extension = attributes.get("Extension", "").casefold()
@@ -415,9 +516,10 @@ def _validate_docx(content: bytes) -> None:
                     if not part_name.startswith("/") or key in overrides:
                         raise DocumentRejected("malformed")
                     overrides[key] = content_type
-            if defaults.get("rels") != RELATIONSHIPS_CONTENT_TYPE or overrides.get(
-                "/word/document.xml"
-            ) != WORD_DOCUMENT_CONTENT_TYPE:
+            if (
+                defaults.get("rels") != RELATIONSHIPS_CONTENT_TYPE
+                or overrides.get("/word/document.xml") != WORD_DOCUMENT_CONTENT_TYPE
+            ):
                 raise DocumentRejected("malformed")
             for name in names - {"[Content_Types].xml"}:
                 if name.endswith("/"):
@@ -429,9 +531,7 @@ def _validate_docx(content: bytes) -> None:
             office_relationships = 0
             for name, (_root, records) in xml_summaries.items():
                 if name.endswith(".rels"):
-                    office_relationships += int(
-                        _validate_docx_relationships(name, records, names)
-                    )
+                    office_relationships += int(_validate_docx_relationships(name, records, names))
             if office_relationships != 1:
                 raise DocumentRejected("malformed")
 
@@ -442,14 +542,21 @@ def _validate_docx(content: bytes) -> None:
                 for namespace in WORDPROCESSING_NAMESPACES
             ):
                 raise DocumentRejected("malformed")
+    except DocumentRejected as exc:
+        if exc.code == "docx_structure_invalid":
+            raise
+        raise DocumentRejected("docx_structure_invalid") from exc
     except (
         DefusedXmlException,
         KeyError,
+        NotImplementedError,
         OSError,
+        OverflowError,
+        RuntimeError,
         ElementTree.ParseError,
         zipfile.BadZipFile,
     ) as exc:
-        raise DocumentRejected("malformed") from exc
+        raise DocumentRejected("docx_structure_invalid") from exc
 
 
 def validate_document_bytes(
@@ -460,15 +567,15 @@ def validate_document_bytes(
     policy: DocumentPolicy,
 ) -> CandidateFile:
     if not content:
-        raise DocumentRejected("empty")
+        raise DocumentRejected("empty_file")
     if len(content) > policy.maximum_bytes:
-        raise DocumentRejected("oversized")
+        raise DocumentRejected("file_too_large")
     clean_name, extension = _safe_filename(original_filename)
     if extension not in policy.extension_mime_types:
-        raise DocumentRejected("extension")
+        raise DocumentRejected("unsupported_extension")
     expected_mime = policy.extension_mime_types[extension]
     if (declared_content_type or "").lower() != expected_mime:
-        raise DocumentRejected("mime")
+        raise DocumentRejected("declared_mime_mismatch")
     image_signature_matches = (
         expected_mime == "image/png" and content.startswith(b"\x89PNG\r\n\x1a\n")
     ) or (expected_mime == "image/jpeg" and content.startswith(b"\xff\xd8\xff"))
@@ -479,9 +586,9 @@ def validate_document_bytes(
     if extension == ".doc":
         accepted_detected_types.add("application/x-ole-storage")
     elif extension == ".docx":
-        accepted_detected_types.add("application/zip")
+        accepted_detected_types.update(DOCX_DETECTED_MIME_TYPES)
     if detected_mime not in accepted_detected_types:
-        raise DocumentRejected("detected_mime")
+        raise DocumentRejected("detected_mime_mismatch")
     if expected_mime == "application/pdf":
         _validate_pdf(content)
     elif expected_mime in {"image/jpeg", "image/png"} and not image_signature_matches:
@@ -507,7 +614,7 @@ def validate_candidate_file(
     maximum: int,
 ) -> CandidateFile:
     if category not in CATEGORIES:
-        raise CandidateFileRejected("category")
+        raise CandidateFileRejected("unsupported_category")
     try:
         content = _read_bounded(stream, maximum)
         return validate_document_bytes(

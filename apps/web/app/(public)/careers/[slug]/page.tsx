@@ -59,9 +59,15 @@ export default async function CareerOpportunityPage({ params }: Props) {
             className="button-link"
             href={`/auth/register?posting=${encodeURIComponent(posting.slug)}`}
           >
-            Start an application
+            Create an account
           </Link>
-          <Link className="button-link button-secondary" href="/careers">
+          <Link
+            className="button-link button-secondary"
+            href={`/auth/sign-in?posting=${encodeURIComponent(posting.slug)}`}
+          >
+            Sign in with an existing account
+          </Link>
+          <Link className="text-link" href="/careers">
             Back to opportunities
           </Link>
         </div>

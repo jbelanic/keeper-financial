@@ -112,16 +112,18 @@ export function CandidateOnboardingDashboardView({
       <ErrorSummary errors={errors} />
 
       <Card>
-        <h2>Activation status</h2>
+        <h2>Activation readiness</h2>
         {dashboard.activation_ready ? (
           <p>
-            <StatusBadge tone="success">Ready for activation</StatusBadge> All
-            required gates are satisfied.
+            <StatusBadge tone="success">Activation ready</StatusBadge> Required
+            assigned tasks, policies, and gates are complete. This does not
+            perform final activation.
           </p>
         ) : (
           <p>
             <StatusBadge tone="warning">In progress</StatusBadge> Complete the
-            required tasks and gates below to unlock activation.
+            required assigned tasks, policies, and gates below. Final activation
+            is not performed by this portal.
           </p>
         )}
       </Card>

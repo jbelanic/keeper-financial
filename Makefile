@@ -1,4 +1,4 @@
-.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed openapi
+.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed link-local-admin openapi
 
 bootstrap: api-install
 	npm install
@@ -17,7 +17,7 @@ api-install:
 	.venv/bin/pip install -e 'apps/api[dev]'
 
 api-dev:
-	.venv/bin/uvicorn keeper_api.main:app --app-dir apps/api/src --reload
+	.venv/bin/python apps/api/scripts/run_local_api.py
 
 web-dev:
 	npm run dev --workspace @keeper/web
@@ -55,6 +55,12 @@ compose-config:
 
 seed:
 	APP_ENV=local .venv/bin/python apps/api/scripts/seed_local.py
+
+ADMIN_EMAIL ?= admin@example.test
+
+link-local-admin:
+	@if [ -z "$(SUPABASE_SUBJECT)" ]; then echo "SUPABASE_SUBJECT is required." >&2; exit 2; fi
+	@APP_ENV=local .venv/bin/python apps/api/scripts/link_local_admin_identity.py --email "$(ADMIN_EMAIL)" --subject "$(SUPABASE_SUBJECT)"
 
 openapi:
 	.venv/bin/python apps/api/scripts/export_openapi.py

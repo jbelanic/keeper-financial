@@ -18,6 +18,7 @@ from keeper_api.models.domain import (
 from keeper_api.models.statuses import OnboardingAssignmentStatus
 from keeper_api.schemas.review_onboarding import (
     ActivationGateResponse,
+    CandidateOnboardingAvailability,
     CandidateOnboardingDashboard,
     CandidateOnboardingTaskResponse,
     ControlledDocumentResponse,
@@ -35,7 +36,6 @@ from keeper_api.services.onboarding import (
     candidate_assigned_documents,
     candidate_esign_envelopes,
     candidate_gates,
-    current_document_version,
     get_candidate_tasks,
     submit_task_evidence,
 )
@@ -71,6 +71,28 @@ class PolicyAckIn(BaseModel):
 
 
 @router.get(
+    "/availability",
+    response_model=CandidateOnboardingAvailability,
+    responses=AUTH_RESPONSES,
+)
+def onboarding_availability(
+    response: Response,
+    principal: Principal = Depends(require_candidate),
+    db: Session = Depends(get_db),
+) -> CandidateOnboardingAvailability:
+    response.headers.update(NO_STORE)
+    candidate = _candidate(principal, db)
+    assignment_id = db.scalar(
+        select(CandidateOnboardingAssignment.id).where(
+            CandidateOnboardingAssignment.candidate_id == candidate.id,
+            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+            CandidateOnboardingAssignment.application_id.is_not(None),
+        )
+    )
+    return CandidateOnboardingAvailability(available=assignment_id is not None)
+
+
+@router.get(
     "",
     response_model=CandidateOnboardingDashboard,
     responses=AUTH_RESPONSES,
@@ -88,14 +110,30 @@ def onboarding_dashboard(
             CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
         )
     )
+    if assignment is None or assignment.application_id is None:
+        return CandidateOnboardingDashboard(
+            assignment=None,
+            tasks=[],
+            gates=[],
+            documents=[],
+            acknowledgements=[],
+            esign_envelopes=[],
+            activation_ready=False,
+        )
     documents = candidate_assigned_documents(db, candidate_id=candidate.id)
     return CandidateOnboardingDashboard(
-        assignment=_assignment_out(assignment) if assignment else None,
-        tasks=[_task_out(t) for t in get_candidate_tasks(db, candidate_id=candidate.id)],
+        assignment=_assignment_out(assignment),
+        tasks=[
+            _task_out(t)
+            for t in get_candidate_tasks(db, candidate_id=candidate.id, assignment_id=assignment.id)
+        ],
         gates=[_gate_out(g) for g in candidate_gates(db, candidate_id=candidate.id)],
-        documents=[_doc_out(db, d) for d in documents],
+        documents=[_doc_out(document, version) for document, version in documents],
         acknowledgements=[
-            _ack_out(a) for a in candidate_acknowledgements(db, candidate_id=candidate.id)
+            _ack_out(a)
+            for a in candidate_acknowledgements(
+                db, candidate_id=candidate.id, assignment_id=assignment.id
+            )
         ],
         esign_envelopes=[
             _esign_out(e) for e in candidate_esign_envelopes(db, candidate_id=candidate.id)
@@ -141,6 +179,7 @@ def submit_evidence(
 
 @router.post(
     "/acknowledgements",
+    response_model=PolicyAcknowledgementResponse,
     responses={
         **AUTH_RESPONSES,
         404: {"description": "Document version not found"},
@@ -153,7 +192,7 @@ def acknowledge(
     response: Response,
     principal: Principal = Depends(require_candidate),
     db: Session = Depends(get_db),
-) -> dict[str, object]:
+) -> PolicyAcknowledgementResponse:
     response.headers.update(NO_STORE)
     candidate = _candidate(principal, db)
     version = db.get(DocumentVersion, payload.document_version_id)
@@ -170,7 +209,7 @@ def acknowledge(
         )
     except OnboardingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"acknowledgement_id": str(ack.id), "document_version_id": str(version.id)}
+    return _ack_out(ack)
 
 
 # ---- projection helpers ---- #
@@ -188,8 +227,7 @@ def _gate_out(g: Any) -> ActivationGateResponse:
     return ActivationGateResponse.model_validate(g, from_attributes=True)
 
 
-def _doc_out(db: Session, d: Any) -> ControlledDocumentResponse:
-    version = current_document_version(db, d)
+def _doc_out(d: Any, version: DocumentVersion) -> ControlledDocumentResponse:
     return ControlledDocumentResponse(
         id=d.id,
         key=d.key,

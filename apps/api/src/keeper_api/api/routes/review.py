@@ -4,11 +4,16 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from keeper_api.db.session import get_db
-from keeper_api.models.domain import Candidate
-from keeper_api.models.statuses import CandidateStatus, InterviewStatus
+from keeper_api.models.domain import (
+    Candidate,
+    CandidateApplication,
+    CandidateOnboardingAssignment,
+)
+from keeper_api.models.statuses import CandidateStatus, InterviewStatus, OnboardingAssignmentStatus
 from keeper_api.schemas.review_onboarding import (
     CandidateDecisionRequest,
     CandidateDetailResponse,
@@ -20,6 +25,7 @@ from keeper_api.schemas.review_onboarding import (
 )
 from keeper_api.services.auth import Principal, require_admin
 from keeper_api.services.onboarding import (
+    OnboardingError,
     assign_onboarding_plan,
     get_onboarding_plan,
 )
@@ -29,7 +35,7 @@ from keeper_api.services.review import (
     candidate_profile,
     candidate_review_queue,
     decide_candidate,
-    get_review_candidate,
+    get_review_application,
     record_interview_status,
     record_withdrawal,
     request_information,
@@ -39,38 +45,69 @@ router = APIRouter(prefix="/admin/candidates", tags=["admin review"])
 NO_STORE = {"Cache-Control": "no-store"}
 
 
-def _summary(candidate: Candidate, profile: CandidateProfileView) -> CandidateReviewSummary:
-    return CandidateReviewSummary(
-        candidate_id=candidate.id,
-        status=CandidateStatus(candidate.status),
-        given_name=profile.given_name,
-        family_name=profile.family_name,
-        email=profile.email,
-        interview_status=InterviewStatus(candidate.interview_status)
-        if candidate.interview_status
-        else None,
-        assigned_onboarding_plan_id=candidate.assigned_onboarding_plan_id,
-        created_at=candidate.created_at,
-        updated_at=candidate.updated_at,
+def _active_assignment(
+    db: Session, application_id: uuid.UUID
+) -> CandidateOnboardingAssignment | None:
+    return db.scalar(
+        select(CandidateOnboardingAssignment).where(
+            CandidateOnboardingAssignment.application_id == application_id,
+            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+        )
     )
 
 
-def _detail(candidate: Candidate, profile: CandidateProfileView) -> CandidateDetailResponse:
-    return CandidateDetailResponse(
+def _summary(
+    db: Session,
+    candidate: Candidate,
+    application: CandidateApplication,
+    profile: CandidateProfileView,
+) -> CandidateReviewSummary:
+    assignment = _active_assignment(db, application.id)
+    return CandidateReviewSummary(
         candidate_id=candidate.id,
-        status=CandidateStatus(candidate.status),
+        application_id=application.id,
+        attempt_number=application.attempt_number,
+        source_posting_slug=application.source_posting_slug,
+        source_posting_title=application.source_posting_title,
+        status=CandidateStatus(application.status),
         given_name=profile.given_name,
         family_name=profile.family_name,
         email=profile.email,
-        interview_status=InterviewStatus(candidate.interview_status)
-        if candidate.interview_status
+        interview_status=InterviewStatus(application.interview_status)
+        if application.interview_status
         else None,
-        interview_notes=candidate.interview_notes,
-        interview_recorded_at=candidate.interview_recorded_at,
-        assigned_onboarding_plan_id=candidate.assigned_onboarding_plan_id,
-        assigned_onboarding_at=candidate.assigned_onboarding_at,
-        created_at=candidate.created_at,
-        updated_at=candidate.updated_at,
+        assigned_onboarding_plan_id=assignment.onboarding_plan_id if assignment else None,
+        created_at=application.created_at,
+        updated_at=application.updated_at,
+    )
+
+
+def _detail(
+    db: Session,
+    candidate: Candidate,
+    application: CandidateApplication,
+    profile: CandidateProfileView,
+) -> CandidateDetailResponse:
+    assignment = _active_assignment(db, application.id)
+    return CandidateDetailResponse(
+        candidate_id=candidate.id,
+        application_id=application.id,
+        attempt_number=application.attempt_number,
+        source_posting_slug=application.source_posting_slug,
+        source_posting_title=application.source_posting_title,
+        status=CandidateStatus(application.status),
+        given_name=profile.given_name,
+        family_name=profile.family_name,
+        email=profile.email,
+        interview_status=InterviewStatus(application.interview_status)
+        if application.interview_status
+        else None,
+        interview_notes=application.interview_notes,
+        interview_recorded_at=application.interview_recorded_at,
+        assigned_onboarding_plan_id=assignment.onboarding_plan_id if assignment else None,
+        assigned_onboarding_at=assignment.created_at if assignment else None,
+        created_at=application.created_at,
+        updated_at=application.updated_at,
     )
 
 
@@ -91,9 +128,12 @@ def list_review_queue(
     db: Session = Depends(get_db),
 ) -> CandidateQueueResponse:
     response.headers.update(NO_STORE)
-    candidates, total = candidate_review_queue(db, limit=limit, offset=offset, status=status_filter)
+    rows, total = candidate_review_queue(db, limit=limit, offset=offset, status=status_filter)
     return CandidateQueueResponse(
-        items=[_summary(item, candidate_profile(db, item)) for item in candidates],
+        items=[
+            _summary(db, candidate, application, candidate_profile(db, candidate, application))
+            for application, candidate in rows
+        ],
         total=total,
         limit=limit,
         offset=offset,
@@ -111,18 +151,19 @@ def list_review_queue(
 )
 def get_candidate_detail(
     candidate_id: uuid.UUID,
+    application_id: uuid.UUID,
     response: Response,
     _: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> CandidateDetailResponse:
     response.headers.update(NO_STORE)
     try:
-        candidate = get_review_candidate(db, candidate_id)
+        candidate, application = get_review_application(db, candidate_id, application_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="candidate not found") from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
-    return _detail(candidate, candidate_profile(db, candidate))
+    return _detail(db, candidate, application, candidate_profile(db, candidate, application))
 
 
 @router.post(
@@ -145,10 +186,13 @@ def set_interview_status(
 ) -> CandidateDetailResponse:
     response.headers.update(NO_STORE)
     try:
-        candidate = get_review_candidate(db, candidate_id)
-        candidate = record_interview_status(
+        candidate, application = get_review_application(
+            db, candidate_id, payload.application_id, lock=True
+        )
+        application = record_interview_status(
             db,
             candidate=candidate,
+            application=application,
             interview_status=payload.interview_status,
             notes=payload.notes,
             actor_user_id=principal.user_id,
@@ -160,7 +204,7 @@ def set_interview_status(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ReviewError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _detail(candidate, candidate_profile(db, candidate))
+    return _detail(db, candidate, application, candidate_profile(db, candidate, application))
 
 
 @router.post(
@@ -185,10 +229,13 @@ def create_information_request(
 ) -> InformationRequestResponse:
     response.headers.update(NO_STORE)
     try:
-        candidate = get_review_candidate(db, candidate_id)
+        candidate, application = get_review_application(
+            db, candidate_id, payload.application_id, lock=True
+        )
         request_record = request_information(
             db,
             candidate=candidate,
+            application=application,
             message=payload.message,
             actor_user_id=principal.user_id,
             request_id=request.state.request_id,
@@ -198,7 +245,10 @@ def create_information_request(
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ReviewError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=409,
+            detail="information request is not available for the selected application status",
+        ) from exc
     return InformationRequestResponse.model_validate(request_record, from_attributes=True)
 
 
@@ -222,19 +272,23 @@ def decide_candidate_status(
 ) -> CandidateDetailResponse:
     response.headers.update(NO_STORE)
     try:
-        candidate = get_review_candidate(db, candidate_id)
+        candidate, application = get_review_application(
+            db, candidate_id, payload.application_id, lock=True
+        )
         if payload.decision == CandidateStatus.WITHDRAWN:
-            candidate = record_withdrawal(
+            application = record_withdrawal(
                 db,
                 candidate=candidate,
+                application=application,
                 reason=payload.reason,
                 actor_user_id=principal.user_id,
                 request_id=request.state.request_id,
             )
         else:
-            candidate = decide_candidate(
+            application = decide_candidate(
                 db,
                 candidate=candidate,
+                application=application,
                 decision=payload.decision,
                 reason=payload.reason,
                 actor_user_id=principal.user_id,
@@ -246,7 +300,7 @@ def decide_candidate_status(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ReviewError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _detail(candidate, candidate_profile(db, candidate))
+    return _detail(db, candidate, application, candidate_profile(db, candidate, application))
 
 
 @router.post(
@@ -263,6 +317,7 @@ def decide_candidate_status(
 def assign_onboarding(
     candidate_id: uuid.UUID,
     plan_id: uuid.UUID,
+    application_id: uuid.UUID,
     request: Request,
     response: Response,
     principal: Principal = Depends(require_admin),
@@ -270,7 +325,7 @@ def assign_onboarding(
 ) -> dict[str, object]:
     response.headers.update(NO_STORE)
     try:
-        candidate = get_review_candidate(db, candidate_id)
+        candidate, application = get_review_application(db, candidate_id, application_id, lock=True)
         plan = get_onboarding_plan(db, plan_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="candidate or plan not found") from exc
@@ -280,15 +335,17 @@ def assign_onboarding(
         assignment = assign_onboarding_plan(
             db,
             candidate=candidate,
+            application=application,
             plan=plan,
             actor_user_id=principal.user_id,
             request_id=request.state.request_id,
         )
-    except ReviewError as exc:
+    except OnboardingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {
         "assignment_id": str(assignment.id),
         "candidate_id": str(candidate.id),
+        "application_id": str(application.id),
         "onboarding_plan_id": str(plan.id),
         "status": assignment.status,
     }

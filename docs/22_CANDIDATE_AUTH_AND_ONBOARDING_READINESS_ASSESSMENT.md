@@ -102,3 +102,67 @@ The gate requires:
 ## Residual blockers outside this assessment
 
 The known Alembic model/schema drift remains a separate Phase 1F readiness blocker. It must receive a reviewed forward migration or explicit disposition; issued migrations must not be rewritten to silence `alembic check`.
+
+## 2026-07-17 remediation addendum
+
+The owner approved a separate consolidated implementation prompt after this
+read-only assessment. Branch `fix/candidate-auth-onboarding-completion`
+remediates `ENTRY-01` through `ENTRY-04`, `NAV-01`, `NAV-02`, `LIFE-01`,
+`ONB-01`, `ONB-02`, and `DOC-01` in source and focused tests. `ACT-01` remains
+an intentional boundary: the implementation calculates readiness and exposes
+no final activation route.
+
+`SESSION-01` now has deterministic callback-cookie, refresh propagation,
+expiry, and local ES256 verification coverage plus an opt-in genuine local
+Supabase/Mailpit journey. It is fully closed as live-stack evidence only when
+that opt-in journey is executed successfully on the review host; a skipped
+run is reported as a residual validation blocker, not treated as a pass.
+
+The implementation keeps the original candidate-id route families for
+compatibility but requires an exact `application_id` for every review,
+decision, and assignment operation. Forward migration `20260717_0006` adds
+application/assignment provenance and exact assigned-document relationships;
+ambiguous legacy rows are not guessed or backfilled. See
+`docs/23_CANDIDATE_AUTH_ONBOARDING_COMPLETION_IMPLEMENTATION_REPORT.md` for
+current evidence. The original assessment above remains unchanged historical
+evidence.
+
+## 2026-07-18 live identity-verification addendum
+
+The opt-in local Supabase/Mailpit journey now passes for fresh synthetic
+identities. Investigation of the genuine posting-bound `403` proved that the
+Next.js callback and password route forwarded a current bearer correctly and
+that JWT signature, issuer, audience, expiry, and route selection had already
+passed. The start dependency failed because it expected top-level JWT email-
+verification claims that local Supabase did not emit; no existing local
+identity, role, or candidate dependency caused the denial, and no partial
+application rows were created.
+
+The corrected start boundary validates the JWT, then confirms the exact UUID
+subject, signed email, and authoritative `email_confirmed_at` through local
+Supabase Auth `/user` using the same bearer and browser-safe anon key. It does
+not trust user-editable metadata or require local candidate rows before the
+atomic transaction that creates them. Generic sign-in remains non-provisioning,
+and ordinary candidate access still requires the resulting PostgreSQL mapping,
+role, ownership, active state, and lifecycle. `SESSION-01` has successful local
+callback/cross-request evidence; refresh-token revocation remains operational
+readiness work.
+
+## 2026-07-18 browser-completion addendum
+
+The application-start `403` is resolved and live candidate draft save and
+submission succeeded. The earlier draft `422` was not a broken save endpoint:
+it reflected valid Phase 1C rules that were not discoverable without developer
+tools. The completion worktree now makes those rules visible and maps safe
+validation details to fields.
+
+The shared candidate shell now uses a minimal assignment-availability response;
+no assignment is stable and does not invoke the full onboarding projection on
+every render. Candidate documents reuse the approved TOTP enrollment/challenge
+ceremony with an exact application/document return and post-refresh AAL2 proof.
+Administrator information requests require the exact selected application and
+are enabled only in `under_review` or `interview`; candidate-visible request
+text remains separate from internal notes. The fresh genuine candidate rerun
+passed through stable pre-onboarding, draft save/submission, real TOTP AAL2, and
+owned document metadata access. A fresh genuine admin-browser information
+request remains pending; current evidence is recorded in `docs/23`.

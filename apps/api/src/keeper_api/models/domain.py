@@ -138,7 +138,7 @@ class CandidateApplication(IdTimestampsMixin, Base):
         ),
         status_check(
             "status",
-            ["application_started", "application_submitted", "withdrawn", "declined"],
+            [item.value for item in CandidateStatus if item != CandidateStatus.PROSPECT],
             "ck_candidate_application_status",
         ),
         UniqueConstraint(
@@ -153,8 +153,8 @@ class CandidateApplication(IdTimestampsMixin, Base):
             "candidate_id",
             "recruitment_posting_id",
             unique=True,
-            postgresql_where=text("status IN ('application_started', 'application_submitted')"),
-            sqlite_where=text("status IN ('application_started', 'application_submitted')"),
+            postgresql_where=text("status NOT IN ('withdrawn', 'declined')"),
+            sqlite_where=text("status NOT IN ('withdrawn', 'declined')"),
         ),
     )
 
@@ -192,6 +192,11 @@ class CandidateApplication(IdTimestampsMixin, Base):
     privacy_acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    interview_status: Mapped[str | None] = mapped_column(String(32), default=None)
+    interview_notes: Mapped[str | None] = mapped_column(String(1000), default=None)
+    interview_recorded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
 
 class CandidateEmploymentEntry(IdTimestampsMixin, Base):
@@ -273,10 +278,19 @@ class CandidateOnboardingTask(IdTimestampsMixin, Base):
             [item.value for item in OnboardingTaskStatus],
             "ck_candidate_onboarding_task_status",
         ),
-        UniqueConstraint("candidate_id", "onboarding_task_id"),
+        UniqueConstraint(
+            "assignment_id",
+            "onboarding_task_id",
+            name="uq_candidate_onboarding_tasks_assignment_task",
+        ),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_onboarding_assignments.id", ondelete="CASCADE"),
+        index=True,
+        default=None,
+    )
     onboarding_task_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("onboarding_tasks.id", ondelete="CASCADE")
     )
@@ -303,14 +317,47 @@ class CandidateOnboardingAssignment(IdTimestampsMixin, Base):
             "ck_candidate_onboarding_assignment_status",
         ),
         UniqueConstraint("candidate_id", "onboarding_plan_id", "generation"),
+        Index(
+            "uq_candidate_onboarding_assignment_active_application",
+            "application_id",
+            unique=True,
+            postgresql_where=text("status = 'active' AND application_id IS NOT NULL"),
+            sqlite_where=text("status = 'active' AND application_id IS NOT NULL"),
+        ),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    application_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="RESTRICT"), index=True, default=None
+    )
     onboarding_plan_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("onboarding_plans.id", ondelete="RESTRICT")
     )
     generation: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(32), default=OnboardingAssignmentStatus.ACTIVE.value)
+    assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class CandidateOnboardingDocumentVersion(IdTimestampsMixin, Base):
+    """Exact controlled-document version issued through one assignment."""
+
+    __tablename__ = "candidate_onboarding_document_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id",
+            "document_version_id",
+            name="uq_candidate_onboarding_document_version",
+        ),
+    )
+
+    assignment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidate_onboarding_assignments.id", ondelete="CASCADE"), index=True
+    )
+    document_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("document_versions.id", ondelete="RESTRICT"), index=True
+    )
     assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -387,6 +434,11 @@ class PolicyAcknowledgement(IdTimestampsMixin, Base):
     __table_args__ = (UniqueConstraint("candidate_id", "document_version_id"),)
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_onboarding_assignments.id", ondelete="RESTRICT"),
+        index=True,
+        default=None,
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     document_version_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("document_versions.id", ondelete="RESTRICT")
@@ -415,6 +467,9 @@ class CandidateInformationRequest(IdTimestampsMixin, Base):
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("candidates.id", ondelete="CASCADE"), index=True
+    )
+    application_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_applications.id", ondelete="RESTRICT"), index=True, default=None
     )
     requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")

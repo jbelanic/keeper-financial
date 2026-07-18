@@ -70,7 +70,7 @@ Live evidence on 2026-07-16: `clamav/clamav:stable` pulled at digest `sha256:7f5
 
 `alembic check` still exits non-zero only because it detects historical Phase 1D model/schema differences in indexes and foreign-key `ondelete`. That command remains a useful diagnostic, but it is not a green acceptance result or a blocker to reaching the checked-in migration head. Historical schema remediation is outside this deployment change. The local SMTP service is mail capture, not real delivery. The Supabase CLI stack is not upstream production-hardened, and its broadly bound ports require host-firewall protection even though the Compose services are loopback-bound.
 
-The expected container database connection is `postgresql+psycopg://<user>:<password>@db:5432/<database>`; `localhost` would address the API container itself and is rejected in production configuration. API-to-MinIO requests use `http://minio:9000`; short-lived browser download redirects use `http://localhost:9000`. Path-style S3 addressing is forced.
+The expected container database connection is `postgresql+psycopg://<user>:<password>@db:5432/<database>`; `localhost` would address the API container itself and is rejected in production configuration. Compose API-to-MinIO requests use `http://minio:9000` and Compose scanning uses `clamav:3310`. `make api-dev` runs `apps/api/scripts/run_local_api.py`, which loads the ignored local values, maps the approved MinIO credentials/bucket into the host S3 adapter without printing them, and uses `http://127.0.0.1:9000` plus `127.0.0.1:3310`. Short-lived browser download endpoints remain loopback. Path-style S3 addressing is forced. Do not start a host API with the Compose-only `minio` or `clamav` DNS names.
 
 To validate the tracked Compose mechanism without reading a real `.env` or emitting environment values:
 
@@ -90,7 +90,7 @@ git diff --check
 
 ## Authentication and authorization
 
-Supabase proves identity only. An identity still needs an active verified local `UserIdentity`, application role, and permitted relationship/lifecycle state. Production disables development identity headers and requires AAL2 for administrators. The seed script creates no Supabase users.
+Supabase proves identity only. Ordinary portal access still needs an active verified local `UserIdentity`, application role, and permitted relationship/lifecycle state. The one deliberate exception is the validated posting-bound application-start operation: after JWT validation it confirms the exact bearer identity and `email_confirmed_at` against local Supabase Auth `/user`, then atomically creates or reuses the narrow candidate mapping and posting-specific attempt. It does not require those rows before creating them. Generic sign-in remains non-provisioning. Production disables development identity headers and requires AAL2 for administrators. The seed script creates no Supabase users.
 
 ### Safe manual candidate and onboarding journey
 
@@ -102,12 +102,67 @@ Use this procedure only with synthetic local data and the loopback-only stack:
 2. Open the published synthetic opportunity from `http://localhost:3000/careers`. Start there rather than navigating directly to a generic Auth URL so the validated posting context is present.
 3. Register a new unique Supabase account, for example an operator-controlled `+candidate-<timestamp>` address accepted by local Mailpit. Use a password created only for this disposable local identity. Do not reuse a seeded fixture email or a real production credential.
 4. Open the confirmation message only in local Mailpit and follow its loopback callback. Record whether the callback returns to the selected posting-specific application and whether a subsequent fresh browser request retains candidate access. Never copy access/refresh tokens, callback codes, cookies, or confirmation URLs into reports or logs.
-5. Return to the published posting with the confirmed account to assess existing-user entry. At the current checkpoint the posting exposes no sign-in action and generic `/auth/sign-in` loses the posting slug. If callback provisioning failed and left the identity locally unmapped, the expected result is fail-closed denial with no supported recovery. Do not manufacture that state or work around the denial by changing database or Auth records.
-6. Exercise refresh, expiry/revocation, and a new browser request only after the posting-bound path exists. A valid refresh must preserve the mapped session; invalid or revoked sessions must return to sign-in without provisioning or leaking credentials.
+5. Return to the published posting with the confirmed account and select **Sign in with an existing account**. The URL must contain only that published posting slug, successful sign-in must reuse the same application attempt, and a fresh browser request must retain access. Generic `/auth/sign-in` remains a separate non-provisioning path.
+6. To prove the recovery boundary, create a second unique synthetic Auth identity, confirm it through Mailpit without a posting context, verify generic candidate access is denied, then return to the published posting and use its existing-user sign-in action. The posting-bound start must create the narrow local mapping exactly once. Do not create or edit application mappings manually.
+7. Exercise refresh, expiry/revocation, and a new browser request. A valid refresh must preserve the mapped session; invalid or revoked sessions must return to sign-in without provisioning or leaking credentials.
 
-Administrative onboarding verification has additional preconditions. The operator must use a genuine, already approved local Supabase identity that maps to an active application `UserIdentity` with the `brokerage_admin` role and must complete a real local TOTP ceremony so the token is AAL2. Seeded admin rows and development headers are insufficient for the browser E2E gate. If no approved admin bootstrap/mapping exists, stop and record that prerequisite rather than editing Studio or PostgreSQL manually.
+### Safe local administrator identity link and AAL2 procedure
 
-Before assigning onboarding, the selected application attempt—not merely another application for the same candidate—must have completed the approved review transitions and be `conditionally_selected`; the onboarding plan must exist and be active. Use only supported admin operations to assign the plan, then verify that candidate and admin onboarding are discoverable in their navigation, the candidate sees only assigned tasks/documents, and acknowledgement rejects any version not assigned through that active assignment. At the current checkpoint these lifecycle, active-plan, navigation, and acknowledgement conditions are known defects, so manual testing records the breakpoint and must not relabel the journey as passed. Satisfying all gates may produce `activation_ready=true`; it does not perform final activation.
+Seeded application identities are fixtures. The only approved bridge for the
+synthetic seeded administrator is the local-only script below. It replaces only
+the known seeded placeholder subject and refuses a genuine existing subject,
+duplicate subject, inactive user, or missing admin role. It never grants a
+role, creates a Supabase Auth user, uses service-role credentials, or links an
+identity merely because email addresses match.
+
+1. Confirm the loopback-only Supabase stack and application services are healthy and that the local application fixtures have been seeded. Open local Studio at `http://127.0.0.1:54323` from the continuation host only.
+2. In **Authentication → Users**, create the synthetic Auth user `admin@example.test` with an operator-controlled local-only password and **Auto Confirm User** enabled. Do not use a real person's email or credential.
+3. Open that Auth user and copy only its **User UID**. Do not copy a token, cookie, provider payload, confirmation link, service-role key, JWT secret, or password.
+4. From the repository root, pass that UUID explicitly to one of these equivalent commands. Do not store it in `.env` or source control:
+
+   ```bash
+   APP_ENV=local .venv/bin/python apps/api/scripts/link_local_admin_identity.py \
+     --email admin@example.test \
+     --subject '<SUPABASE_USER_UUID>'
+
+   make link-local-admin SUPABASE_SUBJECT='<SUPABASE_USER_UUID>'
+   ```
+
+   The expected bounded result is either `The local administrator identity was linked successfully.` or the idempotent `The local administrator identity is already linked.` Any refusal is a stop condition; do not edit application or Auth tables by hand.
+
+5. Open `http://localhost:3000/auth/sign-in?returnTo=/admin` and sign in as the synthetic Auth user. The return path supplies navigation intent only and cannot grant application authorization.
+6. Continue at `/auth/mfa?returnTo=/admin`. Select **Begin TOTP enrollment**, scan the displayed QR code (or privately enter its one-time setup key), enter the current six-digit code, and select **Verify authenticator**. Do not put the setup key or codes in logs, screenshots, shell history, or reports.
+7. Select **Continue to administration**. Loading `/admin` invokes `GET /api/v1/auth/access?area=admin` server-side; reaching the authorized shell proves that the access probe returned success for the current AAL2 session. To retain bounded operational evidence without exporting a token, run `docker compose logs --since=2m api` and confirm the access request completed with status `200`. Do not enable verbose authorization-header logging. A denial must return to sign-in or MFA and must not be bypassed.
+8. Open `http://localhost:3000/admin/candidates` and `http://localhost:3000/admin/onboarding`. Both routes repeat server/API authorization; navigation visibility alone is not evidence of access.
+
+No shell command can safely reproduce the browser's cookie-bound TOTP session
+without exporting an access token, so the supported access check is the exact
+browser navigation above. Never paste a bearer token into shell history merely
+to call `/api/v1/auth/access?area=admin` with `curl`.
+
+Before assigning onboarding, the selected application attempt—not merely another application for the same candidate—must have completed the approved review transitions and be `conditionally_selected`; the onboarding plan must exist and be active. Use only supported admin operations to assign the plan, then verify that candidate and admin onboarding are discoverable in their navigation, the candidate sees only assignment-bound tasks/documents, and acknowledgement rejects any version not assigned through that active assignment. Satisfying all gates may produce `activation_ready=true`; it does not perform final activation.
+
+The repository also provides opt-in local-stack checks. They use only unique
+synthetic identities and do not print tokens, cookies, callback codes, or
+provider payloads:
+
+```bash
+cd apps/web
+KEEPER_RUN_LOCAL_AUTH_E2E=1 \
+KEEPER_LOCAL_E2E_POSTING=test-recruitment-posting-01 \
+node --env-file=../../.env ../../node_modules/vitest/vitest.mjs run \
+  tests/local-candidate-auth-journey.integration.test.ts
+
+cd ../..
+KEEPER_LOCAL_SUPABASE_ACCESS_TOKEN='<synthetic-local-token>' .venv/bin/pytest apps/api/tests/test_supabase_jwt_verification.py
+```
+
+The first command additionally requires the documented local public API/Auth/
+Mailpit endpoints, local anon key, and a published synthetic posting. The
+second enables only the genuine JWT/JWKS/Auth-user verification case; without
+its explicit token the live test skips. Never put the token in `.env`, source
+control, or test output. The anon key is browser-safe, but it must not be
+confused with or replaced by a service-role credential.
 
 Local source-level/API tests may still use `APP_ENV=local`, local filesystem fixtures, `MALWARE_SCANNER_BACKEND=local_test`, and documented development headers. Those are not live Compose settings. The live stack uses MinIO and `MALWARE_SCANNER_BACKEND=clamav`; production startup rejects `local_test` and `disabled`. Scanner connection, timeout, protocol, or daemon failures return safe 503 responses and never fall back to accepting or storing bytes.
 
@@ -149,3 +204,56 @@ sudo usermod -aG docker "$USER" && newgrp docker
 ```
 
 This repository does not run that command. A full logout and login after `usermod` is the cleaner persistent activation for all new sessions.
+
+## Candidate browser-completion verification
+
+A new candidate without an assignment must load `/candidate/application`
+without polling the full onboarding dashboard. Onboarding must be absent from
+the shared navigation; directly opening `/candidate/onboarding` must show the
+stable “not available yet” state. The application form must display the
+100-character interest minimum, `YYYY-MM` month controls, and conditional
+referral-detail rule before save.
+
+From the exact application document section, use **Set up MFA to access
+documents** when no verified factor exists or **Verify with MFA to access
+documents** for an AAL1 session with a verified factor. Complete the local TOTP
+ceremony and confirm return to `/candidate/applications/{application_id}#documents`.
+The refreshed session must be AAL2, document ownership remains enforced by the
+API, and the candidate must still be denied from `/admin`.
+
+At AAL2, existing document metadata loads automatically. Confirm a visible
+list or **No documents uploaded yet**, rather than a disappearing load button.
+A clean synthetic PDF/DOC/DOCX upload must announce success, refresh safe
+metadata, preserve category, and reset only the file input. A scanner outage
+and storage outage must remain distinct safe `503` failures with no false
+success or document metadata. For host-run API validation, start with
+`make api-dev`; for Compose, retain the explicit internal service endpoints.
+
+For format validation, use only synthetic documents. The declared MIME must be
+the approved exact format MIME. A DOCX that libmagic reports as a ZIP-family
+type is accepted only after its bounded OPC/WordprocessingML structure is
+proved. The UI must map the safe type/structure/size/malware/scanner/storage
+categories without displaying parser output. The opt-in local journey accepts
+temporary synthetic standard-PDF and standard-DOCX paths through
+`KEEPER_LOCAL_E2E_PDF_PATH` and `KEEPER_LOCAL_E2E_DOCX_PATH`; keep those
+process-only and do not add them to `.env`. When both paths and the Firefox BiDi
+session endpoint are supplied, the journey uses the real file controls, TOTP,
+ClamAV, MinIO, list refresh, and safe invalid-file rejection.
+
+For draft feedback, scroll the action area into view and save a valid draft.
+The nearby polite status and button must progress through saving to saved
+without changing the visible scroll position or stranding focus. The section
+outline is informational normal-flow content and must not cover headings.
+
+At normal 100% zoom, inspect `/` at 320, 375, 768, 1024, 1280, 1366, 1536,
+and 1920 CSS pixels. `documentElement.scrollWidth` must not exceed the viewport;
+header, hero, trust strip, and following content must share coherent centering,
+and the intended hero subjects must remain visible.
+
+For the corresponding administrator check, select the exact submitted
+opportunity and attempt in `/admin/candidates`, choose **Begin review**, then
+send the bounded information request. The action is intentionally disabled
+while the attempt is merely `application_submitted`; it is permitted only in
+`under_review` or `interview`. Confirm the chosen application moves to
+`more_information_required`, another attempt is unchanged, and the candidate
+status view contains only the bounded request message—not interview notes.

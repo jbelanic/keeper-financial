@@ -574,6 +574,9 @@
           "409": {
             "description": "Identity conflict"
           },
+          "503": {
+            "description": "Identity verification unavailable"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1648,10 +1651,10 @@
             "description": "Application lifecycle or category limit conflict"
           },
           "422": {
-            "description": "Document category, name, type, signature, or size rejected"
+            "description": "Safe document validation or malware rejection category; no object is persisted"
           },
           "503": {
-            "description": "Private storage or scanning unavailable"
+            "description": "Safe scanner_unavailable or storage_unavailable category; no success is reported"
           }
         }
       },
@@ -2548,6 +2551,16 @@
             }
           },
           {
+            "name": "application_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
             "name": "x-dev-auth-sub",
             "in": "header",
             "required": false,
@@ -2919,6 +2932,16 @@
               "type": "string",
               "format": "uuid",
               "title": "Plan Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
             }
           },
           {
@@ -3722,6 +3745,76 @@
         }
       }
     },
+    "/api/v1/candidate/onboarding/availability": {
+      "get": {
+        "tags": [
+          "candidate onboarding"
+        ],
+        "summary": "Onboarding Availability",
+        "operationId": "onboarding_availability_api_v1_candidate_onboarding_availability_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateOnboardingAvailability"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/candidate/onboarding": {
       "get": {
         "tags": [
@@ -3946,9 +4039,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Acknowledge Api V1 Candidate Onboarding Acknowledgements Post"
+                  "$ref": "#/components/schemas/PolicyAcknowledgementResponse"
                 }
               }
             }
@@ -5205,6 +5296,17 @@
             "enum": [
               "application_started",
               "application_submitted",
+              "under_review",
+              "more_information_required",
+              "interview",
+              "conditionally_selected",
+              "onboarding_in_progress",
+              "pending_fsra_authorization",
+              "pending_system_provisioning",
+              "active",
+              "suspended",
+              "offboarding",
+              "offboarded",
               "withdrawn",
               "declined"
             ],
@@ -5478,6 +5580,11 @@
       },
       "CandidateDecisionRequest": {
         "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
           "decision": {
             "$ref": "#/components/schemas/CandidateStatus"
           },
@@ -5497,6 +5604,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "application_id",
           "decision"
         ],
         "title": "CandidateDecisionRequest",
@@ -5508,6 +5616,23 @@
             "type": "string",
             "format": "uuid",
             "title": "Candidate Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number"
+          },
+          "source_posting_slug": {
+            "type": "string",
+            "title": "Source Posting Slug"
+          },
+          "source_posting_title": {
+            "type": "string",
+            "title": "Source Posting Title"
           },
           "status": {
             "$ref": "#/components/schemas/CandidateStatus"
@@ -5609,6 +5734,10 @@
         "type": "object",
         "required": [
           "candidate_id",
+          "application_id",
+          "attempt_number",
+          "source_posting_slug",
+          "source_posting_title",
           "status",
           "given_name",
           "family_name",
@@ -5699,6 +5828,19 @@
         ],
         "title": "CandidateDocumentResponse"
       },
+      "CandidateOnboardingAvailability": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "title": "CandidateOnboardingAvailability"
+      },
       "CandidateOnboardingDashboard": {
         "properties": {
           "assignment": {
@@ -5774,6 +5916,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Candidate Id"
+          },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
           },
           "onboarding_task_id": {
             "type": "string",
@@ -5870,6 +6024,7 @@
         "required": [
           "id",
           "candidate_id",
+          "assignment_id",
           "onboarding_task_id",
           "status",
           "due_at",
@@ -5946,6 +6101,23 @@
             "format": "uuid",
             "title": "Candidate Id"
           },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number"
+          },
+          "source_posting_slug": {
+            "type": "string",
+            "title": "Source Posting Slug"
+          },
+          "source_posting_title": {
+            "type": "string",
+            "title": "Source Posting Title"
+          },
           "status": {
             "$ref": "#/components/schemas/CandidateStatus"
           },
@@ -6011,6 +6183,10 @@
         "type": "object",
         "required": [
           "candidate_id",
+          "application_id",
+          "attempt_number",
+          "source_posting_slug",
+          "source_posting_title",
           "status",
           "given_name",
           "family_name",
@@ -6072,6 +6248,17 @@
             "enum": [
               "application_started",
               "application_submitted",
+              "under_review",
+              "more_information_required",
+              "interview",
+              "conditionally_selected",
+              "onboarding_in_progress",
+              "pending_fsra_authorization",
+              "pending_system_provisioning",
+              "active",
+              "suspended",
+              "offboarding",
+              "offboarded",
               "withdrawn",
               "declined"
             ],
@@ -6687,6 +6874,11 @@
       },
       "InformationRequestCreate": {
         "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
           "message": {
             "type": "string",
             "maxLength": 2000,
@@ -6697,6 +6889,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "application_id",
           "message"
         ],
         "title": "InformationRequestCreate"
@@ -6712,6 +6905,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Candidate Id"
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
           },
           "status": {
             "$ref": "#/components/schemas/InformationRequestStatus"
@@ -6758,6 +6963,7 @@
         "required": [
           "id",
           "candidate_id",
+          "application_id",
           "status",
           "message",
           "response",
@@ -6787,6 +6993,11 @@
       },
       "InterviewStatusUpdate": {
         "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
           "interview_status": {
             "$ref": "#/components/schemas/InterviewStatus"
           },
@@ -6806,6 +7017,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "application_id",
           "interview_status"
         ],
         "title": "InterviewStatusUpdate"
@@ -7083,6 +7295,18 @@
             "format": "uuid",
             "title": "Candidate Id"
           },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
+          },
           "onboarding_plan_id": {
             "type": "string",
             "format": "uuid",
@@ -7122,6 +7346,7 @@
         "required": [
           "id",
           "candidate_id",
+          "application_id",
           "onboarding_plan_id",
           "generation",
           "status",
@@ -7332,6 +7557,18 @@
             "format": "uuid",
             "title": "Candidate Id"
           },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
           "document_version_id": {
             "type": "string",
             "format": "uuid",
@@ -7351,6 +7588,7 @@
         "required": [
           "id",
           "candidate_id",
+          "assignment_id",
           "document_version_id",
           "wording",
           "acknowledged_at"

@@ -6,6 +6,12 @@ export function isSafePostingSlug(value: string): boolean {
   return value.length <= 100 && SAFE_POSTING.test(value);
 }
 
+export class CandidateProvisioningError extends Error {
+  constructor(public readonly status: number) {
+    super("application provisioning failed");
+  }
+}
+
 export async function startCandidateApplication(
   token: string,
   posting: string,
@@ -20,7 +26,7 @@ export async function startCandidateApplication(
       cache: "no-store",
     },
   );
-  if (!response.ok) throw new Error("application provisioning failed");
+  if (!response.ok) throw new CandidateProvisioningError(response.status);
   const data = (await response.json()) as { id?: unknown };
   if (typeof data.id !== "string")
     throw new Error("invalid application response");

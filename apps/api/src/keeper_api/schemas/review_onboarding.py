@@ -42,6 +42,10 @@ class CandidateReviewSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     candidate_id: uuid.UUID
+    application_id: uuid.UUID
+    attempt_number: int
+    source_posting_slug: str
+    source_posting_title: str
     status: CandidateStatus
     given_name: str | None
     family_name: str | None
@@ -63,6 +67,10 @@ class CandidateDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     candidate_id: uuid.UUID
+    application_id: uuid.UUID
+    attempt_number: int
+    source_posting_slug: str
+    source_posting_title: str
     status: CandidateStatus
     given_name: str | None
     family_name: str | None
@@ -79,6 +87,7 @@ class CandidateDetailResponse(BaseModel):
 class InterviewStatusUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    application_id: uuid.UUID
     interview_status: InterviewStatus
     notes: str | None = Field(default=None, max_length=1000)
 
@@ -90,6 +99,7 @@ class InterviewStatusUpdate(BaseModel):
 class InformationRequestCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    application_id: uuid.UUID
     message: str = Field(min_length=1, max_length=2000)
 
     _validate_message = field_validator("message")(
@@ -102,6 +112,7 @@ class InformationRequestResponse(BaseModel):
 
     id: uuid.UUID
     candidate_id: uuid.UUID
+    application_id: uuid.UUID | None
     status: InformationRequestStatus
     message: str
     response: str | None
@@ -115,6 +126,7 @@ class CandidateDecisionRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    application_id: uuid.UUID
     decision: CandidateStatus
     reason: str | None = Field(default=None, max_length=1000)
 
@@ -215,6 +227,7 @@ class OnboardingAssignmentResponse(BaseModel):
 
     id: uuid.UUID
     candidate_id: uuid.UUID
+    application_id: uuid.UUID | None
     onboarding_plan_id: uuid.UUID
     generation: int
     status: OnboardingAssignmentStatus
@@ -228,6 +241,7 @@ class CandidateOnboardingTaskResponse(BaseModel):
 
     id: uuid.UUID
     candidate_id: uuid.UUID
+    assignment_id: uuid.UUID | None
     onboarding_task_id: uuid.UUID
     status: OnboardingTaskStatus
     due_at: datetime | None
@@ -304,6 +318,7 @@ class PolicyAcknowledgementResponse(BaseModel):
 
     id: uuid.UUID
     candidate_id: uuid.UUID
+    assignment_id: uuid.UUID | None
     document_version_id: uuid.UUID
     wording: str
     acknowledged_at: datetime
@@ -374,6 +389,10 @@ class ActivationGateListResponse(BaseModel):
 # --------------------------------------------------------------------------- #
 # Candidate-facing onboarding dashboard projection
 # --------------------------------------------------------------------------- #
+
+
+class CandidateOnboardingAvailability(BaseModel):
+    available: bool
 
 
 class CandidateOnboardingDashboard(BaseModel):

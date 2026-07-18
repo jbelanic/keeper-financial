@@ -95,6 +95,8 @@ services:
       CLAMAV_MAX_CHUNKS: 256
       CLAMAV_MAX_RESPONSE_BYTES: 4096
       SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
+      SUPABASE_USER_URL: http://host.docker.internal:54321/auth/v1/user
+      SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
     ports:
       - "127.0.0.1:8000:8000"
     extra_hosts:
@@ -109,7 +111,13 @@ services:
       clamav:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10

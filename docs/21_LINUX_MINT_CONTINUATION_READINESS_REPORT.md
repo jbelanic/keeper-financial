@@ -317,3 +317,64 @@ The next safe work is:
 3. investigate and disposition the Alembic drift;
 4. approve the remaining Phase 1F scope; and
 5. only then begin bounded Phase 1F implementation.
+
+## 2026-07-17 candidate-completion addendum
+
+The owner subsequently approved the consolidated candidate authentication and
+onboarding completion prompt on branch
+`fix/candidate-auth-onboarding-completion`. That bounded remediation now:
+
+- provides published-posting registration and existing-user sign-in while
+  retaining only a server-validated posting slug;
+- preserves generic sign-in as a non-provisioning path and reuses the existing
+  application-start API as the sole candidate self-provisioning boundary;
+- refreshes and propagates Supabase SSR cookies on protected/auth requests;
+- exposes authorized candidate/admin onboarding navigation;
+- makes review transitions and onboarding assignment application-specific;
+- requires `conditionally_selected` plus an active plan; and
+- binds controlled-document acknowledgement and readiness to exact assignment
+  versions.
+
+Forward migration `20260717_0006` is limited to the provenance needed for
+these controls. It does not resolve or claim to resolve the known general
+Phase 1D Alembic drift. Historical validation and Git-state sections above
+remain evidence of the continuation baseline at that time, not the current
+remediation worktree. Current command evidence and residual blockers are in
+`docs/23_CANDIDATE_AUTH_ONBOARDING_COMPLETION_IMPLEMENTATION_REPORT.md`.
+
+Final activation remains unimplemented.
+
+### Local administrator access addendum
+
+A genuine local browser investigation subsequently confirmed that the seeded
+`admin@example.test` application fixture retained placeholder Supabase subject
+`00000000-0000-4000-8000-000000000002`, while the separately created local
+Auth user had a different UUID. The API correctly denied that unmatched
+identity. This was not an MFA or role-check bypass defect.
+
+The remediation worktree now adds an explicit local-only, transactional
+placeholder replacement command and a browser TOTP enrollment/challenge route.
+The command requires an existing active `brokerage_admin`, creates no Auth user
+or role, uses no service-role credential, and refuses genuine-subject or
+cross-user replacement. `/auth/sign-in?returnTo=/admin` remains generic and
+non-provisioning; PostgreSQL role mapping and AAL2 remain authoritative. The
+subsequent genuine local ceremony successfully linked the placeholder,
+enrolled TOTP, established AAL2, and reached `/admin`, `/admin/candidates`, and
+`/admin/onboarding`; current evidence is recorded in `docs/23`.
+
+### 2026-07-18 browser-completion addendum
+
+The remaining focused pass replaces the shared shell's full onboarding
+dashboard fetch with a bounded availability projection, maps no assignment to
+a stable candidate state, exposes Phase 1C form requirements and safe linked
+`422` errors, reuses the approved TOTP ceremony for candidate document step-up,
+and keeps administrator information requests bound to the exact selected
+application. The separate general Alembic drift and final activation remain
+outside this work. A later stabilization rerun passed three fresh closed-tab
+candidate sign-ins without focus/visibility/resize assistance, in-place draft
+feedback, nonobstructing section flow, real candidate AAL2, clean ClamAV/MinIO
+upload with refreshed metadata, and responsive Firefox checks at all required
+320–1920 CSS-pixel widths. A fresh genuine admin-browser information request
+remains pending before commit readiness. Any earlier “ready to commit” wording
+in this historical continuation report refers only to its bounded baseline at
+that time, not the current uncommitted remediation worktree.

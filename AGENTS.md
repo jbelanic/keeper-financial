@@ -32,20 +32,25 @@ The known Alembic model/schema drift must be resolved or explicitly dispositione
 
 The narrow continuation-validation corrections are complete: Ruff import ordering is green, and the configuration test now permits local-operator-only Studio while continuing to require Supabase Storage and its S3 protocol to remain disabled.
 
-Current readiness blockers include the known Alembic drift and the unremediated end-to-end candidate sign-in, local provisioning/authorization, application-entry, lifecycle, and onboarding journey defects below.
+The candidate authentication/onboarding completion worktree contains the
+bounded Phase 1F blocker remediation described in
+`docs/23_CANDIDATE_AUTH_ONBOARDING_COMPLETION_IMPLEMENTATION_REPORT.md`. Its
+focused browser-completion addendum has a passing genuine candidate rerun but is
+pending a fresh genuine admin information-request send before owner review; it
+is not an approved checkpoint until reviewed and committed. Generic sign-in
+remains non-provisioning, and Supabase identity alone still grants no
+application access.
 
-The Phase 1F readiness gate has also identified the following unresolved Phase 1C/1D completion defects. They are findings, not completed remediation:
-
-- the public posting offers registration only and has no posting-preserving existing-user sign-in path;
-- generic `/auth/sign-in` is not discoverable from the posting, drops posting context, and must remain non-provisioning;
-- `/auth/callback` is the only posting-bound local-provisioning bridge;
-- a confirmed but locally unmapped Supabase user is correctly denied candidate access but has no supported posting-bound recovery path;
-- Supabase SSR cookie persistence exists, but callback, refresh, expiry, and cross-request session behavior are not adequately verified;
-- candidate and admin onboarding pages exist but are absent from their respective portal navigation;
-- onboarding assignment does not prove a `conditionally_selected` application-specific state or an active plan;
-- review decisions do not enforce application-specific lifecycle transitions;
-- controlled-document acknowledgement does not prove that the exact document version is assigned to the candidate; and
-- activation-gate satisfaction and `activation_ready` are implemented, but final agent activation is not.
+The local admin browser investigation additionally proved that the seeded
+`admin@example.test` application identity is a fixture whose placeholder
+subject does not match a newly created Supabase Auth user. The remediation
+worktree therefore provides an explicit `APP_ENV=local`, placeholder-only
+operator link command and a browser TOTP/AAL2 ceremony. It must never infer or
+grant an admin role, link by matching email automatically, create an Auth user,
+use service-role credentials, or replace a genuine non-placeholder subject.
+The known general Alembic drift, remaining admin-browser journey evidence,
+operational hardening, and owner release approval remain separate readiness
+gates.
 
 Activation gates and `activation_ready` calculation are implemented. Do not claim that final agent activation is implemented unless a separately approved final activation operation exists.
 

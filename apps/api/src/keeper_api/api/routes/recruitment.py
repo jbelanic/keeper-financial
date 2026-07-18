@@ -79,6 +79,7 @@ def list_public_postings(
         403: {"description": "Verified identity required"},
         404: {"description": "Posting unavailable"},
         409: {"description": "Identity conflict"},
+        503: {"description": "Identity verification unavailable"},
     },
 )
 def start_candidate_application(

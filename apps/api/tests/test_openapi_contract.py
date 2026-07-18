@@ -110,6 +110,8 @@ def test_phase_1d_openapi_operations_enforce_boundaries_and_contracts(
     decision = paths["/api/v1/admin/candidates/{candidate_id}/decision"]["post"]
     assert decision["security"] == [{"HTTPBearer": []}]
     assert {"401", "403", "409"}.issubset(decision["responses"])
+    decision_schema = document["components"]["schemas"]["CandidateDecisionRequest"]
+    assert "application_id" in decision_schema["required"]
 
     # ONB-001/002: plan + assignment are admin-only.
     plans_post = paths["/api/v1/admin/onboarding/plans"]["post"]
@@ -119,6 +121,11 @@ def test_phase_1d_openapi_operations_enforce_boundaries_and_contracts(
     assign = paths["/api/v1/admin/candidates/{candidate_id}/assign-onboarding"]["post"]
     assert assign["security"] == [{"HTTPBearer": []}]
     assert {"401", "403", "409"}.issubset(assign["responses"])
+    assert {parameter["name"] for parameter in assign["parameters"]} >= {
+        "candidate_id",
+        "application_id",
+        "plan_id",
+    }
 
     # ONB-005/006/008/009: candidate-facing onboarding is candidate-only.
     dash = paths["/api/v1/candidate/onboarding"]["get"]
@@ -128,6 +135,10 @@ def test_phase_1d_openapi_operations_enforce_boundaries_and_contracts(
     ack = paths["/api/v1/candidate/onboarding/acknowledgements"]["post"]
     assert ack["security"] == [{"HTTPBearer": []}]
     assert {"401", "403"}.issubset(ack["responses"])
+    assert ack["responses"]["200"]["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/PolicyAcknowledgementResponse"
+    )
+    assert not any(path.endswith("/activate") for path in paths)
 
     # B7: no internal audit fields leak into candidate-facing contract types.
     dash_schema = document["components"]["schemas"]["CandidateOnboardingDashboard"]

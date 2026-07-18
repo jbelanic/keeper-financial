@@ -8,6 +8,24 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+CandidateVisibleStatus = Literal[
+    "application_started",
+    "application_submitted",
+    "under_review",
+    "more_information_required",
+    "interview",
+    "conditionally_selected",
+    "onboarding_in_progress",
+    "pending_fsra_authorization",
+    "pending_system_provisioning",
+    "active",
+    "suspended",
+    "offboarding",
+    "offboarded",
+    "withdrawn",
+    "declined",
+]
+
 COUNTRY_CODES = frozenset(
     [
         "AD",
@@ -414,7 +432,7 @@ class CandidateApplicationResponse(BaseModel):
     schema_version: str
     revision: int
     state: Literal["draft", "submitted", "withdrawn"]
-    status: Literal["application_started", "application_submitted", "withdrawn", "declined"]
+    status: CandidateVisibleStatus
     email: str
     given_name: str | None
     family_name: str | None
@@ -447,7 +465,7 @@ class ApplicationListResponse(BaseModel):
 
 class CandidateVisibleApplicationStatus(BaseModel):
     application_id: uuid.UUID
-    status: Literal["application_started", "application_submitted", "withdrawn", "declined"]
+    status: CandidateVisibleStatus
     messages: list[str]
 
 

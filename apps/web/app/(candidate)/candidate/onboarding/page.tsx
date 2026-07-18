@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Card, ErrorState, StatusBadge } from "@keeper/ui";
 import {
   portalServerJson,
@@ -19,12 +20,22 @@ export default async function CandidateOnboardingPage() {
         <h1>Your onboarding</h1>
         <p>
           Complete assigned tasks, acknowledge required policies, and finish
-          external signing steps. Activation is unlocked only when all required
-          gates are satisfied.
+          external signing steps. The portal calculates activation readiness;
+          final activation remains a separate approved administrative step.
         </p>
       </header>
-      {dashboard ? (
+      {dashboard?.assignment ? (
         <CandidateOnboardingDashboardView dashboard={dashboard} />
+      ) : dashboard ? (
+        <Card>
+          <StatusBadge tone="neutral">Not assigned</StatusBadge>
+          <h2>Onboarding is not available yet</h2>
+          <p>
+            It will appear if your application advances and an onboarding plan
+            is assigned. You can continue using your application portal now.
+          </p>
+          <Link href="/candidate/application">Return to your applications</Link>
+        </Card>
       ) : (
         <Card>
           <StatusBadge tone="warning">Access unavailable</StatusBadge>
@@ -32,6 +43,7 @@ export default async function CandidateOnboardingPage() {
             Your candidate session or the onboarding service could not be
             verified.
           </ErrorState>
+          <Link href="/candidate/onboarding">Try onboarding again</Link>
         </Card>
       )}
     </>

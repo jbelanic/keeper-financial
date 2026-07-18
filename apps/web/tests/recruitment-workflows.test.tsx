@@ -48,4 +48,43 @@ describe("public recruitment postings", () => {
       /opportunities are temporarily unavailable/i,
     );
   });
+
+  it("offers both posting-bound registration and existing-user sign-in", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          slug: "synthetic-advisor-opportunity",
+          title: "Synthetic advisor opportunity",
+          summary: "A synthetic published fixture.",
+          body: "Test-only posting body.",
+        }),
+      }),
+    );
+    const { default: PostingPage } = await import(
+      "@/app/(public)/careers/[slug]/page"
+    );
+    render(
+      <>
+        {await PostingPage({
+          params: Promise.resolve({ slug: "synthetic-advisor-opportunity" }),
+        })}
+      </>,
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Create an account" }),
+    ).toHaveAttribute(
+      "href",
+      "/auth/register?posting=synthetic-advisor-opportunity",
+    );
+    expect(
+      screen.getByRole("link", { name: "Sign in with an existing account" }),
+    ).toHaveAttribute(
+      "href",
+      "/auth/sign-in?posting=synthetic-advisor-opportunity",
+    );
+  });
 });

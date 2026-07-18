@@ -7,6 +7,7 @@ vi.mock("@supabase/ssr", () => ({
 
 describe("candidate registration", () => {
   beforeEach(() => signUp.mockReset());
+  afterEach(() => vi.unstubAllGlobals());
 
   it("registers through Supabase with a posting-bound verification callback", async () => {
     signUp.mockResolvedValue({ error: null });
@@ -44,6 +45,52 @@ describe("candidate registration", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       /application link is unavailable/i,
     );
+    expect(
+      screen.queryByRole("button", { name: /create account/i }),
+    ).toBeNull();
+  });
+
+  it("server-validates a published posting and links existing-user recovery", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          slug: "synthetic-opportunity",
+          title: "Synthetic opportunity",
+          summary: "Synthetic summary.",
+          body: "Synthetic body.",
+        }),
+      }),
+    );
+    const { default: RegistrationPage } = await import(
+      "@/app/auth/register/page"
+    );
+    render(
+      await RegistrationPage({
+        searchParams: Promise.resolve({ posting: "synthetic-opportunity" }),
+      }),
+    );
+    expect(
+      screen.getByRole("link", { name: /sign in and continue/i }),
+    ).toHaveAttribute("href", "/auth/sign-in?posting=synthetic-opportunity");
+  });
+
+  it("rejects an unpublished but well-formed posting context", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+    );
+    const { default: RegistrationPage } = await import(
+      "@/app/auth/register/page"
+    );
+    render(
+      await RegistrationPage({
+        searchParams: Promise.resolve({ posting: "closed-opportunity" }),
+      }),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(/link is unavailable/i);
     expect(
       screen.queryByRole("button", { name: /create account/i }),
     ).toBeNull();

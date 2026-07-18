@@ -29,6 +29,7 @@ export function OnboardingAdmin({
   const [planDescription, setPlanDescription] = useState("");
 
   const [assignCandidateId, setAssignCandidateId] = useState("");
+  const [assignApplicationId, setAssignApplicationId] = useState("");
   const [assignPlanId, setAssignPlanId] = useState("");
 
   const [gateCandidateId, setGateCandidateId] = useState("");
@@ -95,7 +96,7 @@ export function OnboardingAdmin({
     setNotice("Assigning plan…");
     try {
       const response = await requester(
-        `/api/v1/admin/candidates/${assignCandidateId}/assign-onboarding?plan_id=${assignPlanId}`,
+        `/api/v1/admin/candidates/${encodeURIComponent(assignCandidateId)}/assign-onboarding?plan_id=${encodeURIComponent(assignPlanId)}&application_id=${encodeURIComponent(assignApplicationId)}`,
         { method: "POST" },
       );
       if (!response.ok) throw new Error("rejected");
@@ -268,6 +269,17 @@ export function OnboardingAdmin({
               id="assign-plan"
               value={assignPlanId}
               onChange={(event) => setAssignPlanId(event.target.value)}
+              required
+            />
+          </FormField>
+          <FormField
+            id="assign-application"
+            label="Conditionally selected application ID (required)"
+          >
+            <input
+              id="assign-application"
+              value={assignApplicationId}
+              onChange={(event) => setAssignApplicationId(event.target.value)}
               required
             />
           </FormField>

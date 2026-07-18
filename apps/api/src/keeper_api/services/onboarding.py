@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 
 from keeper_api.models.domain import (
     Candidate,
+    CandidateApplication,
     CandidateEsignEnvelope,
     CandidateOnboardingAssignment,
+    CandidateOnboardingDocumentVersion,
     CandidateOnboardingTask,
     CandidateStatusHistory,
     ControlledDocument,
@@ -28,7 +30,6 @@ from keeper_api.models.statuses import (
     OnboardingTaskStatus,
 )
 from keeper_api.services.audit import AuditService
-from keeper_api.services.review import REVIEW_QUEUE_STATUSES
 
 # Mandatory activation gate codes (ONB-009). Activation is blocked until every
 # configured gate is satisfied. These codes are server-owned and stable.
@@ -126,13 +127,31 @@ def assign_onboarding_plan(
     db: Session,
     *,
     candidate: Candidate,
+    application: CandidateApplication,
     plan: OnboardingPlan,
     actor_user_id: uuid.UUID,
     request_id: str | None,
 ) -> CandidateOnboardingAssignment:
-    if CandidateStatus(candidate.status) not in REVIEW_QUEUE_STATUSES:
-        raise OnboardingError("onboarding may only be assigned during active review")
-    # Supersede any prior active assignment for this candidate.
+    if application.candidate_id != candidate.id:
+        raise OnboardingError("application does not belong to this candidate")
+    existing = db.scalar(
+        select(CandidateOnboardingAssignment).where(
+            CandidateOnboardingAssignment.application_id == application.id,
+            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+        )
+    )
+    if existing is not None:
+        if existing.onboarding_plan_id == plan.id:
+            return existing
+        raise OnboardingError("the application already has an active onboarding assignment")
+    if CandidateStatus(application.status) != CandidateStatus.CONDITIONALLY_SELECTED:
+        raise OnboardingError("only a conditionally selected application may be assigned")
+    if not plan.is_active:
+        raise OnboardingError("the onboarding plan is not active")
+
+    # A candidate has one current onboarding assignment. Preserve prior
+    # application-specific generations as superseded history only after every
+    # new assignment precondition has passed.
     prior = db.scalars(
         select(CandidateOnboardingAssignment).where(
             CandidateOnboardingAssignment.candidate_id == candidate.id,
@@ -152,6 +171,7 @@ def assign_onboarding_plan(
     ) + 1
     assignment = CandidateOnboardingAssignment(
         candidate_id=candidate.id,
+        application_id=application.id,
         onboarding_plan_id=plan.id,
         generation=generation,
         status=OnboardingAssignmentStatus.ACTIVE.value,
@@ -168,29 +188,48 @@ def assign_onboarding_plan(
         db.add(
             CandidateOnboardingTask(
                 candidate_id=candidate.id,
+                assignment_id=assignment.id,
                 onboarding_task_id=task.id,
                 status=OnboardingTaskStatus.REQUIRED.value,
             )
         )
+    versions = db.scalars(
+        select(DocumentVersion).where(
+            DocumentVersion.issued_at.is_not(None),
+            DocumentVersion.superseded_at.is_(None),
+        )
+    ).all()
+    for version in versions:
+        db.add(
+            CandidateOnboardingDocumentVersion(
+                assignment_id=assignment.id,
+                document_version_id=version.id,
+                assigned_by_user_id=actor_user_id,
+            )
+        )
     candidate.assigned_onboarding_plan_id = plan.id
     candidate.assigned_onboarding_at = datetime.now(UTC)
-    # Selecting a candidate for onboarding advances the lifecycle (REV-004).
-    if CandidateStatus(candidate.status) == CandidateStatus.CONDITIONALLY_SELECTED:
-        _advance_status(
-            db,
-            candidate=candidate,
-            target=CandidateStatus.ONBOARDING_IN_PROGRESS,
-            actor_user_id=actor_user_id,
-            request_id=request_id,
-            reason="onboarding plan assigned",
-        )
+    _advance_status(
+        db,
+        candidate=candidate,
+        application=application,
+        target=CandidateStatus.ONBOARDING_IN_PROGRESS,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+        reason="onboarding plan assigned",
+    )
+    ensure_gates_exist(db, candidate=candidate)
     AuditService(db).record(
         "candidate.onboarding_assigned",
         "candidate",
         candidate.id,
         actor_user_id=actor_user_id,
         request_id=request_id,
-        safe_metadata={"plan_id": str(plan.id), "generation": generation},
+        safe_metadata={
+            "application_id": str(application.id),
+            "plan_id": str(plan.id),
+            "generation": generation,
+        },
     )
     db.commit()
     db.refresh(assignment)
@@ -201,16 +240,18 @@ def _advance_status(
     db: Session,
     *,
     candidate: Candidate,
+    application: CandidateApplication,
     target: CandidateStatus,
     actor_user_id: uuid.UUID,
     request_id: str | None,
     reason: str | None,
 ) -> None:
-    previous = candidate.status
-    candidate.status = target.value
+    previous = application.status
+    application.status = target.value
     db.add(
         CandidateStatusHistory(
             candidate_id=candidate.id,
+            application_id=application.id,
             previous_status=previous,
             new_status=target.value,
             actor_user_id=actor_user_id,
@@ -218,9 +259,9 @@ def _advance_status(
         )
     )
     AuditService(db).record(
-        "candidate.status_changed",
-        "candidate",
-        candidate.id,
+        "candidate_application.status_changed",
+        "candidate_application",
+        application.id,
         actor_user_id=actor_user_id,
         request_id=request_id,
         safe_metadata={"previous_status": previous, "new_status": target.value},
@@ -232,11 +273,16 @@ def _advance_status(
 # --------------------------------------------------------------------------- #
 
 
-def get_candidate_tasks(db: Session, *, candidate_id: uuid.UUID) -> list[CandidateOnboardingTask]:
+def get_candidate_tasks(
+    db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID | None = None
+) -> list[CandidateOnboardingTask]:
+    conditions = [CandidateOnboardingTask.candidate_id == candidate_id]
+    if assignment_id is not None:
+        conditions.append(CandidateOnboardingTask.assignment_id == assignment_id)
     return list(
         db.scalars(
             select(CandidateOnboardingTask)
-            .where(CandidateOnboardingTask.candidate_id == candidate_id)
+            .where(*conditions)
             .order_by(CandidateOnboardingTask.created_at, CandidateOnboardingTask.id)
         ).all()
     )
@@ -253,6 +299,13 @@ def submit_task_evidence(
 ) -> CandidateOnboardingTask:
     if task.candidate_id != candidate.id:
         raise OnboardingError("task does not belong to this candidate")
+    assignment = db.get(CandidateOnboardingAssignment, task.assignment_id)
+    if (
+        assignment is None
+        or assignment.candidate_id != candidate.id
+        or assignment.status != OnboardingAssignmentStatus.ACTIVE.value
+    ):
+        raise OnboardingError("task is not part of the current onboarding assignment")
     if task.status in {OnboardingTaskStatus.COMPLETED.value, OnboardingTaskStatus.REJECTED.value}:
         raise OnboardingError("task is already finalized")
     task.evidence = evidence
@@ -281,6 +334,9 @@ def review_task(
     actor_user_id: uuid.UUID,
     request_id: str | None,
 ) -> CandidateOnboardingTask:
+    assignment = db.get(CandidateOnboardingAssignment, task.assignment_id)
+    if assignment is None or assignment.status != OnboardingAssignmentStatus.ACTIVE.value:
+        raise OnboardingError("task is not part of the current onboarding assignment")
     if task.status not in {
         OnboardingTaskStatus.SUBMITTED.value,
         OnboardingTaskStatus.REQUIRED.value,
@@ -334,7 +390,7 @@ def current_document_version(db: Session, document: ControlledDocument) -> Docum
 
 def candidate_assigned_documents(
     db: Session, *, candidate_id: uuid.UUID
-) -> list[ControlledDocument]:
+) -> list[tuple[ControlledDocument, DocumentVersion]]:
     """Documents a candidate may view/download once onboarding is assigned (ONB-005)."""
     assignment = db.scalar(
         select(CandidateOnboardingAssignment).where(
@@ -344,12 +400,68 @@ def candidate_assigned_documents(
     )
     if assignment is None:
         return []
-    return list(db.scalars(select(ControlledDocument).order_by(ControlledDocument.title)).all())
+    return [
+        (document, version)
+        for document, version in db.execute(
+            select(ControlledDocument, DocumentVersion)
+            .join(
+                DocumentVersion,
+                DocumentVersion.controlled_document_id == ControlledDocument.id,
+            )
+            .join(
+                CandidateOnboardingDocumentVersion,
+                CandidateOnboardingDocumentVersion.document_version_id == DocumentVersion.id,
+            )
+            .where(CandidateOnboardingDocumentVersion.assignment_id == assignment.id)
+            .order_by(ControlledDocument.title, DocumentVersion.id)
+        ).all()
+    ]
 
 
 # --------------------------------------------------------------------------- #
 # Policy acknowledgements (ONB-006)
 # --------------------------------------------------------------------------- #
+
+
+def _all_required_policies_acknowledged(db: Session, *, assignment_id: uuid.UUID) -> bool:
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    if assignment is None:
+        return False
+    required_version_ids = set(
+        db.scalars(
+            select(CandidateOnboardingDocumentVersion.document_version_id)
+            .join(
+                DocumentVersion,
+                DocumentVersion.id == CandidateOnboardingDocumentVersion.document_version_id,
+            )
+            .join(
+                ControlledDocument,
+                ControlledDocument.id == DocumentVersion.controlled_document_id,
+            )
+            .where(
+                CandidateOnboardingDocumentVersion.assignment_id == assignment_id,
+                ControlledDocument.requires_acknowledgement.is_(True),
+                DocumentVersion.issued_at.is_not(None),
+            )
+        ).all()
+    )
+    if not required_version_ids:
+        return True
+    acknowledged_version_ids = set(
+        db.scalars(
+            select(PolicyAcknowledgement.document_version_id)
+            .join(
+                CandidateOnboardingAssignment,
+                CandidateOnboardingAssignment.id == PolicyAcknowledgement.assignment_id,
+            )
+            .where(
+                PolicyAcknowledgement.candidate_id == assignment.candidate_id,
+                CandidateOnboardingAssignment.candidate_id == assignment.candidate_id,
+                PolicyAcknowledgement.document_version_id.in_(required_version_ids),
+            )
+        ).all()
+    )
+    return acknowledged_version_ids == required_version_ids
 
 
 def acknowledge_policy(
@@ -363,14 +475,54 @@ def acknowledge_policy(
 ) -> PolicyAcknowledgement:
     if candidate.user_id != actor_user_id:
         raise OnboardingError("acknowledgement must be recorded by the candidate")
+    assignment = db.scalar(
+        select(CandidateOnboardingAssignment)
+        .where(
+            CandidateOnboardingAssignment.candidate_id == candidate.id,
+            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+        )
+        .with_for_update()
+    )
+    if assignment is None:
+        raise OnboardingError("an active onboarding assignment is required")
+    assigned = db.scalar(
+        select(CandidateOnboardingDocumentVersion).where(
+            CandidateOnboardingDocumentVersion.assignment_id == assignment.id,
+            CandidateOnboardingDocumentVersion.document_version_id == document_version.id,
+        )
+    )
+    if assigned is None:
+        raise OnboardingError("the document version is not assigned to this candidate")
+    if document_version.issued_at is None or document_version.superseded_at is not None:
+        raise OnboardingError("the assigned document version is not eligible for acknowledgement")
+    existing = db.scalar(
+        select(PolicyAcknowledgement).where(
+            PolicyAcknowledgement.candidate_id == candidate.id,
+            PolicyAcknowledgement.document_version_id == document_version.id,
+        )
+    )
+    if existing is not None:
+        evidence_assignment = (
+            db.get(CandidateOnboardingAssignment, existing.assignment_id)
+            if existing.assignment_id is not None
+            else None
+        )
+        if evidence_assignment is not None and evidence_assignment.candidate_id == candidate.id:
+            return existing
+        raise OnboardingError("existing acknowledgement assignment cannot be verified")
     acknowledgement = PolicyAcknowledgement(
         candidate_id=candidate.id,
+        assignment_id=assignment.id,
         user_id=actor_user_id,
         document_version_id=document_version.id,
         wording=wording,
     )
     db.add(acknowledgement)
-    _maybe_satisfy_gate(db, candidate, code="policy_acknowledgement", actor_user_id=actor_user_id)
+    db.flush()
+    if _all_required_policies_acknowledged(db, assignment_id=assignment.id):
+        _maybe_satisfy_gate(
+            db, candidate, code="policy_acknowledgement", actor_user_id=actor_user_id
+        )
     AuditService(db).record(
         "policy.acknowledged",
         "candidate",
@@ -385,11 +537,30 @@ def acknowledge_policy(
 
 
 def candidate_acknowledgements(
-    db: Session, *, candidate_id: uuid.UUID
+    db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID | None = None
 ) -> list[PolicyAcknowledgement]:
+    conditions = [PolicyAcknowledgement.candidate_id == candidate_id]
+    statement = select(PolicyAcknowledgement)
+    if assignment_id is not None:
+        statement = statement.join(
+            CandidateOnboardingAssignment,
+            CandidateOnboardingAssignment.id == PolicyAcknowledgement.assignment_id,
+        )
+        conditions.extend(
+            [
+                CandidateOnboardingAssignment.candidate_id == candidate_id,
+                PolicyAcknowledgement.document_version_id.in_(
+                    select(CandidateOnboardingDocumentVersion.document_version_id).where(
+                        CandidateOnboardingDocumentVersion.assignment_id == assignment_id
+                    )
+                ),
+            ]
+        )
     return list(
         db.scalars(
-            select(PolicyAcknowledgement).where(PolicyAcknowledgement.candidate_id == candidate_id)
+            statement.where(*conditions).order_by(
+                PolicyAcknowledgement.acknowledged_at, PolicyAcknowledgement.id
+            )
         ).all()
     )
 
@@ -571,8 +742,39 @@ def candidate_gates(db: Session, *, candidate_id: uuid.UUID) -> list[Programmati
 
 
 def activation_ready(db: Session, *, candidate_id: uuid.UUID) -> bool:
+    assignment = db.scalar(
+        select(CandidateOnboardingAssignment).where(
+            CandidateOnboardingAssignment.candidate_id == candidate_id,
+            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+        )
+    )
+    if assignment is None or assignment.application_id is None:
+        return False
+    application = db.get(CandidateApplication, assignment.application_id)
+    if application is None or application.candidate_id != candidate_id:
+        return False
+    required_task_statuses = list(
+        db.execute(
+            select(CandidateOnboardingTask.status)
+            .join(
+                OnboardingTask,
+                OnboardingTask.id == CandidateOnboardingTask.onboarding_task_id,
+            )
+            .where(
+                CandidateOnboardingTask.assignment_id == assignment.id,
+                OnboardingTask.is_required.is_(True),
+            )
+        ).scalars()
+    )
+    if any(status != OnboardingTaskStatus.COMPLETED.value for status in required_task_statuses):
+        return False
+    if not _all_required_policies_acknowledged(db, assignment_id=assignment.id):
+        return False
     gates = candidate_gates(db, candidate_id=candidate_id)
-    return bool(gates) and all(g.status == GateStatus.SATISFIED.value for g in gates)
+    gate_status = {gate.code: gate.status for gate in gates}
+    return all(
+        gate_status.get(code) == GateStatus.SATISFIED.value for code in ACTIVATION_GATE_CODES
+    )
 
 
 __all__ = [
