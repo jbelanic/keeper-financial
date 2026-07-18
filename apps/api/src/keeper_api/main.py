@@ -40,9 +40,7 @@ app.state.lead_submission_guard = LeadSubmissionGuard(
     window_seconds=settings.lead_rate_limit_window_seconds,
     tracked_clients=settings.lead_rate_limit_tracked_clients,
 )
-app.state.document_scan_gate = ProcessLocalDocumentScanGate(
-    settings.document_scan_max_concurrency
-)
+app.state.document_scan_gate = ProcessLocalDocumentScanGate(settings.document_scan_max_concurrency)
 configure_multipart_spooling(max(FIVE_MIB, settings.max_document_bytes))
 app.add_middleware(
     CORSMiddleware,

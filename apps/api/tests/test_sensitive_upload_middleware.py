@@ -65,9 +65,7 @@ def _run_middleware(
             body.extend(message.get("body", b""))
             if not message.get("more_body", False):
                 break
-        await downstream_send(
-            {"type": "http.response.start", "status": 204, "headers": []}
-        )
+        await downstream_send({"type": "http.response.start", "status": 204, "headers": []})
         await downstream_send({"type": "http.response.body", "body": bytes(body)})
 
     middleware = SensitiveUploadMiddleware(

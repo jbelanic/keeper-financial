@@ -30,7 +30,7 @@ function request(body: URLSearchParams) {
       origin: "http://localhost:3000",
       "content-type": "application/x-www-form-urlencoded",
     },
-    body,
+    body: body.toString(),
   });
 }
 

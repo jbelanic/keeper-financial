@@ -147,12 +147,16 @@ class SensitiveUploadMiddleware:
 
     @staticmethod
     def _has_well_formed_bearer(scope: Scope) -> bool:
-        values = [value for name, value in scope.get("headers", []) if name.lower() == b"authorization"]
+        values = [
+            value for name, value in scope.get("headers", []) if name.lower() == b"authorization"
+        ]
         return len(values) == 1 and _BEARER_TOKEN.fullmatch(values[0]) is not None
 
     @staticmethod
     def _declared_too_large(scope: Scope, maximum: int) -> bool:
-        values = [value for name, value in scope.get("headers", []) if name.lower() == b"content-length"]
+        values = [
+            value for name, value in scope.get("headers", []) if name.lower() == b"content-length"
+        ]
         if not values:
             return False
         if len(values) != 1:

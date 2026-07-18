@@ -218,7 +218,10 @@ def test_agent_role_without_candidate_relationship_remains_profile_eligible(
     db.add(profile)
     db.commit()
 
-    assert client.get(f"/api/v1/admin/agent-profiles/{profile.id}", headers=ADMIN_HEADERS).status_code == 200
+    assert (
+        client.get(f"/api/v1/admin/agent-profiles/{profile.id}", headers=ADMIN_HEADERS).status_code
+        == 200
+    )
     assert client.get("/api/v1/agents/agent-without-candidate").status_code == 200
 
 
@@ -266,9 +269,7 @@ def test_duplicate_profile_returns_conflict_without_partial_audit(
     first_agent, _ = _agent_account(db, subject=f"first-{duplicate}-agent")
     second_agent, _ = _agent_account(db, subject=f"second-{duplicate}-agent")
     first_payload = _profile_payload(str(first_agent.id))
-    created = client.post(
-        "/api/v1/admin/agent-profiles", json=first_payload, headers=ADMIN_HEADERS
-    )
+    created = client.post("/api/v1/admin/agent-profiles", json=first_payload, headers=ADMIN_HEADERS)
     assert created.status_code == 201
 
     duplicate_payload = _profile_payload(
@@ -282,11 +283,14 @@ def test_duplicate_profile_returns_conflict_without_partial_audit(
 
     assert response.status_code == 409
     assert response.json() == {"detail": "agent profile user or slug is already in use"}
-    assert db.scalar(
-        select(func.count()).select_from(AuditEvent).where(
-            AuditEvent.event_type == "agent_profile.created"
+    assert (
+        db.scalar(
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(AuditEvent.event_type == "agent_profile.created")
         )
-    ) == 1
+        == 1
+    )
     assert db.scalar(select(func.count()).select_from(AgentProfile)) == 1
 
 
