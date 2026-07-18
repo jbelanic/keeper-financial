@@ -574,6 +574,9 @@
           "409": {
             "description": "Identity conflict"
           },
+          "503": {
+            "description": "Identity verification unavailable"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -1648,10 +1651,10 @@
             "description": "Application lifecycle or category limit conflict"
           },
           "422": {
-            "description": "Document category, name, type, signature, or size rejected"
+            "description": "Safe document validation or malware rejection category; no object is persisted"
           },
           "503": {
-            "description": "Private storage or scanning unavailable"
+            "description": "Safe scanner_unavailable or storage_unavailable category; no success is reported"
           }
         }
       },
@@ -1829,6 +1832,419 @@
         }
       }
     },
+    "/api/v1/agents": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "List Public Agent Profiles",
+        "operationId": "list_public_agent_profiles_api_v1_agents_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAgentProfileList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid pagination"
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{slug}": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get Public Agent Profile",
+        "operationId": "get_public_agent_profile_api_v1_agents__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAgentProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Published profile not found"
+          },
+          "422": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-profiles": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "List Admin Agent Profiles",
+        "operationId": "list_admin_agent_profiles_api_v1_admin_agent_profiles_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfileList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "422": {
+            "description": "Invalid pagination"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Create Admin Agent Profile",
+        "operationId": "create_admin_agent_profile_api_v1_admin_agent_profiles_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentProfileCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "404": {
+            "description": "Active agent relationship not found"
+          },
+          "409": {
+            "description": "Profile user or slug conflict"
+          },
+          "422": {
+            "description": "Invalid profile content"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-profiles/{profile_id}": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get Admin Agent Profile",
+        "operationId": "get_admin_agent_profile_api_v1_admin_agent_profiles__profile_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "404": {
+            "description": "Profile not found"
+          },
+          "422": {
+            "description": "Invalid profile id"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Patch Admin Agent Profile",
+        "operationId": "patch_admin_agent_profile_api_v1_admin_agent_profiles__profile_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAgentProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin or MFA denied"
+          },
+          "404": {
+            "description": "Profile not found"
+          },
+          "409": {
+            "description": "Profile lifecycle or slug conflict"
+          },
+          "422": {
+            "description": "Invalid profile content"
+          }
+        }
+      }
+    },
     "/api/v1/agents/{profile_id}/status": {
       "post": {
         "tags": [
@@ -1900,15 +2316,20 @@
               }
             }
           },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin, MFA, or approval denied"
+          },
+          "404": {
+            "description": "Profile not found"
+          },
+          "409": {
+            "description": "Invalid profile transition"
+          },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "Invalid transition request"
           }
         }
       }
@@ -1996,6 +2417,1739 @@
           }
         }
       }
+    },
+    "/api/v1/admin/candidates": {
+      "get": {
+        "tags": [
+          "admin review"
+        ],
+        "summary": "List Review Queue",
+        "operationId": "list_review_queue_api_v1_admin_candidates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CandidateStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateQueueResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/candidates/{candidate_id}": {
+      "get": {
+        "tags": [
+          "admin review"
+        ],
+        "summary": "Get Candidate Detail",
+        "operationId": "get_candidate_detail_api_v1_admin_candidates__candidate_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied or candidate access unavailable"
+          },
+          "404": {
+            "description": "Candidate not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/candidates/{candidate_id}/interview": {
+      "post": {
+        "tags": [
+          "admin review"
+        ],
+        "summary": "Set Interview Status",
+        "operationId": "set_interview_status_api_v1_admin_candidates__candidate_id__interview_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterviewStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied or candidate access unavailable"
+          },
+          "404": {
+            "description": "Candidate not found"
+          },
+          "409": {
+            "description": "Lifecycle conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/candidates/{candidate_id}/information-requests": {
+      "post": {
+        "tags": [
+          "admin review"
+        ],
+        "summary": "Create Information Request",
+        "operationId": "create_information_request_api_v1_admin_candidates__candidate_id__information_requests_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InformationRequestCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformationRequestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied or candidate access unavailable"
+          },
+          "404": {
+            "description": "Candidate not found"
+          },
+          "409": {
+            "description": "Lifecycle conflict"
+          },
+          "422": {
+            "description": "Validation failed"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/candidates/{candidate_id}/decision": {
+      "post": {
+        "tags": [
+          "admin review"
+        ],
+        "summary": "Decide Candidate Status",
+        "operationId": "decide_candidate_status_api_v1_admin_candidates__candidate_id__decision_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied or candidate access unavailable"
+          },
+          "404": {
+            "description": "Candidate not found"
+          },
+          "409": {
+            "description": "Invalid transition or required reason missing"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/candidates/{candidate_id}/assign-onboarding": {
+      "post": {
+        "tags": [
+          "admin review"
+        ],
+        "summary": "Assign Onboarding",
+        "operationId": "assign_onboarding_api_v1_admin_candidates__candidate_id__assign_onboarding_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "plan_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "application_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Assign Onboarding Api V1 Admin Candidates  Candidate Id  Assign Onboarding Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied or candidate access unavailable"
+          },
+          "404": {
+            "description": "Candidate or plan not found"
+          },
+          "409": {
+            "description": "Assignment conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/plans": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Create Plan",
+        "operationId": "create_plan_api_v1_admin_onboarding_plans_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanCreateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanWithTasks"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "List Plans",
+        "operationId": "list_plans_api_v1_admin_onboarding_plans_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanSummary"
+                  },
+                  "title": "Response List Plans Api V1 Admin Onboarding Plans Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Get Plan",
+        "operationId": "get_plan_api_v1_admin_onboarding_plans__plan_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanWithTasks"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Plan not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/tasks/{task_id}/review": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Review Candidate Task",
+        "operationId": "review_candidate_task_api_v1_admin_onboarding_candidates__candidate_id__tasks__task_id__review_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskReviewIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateOnboardingTaskResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Not in a reviewable state"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/esign-envelopes": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Link Envelope",
+        "operationId": "link_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EsignLinkIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Link Envelope Api V1 Admin Onboarding Candidates  Candidate Id  Esign Envelopes Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Candidate not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/esign-envelopes/{envelope_id}": {
+      "patch": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Update Envelope",
+        "operationId": "update_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes__envelope_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "envelope_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Envelope Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EsignUpdateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Envelope Api V1 Admin Onboarding Candidates  Candidate Id  Esign Envelopes  Envelope Id  Patch"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/candidates/{candidate_id}/gates": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Satisfy Activation Gate",
+        "operationId": "satisfy_activation_gate_api_v1_admin_onboarding_candidates__candidate_id__gates_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Candidate Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GateSatisfyIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Satisfy Activation Gate Api V1 Admin Onboarding Candidates  Candidate Id  Gates Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Candidate not found"
+          },
+          "409": {
+            "description": "Unknown gate"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/documents": {
+      "get": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "List Documents",
+        "operationId": "list_documents_api_v1_admin_onboarding_documents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ControlledDocumentResponse"
+                  },
+                  "title": "Response List Documents Api V1 Admin Onboarding Documents Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/onboarding/availability": {
+      "get": {
+        "tags": [
+          "candidate onboarding"
+        ],
+        "summary": "Onboarding Availability",
+        "operationId": "onboarding_availability_api_v1_candidate_onboarding_availability_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateOnboardingAvailability"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/onboarding": {
+      "get": {
+        "tags": [
+          "candidate onboarding"
+        ],
+        "summary": "Onboarding Dashboard",
+        "operationId": "onboarding_dashboard_api_v1_candidate_onboarding_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateOnboardingDashboard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/onboarding/tasks/{task_id}/evidence": {
+      "post": {
+        "tags": [
+          "candidate onboarding"
+        ],
+        "summary": "Submit Evidence",
+        "operationId": "submit_evidence_api_v1_candidate_onboarding_tasks__task_id__evidence_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskEvidenceIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Submit Evidence Api V1 Candidate Onboarding Tasks  Task Id  Evidence Post"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "404": {
+            "description": "Task not found"
+          },
+          "409": {
+            "description": "Task not in a submittable state"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/candidate/onboarding/acknowledgements": {
+      "post": {
+        "tags": [
+          "candidate onboarding"
+        ],
+        "summary": "Acknowledge",
+        "operationId": "acknowledge_api_v1_candidate_onboarding_acknowledgements_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyAckIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyAcknowledgementResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate access denied"
+          },
+          "404": {
+            "description": "Document version not found"
+          },
+          "409": {
+            "description": "Cannot acknowledge"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/upload-document": {
+      "post": {
+        "tags": [
+          "document scanning"
+        ],
+        "summary": "Upload Document",
+        "operationId": "upload_document_api_v1_upload_document_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_upload_document_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentScanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Candidate role, lifecycle, or AAL2 denied"
+          },
+          "413": {
+            "description": "Document exceeds exactly 5 MiB"
+          },
+          "415": {
+            "description": "Document type or type relationship is unsupported"
+          },
+          "422": {
+            "description": "Document is empty, malformed, or contains malware"
+          },
+          "503": {
+            "description": "Malware scanner is unavailable or returned an invalid response"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2031,6 +4185,258 @@
           "roles"
         ],
         "title": "AccessResponse"
+      },
+      "ActivationGateResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "$ref": "#/components/schemas/GateStatus"
+          },
+          "satisfied_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Satisfied At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "candidate_id",
+          "code",
+          "label",
+          "status",
+          "satisfied_at"
+        ],
+        "title": "ActivationGateResponse"
+      },
+      "AdminAgentProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "title": "Licence Number"
+          },
+          "biography": {
+            "type": "string",
+            "title": "Biography"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSocialLink"
+            },
+            "type": "array",
+            "title": "Social Links"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentProfileStatus"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number",
+          "biography",
+          "languages",
+          "service_areas",
+          "specialties",
+          "photo_url",
+          "photo_alt_text",
+          "public_email",
+          "public_phone",
+          "social_links",
+          "status",
+          "version",
+          "created_at",
+          "updated_at",
+          "approved_at",
+          "published_at"
+        ],
+        "title": "AdminAgentProfile"
+      },
+      "AdminAgentProfileList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminAgentProfile"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AdminAgentProfileList"
       },
       "AdminPosting": {
         "properties": {
@@ -2164,6 +4570,136 @@
         ],
         "title": "AdminPostingList"
       },
+      "AgentProfileCreate": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Licence Number"
+          },
+          "biography": {
+            "type": "string",
+            "maxLength": 3000,
+            "title": "Biography",
+            "default": ""
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSocialLink"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Social Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number"
+        ],
+        "title": "AgentProfileCreate"
+      },
       "AgentProfileStatus": {
         "type": "string",
         "enum": [
@@ -2175,12 +4711,216 @@
         ],
         "title": "AgentProfileStatus"
       },
+      "AgentProfileUpdate": {
+        "properties": {
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licence Number"
+          },
+          "biography": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 3000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Biography"
+          },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 12
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
+          },
+          "service_areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AgentSocialLink"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AgentProfileUpdate"
+      },
+      "AgentSocialLink": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "AgentSocialLink"
+      },
       "AgentStatusResponse": {
         "properties": {
           "status": {
             "$ref": "#/components/schemas/AgentProfileStatus"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "status"
@@ -2205,6 +4945,7 @@
             "title": "Reason"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "status"
@@ -2495,6 +5236,20 @@
         ],
         "title": "Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post"
       },
+      "Body_upload_document_api_v1_upload_document_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_document_api_v1_upload_document_post"
+      },
       "CandidateApplicationResponse": {
         "properties": {
           "id": {
@@ -2541,6 +5296,17 @@
             "enum": [
               "application_started",
               "application_submitted",
+              "under_review",
+              "more_information_required",
+              "interview",
+              "conditionally_selected",
+              "onboarding_in_progress",
+              "pending_fsra_authorization",
+              "pending_system_provisioning",
+              "active",
+              "suspended",
+              "offboarding",
+              "offboarded",
               "withdrawn",
               "declined"
             ],
@@ -2812,6 +5578,180 @@
         ],
         "title": "CandidateApplicationResponse"
       },
+      "CandidateDecisionRequest": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/CandidateStatus"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "decision"
+        ],
+        "title": "CandidateDecisionRequest",
+        "description": "REV-004/005: select, decline, or withdraw with a required reason where applicable."
+      },
+      "CandidateDetailResponse": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number"
+          },
+          "source_posting_slug": {
+            "type": "string",
+            "title": "Source Posting Slug"
+          },
+          "source_posting_title": {
+            "type": "string",
+            "title": "Source Posting Title"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CandidateStatus"
+          },
+          "given_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given Name"
+          },
+          "family_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "interview_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interview_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interview Notes"
+          },
+          "interview_recorded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interview Recorded At"
+          },
+          "assigned_onboarding_plan_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Onboarding Plan Id"
+          },
+          "assigned_onboarding_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Onboarding At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "application_id",
+          "attempt_number",
+          "source_posting_slug",
+          "source_posting_title",
+          "status",
+          "given_name",
+          "family_name",
+          "email",
+          "interview_status",
+          "interview_notes",
+          "interview_recorded_at",
+          "assigned_onboarding_plan_id",
+          "assigned_onboarding_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CandidateDetailResponse"
+      },
       "CandidateDocumentList": {
         "properties": {
           "items": {
@@ -2888,6 +5828,215 @@
         ],
         "title": "CandidateDocumentResponse"
       },
+      "CandidateOnboardingAvailability": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "title": "CandidateOnboardingAvailability"
+      },
+      "CandidateOnboardingDashboard": {
+        "properties": {
+          "assignment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingAssignmentResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOnboardingTaskResponse"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/ActivationGateResponse"
+            },
+            "type": "array",
+            "title": "Gates"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/ControlledDocumentResponse"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "acknowledgements": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAcknowledgementResponse"
+            },
+            "type": "array",
+            "title": "Acknowledgements"
+          },
+          "esign_envelopes": {
+            "items": {
+              "$ref": "#/components/schemas/EsignEnvelopeResponse"
+            },
+            "type": "array",
+            "title": "Esign Envelopes"
+          },
+          "activation_ready": {
+            "type": "boolean",
+            "title": "Activation Ready"
+          }
+        },
+        "type": "object",
+        "required": [
+          "assignment",
+          "tasks",
+          "gates",
+          "documents",
+          "acknowledgements",
+          "esign_envelopes",
+          "activation_ready"
+        ],
+        "title": "CandidateOnboardingDashboard"
+      },
+      "CandidateOnboardingTaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
+          "onboarding_task_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Onboarding Task Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingTaskStatus"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "completed_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed By User Id"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "reviewed_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By User Id"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "candidate_id",
+          "assignment_id",
+          "onboarding_task_id",
+          "status",
+          "due_at",
+          "completed_at",
+          "completed_by_user_id",
+          "evidence",
+          "reviewed_by_user_id",
+          "reviewed_at",
+          "review_notes"
+        ],
+        "title": "CandidateOnboardingTaskResponse"
+      },
       "CandidatePrivacyDisclosureResponse": {
         "properties": {
           "title": {
@@ -2913,6 +6062,163 @@
           "paragraphs"
         ],
         "title": "CandidatePrivacyDisclosureResponse"
+      },
+      "CandidateQueueResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateReviewSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "CandidateQueueResponse"
+      },
+      "CandidateReviewSummary": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number"
+          },
+          "source_posting_slug": {
+            "type": "string",
+            "title": "Source Posting Slug"
+          },
+          "source_posting_title": {
+            "type": "string",
+            "title": "Source Posting Title"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CandidateStatus"
+          },
+          "given_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given Name"
+          },
+          "family_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "interview_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterviewStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assigned_onboarding_plan_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Onboarding Plan Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "application_id",
+          "attempt_number",
+          "source_posting_slug",
+          "source_posting_title",
+          "status",
+          "given_name",
+          "family_name",
+          "email",
+          "interview_status",
+          "assigned_onboarding_plan_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CandidateReviewSummary"
+      },
+      "CandidateStatus": {
+        "type": "string",
+        "enum": [
+          "prospect",
+          "application_started",
+          "application_submitted",
+          "under_review",
+          "more_information_required",
+          "interview",
+          "conditionally_selected",
+          "declined",
+          "withdrawn",
+          "onboarding_in_progress",
+          "pending_fsra_authorization",
+          "pending_system_provisioning",
+          "active",
+          "suspended",
+          "offboarding",
+          "offboarded"
+        ],
+        "title": "CandidateStatus"
       },
       "CandidateStatusListResponse": {
         "properties": {
@@ -2942,6 +6248,17 @@
             "enum": [
               "application_started",
               "application_submitted",
+              "under_review",
+              "more_information_required",
+              "interview",
+              "conditionally_selected",
+              "onboarding_in_progress",
+              "pending_fsra_authorization",
+              "pending_system_provisioning",
+              "active",
+              "suspended",
+              "offboarding",
+              "offboarded",
               "withdrawn",
               "declined"
             ],
@@ -2999,6 +6316,50 @@
         ],
         "title": "ConsentState"
       },
+      "ControlledDocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "requires_acknowledgement": {
+            "type": "boolean",
+            "title": "Requires Acknowledgement"
+          },
+          "current_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentVersionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "title",
+          "description",
+          "requires_acknowledgement"
+        ],
+        "title": "ControlledDocumentResponse"
+      },
       "DatabaseHealthResponse": {
         "properties": {
           "status": {
@@ -3024,6 +6385,86 @@
           "database"
         ],
         "title": "DatabaseHealthResponse"
+      },
+      "DocumentScanResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "clean",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "DocumentScanResponse"
+      },
+      "DocumentVersionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "controlled_document_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Controlled Document Id"
+          },
+          "version_label": {
+            "type": "string",
+            "title": "Version Label"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "sha256_digest": {
+            "type": "string",
+            "title": "Sha256 Digest"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "controlled_document_id",
+          "version_label",
+          "content_type",
+          "size_bytes",
+          "sha256_digest",
+          "issued_at",
+          "superseded_at"
+        ],
+        "title": "DocumentVersionResponse"
       },
       "EducationEntryInput": {
         "properties": {
@@ -3211,6 +6652,194 @@
         ],
         "title": "EmploymentEntryResponse"
       },
+      "EsignEnvelopeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "document_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Version Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EsignEnvelopeStatus"
+          },
+          "envelope_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Envelope Id"
+          },
+          "envelope_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Envelope Url"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "candidate_id",
+          "document_version_id",
+          "status",
+          "envelope_id",
+          "envelope_url",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EsignEnvelopeResponse"
+      },
+      "EsignEnvelopeStatus": {
+        "type": "string",
+        "enum": [
+          "sent",
+          "viewed",
+          "completed",
+          "voided"
+        ],
+        "title": "EsignEnvelopeStatus"
+      },
+      "EsignLinkIn": {
+        "properties": {
+          "envelope_url": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Envelope Url"
+          },
+          "envelope_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Envelope Id"
+          },
+          "document_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Version Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EsignEnvelopeStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "envelope_url",
+          "status"
+        ],
+        "title": "EsignLinkIn"
+      },
+      "EsignUpdateIn": {
+        "properties": {
+          "envelope_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Envelope Id"
+          },
+          "envelope_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Envelope Url"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EsignEnvelopeStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "EsignUpdateIn"
+      },
+      "GateSatisfyIn": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "GateSatisfyIn"
+      },
+      "GateStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "satisfied"
+        ],
+        "title": "GateStatus"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3242,6 +6871,156 @@
           "service"
         ],
         "title": "HealthResponse"
+      },
+      "InformationRequestCreate": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "message"
+        ],
+        "title": "InformationRequestCreate"
+      },
+      "InformationRequestResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InformationRequestStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
+          "responded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responded At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "candidate_id",
+          "application_id",
+          "status",
+          "message",
+          "response",
+          "responded_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "InformationRequestResponse"
+      },
+      "InformationRequestStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "responded"
+        ],
+        "title": "InformationRequestStatus"
+      },
+      "InterviewStatus": {
+        "type": "string",
+        "enum": [
+          "scheduled",
+          "completed",
+          "cancelled",
+          "no_show"
+        ],
+        "title": "InterviewStatus"
+      },
+      "InterviewStatusUpdate": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "interview_status": {
+            "$ref": "#/components/schemas/InterviewStatus"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "interview_status"
+        ],
+        "title": "InterviewStatusUpdate"
       },
       "LeadInquiryCreate": {
         "properties": {
@@ -3504,6 +7283,318 @@
         ],
         "title": "LeadListResponse"
       },
+      "OnboardingAssignmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
+          },
+          "onboarding_plan_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Onboarding Plan Id"
+          },
+          "generation": {
+            "type": "integer",
+            "title": "Generation"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingAssignmentStatus"
+          },
+          "assigned_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned By User Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "candidate_id",
+          "application_id",
+          "onboarding_plan_id",
+          "generation",
+          "status",
+          "assigned_by_user_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OnboardingAssignmentResponse"
+      },
+      "OnboardingAssignmentStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "completed",
+          "superseded"
+        ],
+        "title": "OnboardingAssignmentStatus"
+      },
+      "OnboardingTaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "plan_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Plan Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions"
+          },
+          "sequence": {
+            "type": "integer",
+            "title": "Sequence"
+          },
+          "is_required": {
+            "type": "boolean",
+            "title": "Is Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "plan_id",
+          "title",
+          "instructions",
+          "sequence",
+          "is_required"
+        ],
+        "title": "OnboardingTaskResponse"
+      },
+      "OnboardingTaskStatus": {
+        "type": "string",
+        "enum": [
+          "required",
+          "in_progress",
+          "submitted",
+          "completed",
+          "rejected"
+        ],
+        "title": "OnboardingTaskStatus"
+      },
+      "PlanCreateIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Description",
+            "default": ""
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskTemplateIn"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Tasks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PlanCreateIn"
+      },
+      "PlanSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "is_active"
+        ],
+        "title": "PlanSummary"
+      },
+      "PlanWithTasks": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingTaskResponse"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PlanWithTasks"
+      },
+      "PolicyAckIn": {
+        "properties": {
+          "document_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Version Id"
+          },
+          "wording": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Wording"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document_version_id",
+          "wording"
+        ],
+        "title": "PolicyAckIn"
+      },
+      "PolicyAcknowledgementResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
+          "document_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Version Id"
+          },
+          "wording": {
+            "type": "string",
+            "title": "Wording"
+          },
+          "acknowledged_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Acknowledged At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "candidate_id",
+          "assignment_id",
+          "document_version_id",
+          "wording",
+          "acknowledged_at"
+        ],
+        "title": "PolicyAcknowledgementResponse"
+      },
       "PostingCreate": {
         "properties": {
           "slug": {
@@ -3602,6 +7693,229 @@
         "type": "object",
         "title": "PostingUpdate"
       },
+      "PublicAgentProfile": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "title": "Licence Number"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          },
+          "biography": {
+            "type": "string",
+            "title": "Biography"
+          },
+          "public_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Email"
+          },
+          "public_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Phone"
+          },
+          "social_links": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSocialLink"
+            },
+            "type": "array",
+            "title": "Social Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number",
+          "languages",
+          "service_areas",
+          "specialties",
+          "photo_url",
+          "photo_alt_text",
+          "biography",
+          "public_email",
+          "public_phone",
+          "social_links"
+        ],
+        "title": "PublicAgentProfile"
+      },
+      "PublicAgentProfileList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicAgentProfileSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PublicAgentProfileList"
+      },
+      "PublicAgentProfileSummary": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "licensed_name": {
+            "type": "string",
+            "title": "Licensed Name"
+          },
+          "approved_title": {
+            "type": "string",
+            "title": "Approved Title"
+          },
+          "licence_number": {
+            "type": "string",
+            "title": "Licence Number"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "specialties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specialties"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "photo_alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Alt Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "licensed_name",
+          "approved_title",
+          "licence_number",
+          "languages",
+          "service_areas",
+          "specialties",
+          "photo_url",
+          "photo_alt_text"
+        ],
+        "title": "PublicAgentProfileSummary"
+      },
       "PublicPosting": {
         "properties": {
           "slug": {
@@ -3683,6 +7997,75 @@
           "summary"
         ],
         "title": "PublicPostingSummary"
+      },
+      "TaskEvidenceIn": {
+        "properties": {
+          "evidence": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence"
+        ],
+        "title": "TaskEvidenceIn"
+      },
+      "TaskReviewIn": {
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "title": "Approved"
+          },
+          "review_notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "approved"
+        ],
+        "title": "TaskReviewIn"
+      },
+      "TaskTemplateIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Instructions",
+            "default": ""
+          },
+          "is_required": {
+            "type": "boolean",
+            "title": "Is Required",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "TaskTemplateIn"
       },
       "ValidationError": {
         "properties": {

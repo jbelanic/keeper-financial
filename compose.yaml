@@ -4,58 +4,169 @@ services:
   db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: keeper
-      POSTGRES_USER: keeper
-      POSTGRES_PASSWORD: keeper_local_only
+      POSTGRES_DB: ${POSTGRES_DB:-keeper}
+      POSTGRES_USER: ${POSTGRES_USER:-keeper}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - keeper_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keeper -d keeper"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+      MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - keeper_minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+  minio-init:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+      MINIO_BUCKET: ${MINIO_BUCKET:-keeper-private}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set keeper http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" &&
+        mc mb --ignore-existing "keeper/$${MINIO_BUCKET}" &&
+        mc anonymous set none "keeper/$${MINIO_BUCKET}"
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  clamav:
+    image: clamav/clamav:stable
+    ports:
+      - "127.0.0.1:3310:3310"
+    expose:
+      - "3310"
+    volumes:
+      - keeper_clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10m
+    restart: unless-stopped
 
   api:
     build:
       context: .
       dockerfile: infrastructure/docker/api.Dockerfile
-    env_file: .env
-    # Match the local host owner so the non-root API can write the bind-mounted
-    # private development storage directory without broadening its permissions.
-    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    env_file: ${KEEPER_ENV_FILE:-.env}
     environment:
-      DATABASE_URL: postgresql+psycopg://keeper:keeper_local_only@db:5432/keeper
-      LOCAL_STORAGE_PATH: /app/storage/dev_uploads
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-keeper}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-keeper}
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_PUBLIC_ENDPOINT_URL: http://localhost:9000
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+      S3_BUCKET: ${MINIO_BUCKET:-keeper-private}
+      S3_REGION: us-east-1
+      MALWARE_SCANNER_BACKEND: clamav
+      MALWARE_SCANNER_FAIL_CLOSED: "true"
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+      CLAMAV_CONNECT_TIMEOUT_SECONDS: 2
+      CLAMAV_READ_TIMEOUT_SECONDS: 15
+      CLAMAV_MAX_CHUNKS: 256
+      CLAMAV_MAX_RESPONSE_BYTES: 4096
       SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
+      SUPABASE_USER_URL: http://host.docker.internal:54321/auth/v1/user
+      SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
     ports:
-      - "8000:8000"
-    volumes:
-      - ./storage/dev_uploads:/app/storage/dev_uploads
+      - "127.0.0.1:8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      clamav:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
   web:
     build:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
-    env_file: .env
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME: ${NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME:-Keeper Financial}
+        NEXT_PUBLIC_BROKERAGE_LEGAL_NAME: ${NEXT_PUBLIC_BROKERAGE_LEGAL_NAME:-Keeper Financial Inc.}
+        NEXT_PUBLIC_BROKERAGE_REGULATORY_TEXT: ${NEXT_PUBLIC_BROKERAGE_REGULATORY_TEXT:-}
+        NEXT_PUBLIC_PUBLIC_ADDRESS: ${NEXT_PUBLIC_PUBLIC_ADDRESS:-}
+        NEXT_PUBLIC_PUBLIC_EMAIL: ${NEXT_PUBLIC_PUBLIC_EMAIL:-}
+        NEXT_PUBLIC_PUBLIC_PHONE: ${NEXT_PUBLIC_PUBLIC_PHONE:-}
+        NEXT_PUBLIC_PUBLIC_PHONE_E164: ${NEXT_PUBLIC_PUBLIC_PHONE_E164:-}
+        NEXT_PUBLIC_MORTGAGE_APPLICATION_URL: ${NEXT_PUBLIC_MORTGAGE_APPLICATION_URL:-}
+        NEXT_PUBLIC_BOOKING_URL: ${NEXT_PUBLIC_BOOKING_URL:-}
+        NEXT_PUBLIC_PRINCIPAL_BROKER: ${NEXT_PUBLIC_PRINCIPAL_BROKER:-}
     environment:
       API_INTERNAL_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME: ${NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME:-Keeper Financial}
+      NEXT_PUBLIC_BROKERAGE_LEGAL_NAME: ${NEXT_PUBLIC_BROKERAGE_LEGAL_NAME:-Keeper Financial Inc.}
+      NEXT_PUBLIC_BROKERAGE_REGULATORY_TEXT: ${NEXT_PUBLIC_BROKERAGE_REGULATORY_TEXT:-}
+      NEXT_PUBLIC_PUBLIC_ADDRESS: ${NEXT_PUBLIC_PUBLIC_ADDRESS:-}
+      NEXT_PUBLIC_PUBLIC_EMAIL: ${NEXT_PUBLIC_PUBLIC_EMAIL:-}
+      NEXT_PUBLIC_PUBLIC_PHONE: ${NEXT_PUBLIC_PUBLIC_PHONE:-}
+      NEXT_PUBLIC_PUBLIC_PHONE_E164: ${NEXT_PUBLIC_PUBLIC_PHONE_E164:-}
+      NEXT_PUBLIC_MORTGAGE_APPLICATION_URL: ${NEXT_PUBLIC_MORTGAGE_APPLICATION_URL:-}
+      NEXT_PUBLIC_BOOKING_URL: ${NEXT_PUBLIC_BOOKING_URL:-}
+      NEXT_PUBLIC_PRINCIPAL_BROKER: ${NEXT_PUBLIC_PRINCIPAL_BROKER:-}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       api:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   keeper_postgres:
+  keeper_minio:
+  keeper_clamav:

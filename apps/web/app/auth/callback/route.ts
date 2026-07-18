@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  CandidateProvisioningError,
   startCandidateApplication,
   isSafePostingSlug,
 } from "@/lib/candidate-provisioning";
@@ -9,26 +10,44 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const posting = request.nextUrl.searchParams.get("posting") ?? "";
   if (!code || !isSafePostingSlug(posting)) {
-    return NextResponse.redirect(
-      new URL("/auth/sign-in?error=verification", request.url),
-    );
+    const url = new URL("/auth/sign-in", request.url);
+    url.searchParams.set("error", "verification");
+    if (isSafePostingSlug(posting)) url.searchParams.set("posting", posting);
+    return NextResponse.redirect(url);
   }
   const supabase = await getSupabaseServerClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  const token = data.session?.access_token;
-  if (error || !token) {
-    return NextResponse.redirect(
-      new URL("/auth/sign-in?error=verification", request.url),
-    );
+  let authResult: {
+    data: { session: { access_token: string } | null };
+    error: unknown;
+  };
+  try {
+    authResult = await supabase.auth.exchangeCodeForSession(code);
+  } catch {
+    const url = new URL("/auth/sign-in", request.url);
+    url.searchParams.set("error", "verification");
+    url.searchParams.set("posting", posting);
+    return NextResponse.redirect(url);
+  }
+  const token = authResult.data.session?.access_token;
+  if (authResult.error || !token) {
+    const url = new URL("/auth/sign-in", request.url);
+    url.searchParams.set("error", "verification");
+    url.searchParams.set("posting", posting);
+    return NextResponse.redirect(url);
   }
   try {
     const application = await startCandidateApplication(token, posting);
     return NextResponse.redirect(
       new URL(`/candidate/applications/${application.id}`, request.url),
     );
-  } catch {
-    return NextResponse.redirect(
-      new URL(`/auth/sign-in?error=application-access`, request.url),
-    );
+  } catch (error) {
+    const url = new URL("/auth/sign-in", request.url);
+    if (error instanceof CandidateProvisioningError && error.status === 404) {
+      url.searchParams.set("error", "posting-unavailable");
+      return NextResponse.redirect(url);
+    }
+    url.searchParams.set("error", "application-access");
+    url.searchParams.set("posting", posting);
+    return NextResponse.redirect(url);
   }
 }

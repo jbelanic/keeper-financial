@@ -13,8 +13,10 @@ describe("portal API authorization", () => {
       expect.objectContaining({
         headers: { Authorization: "Bearer synthetic-token" },
         cache: "no-store",
+        signal: expect.any(AbortSignal),
       }),
     );
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 
   it("denies portal entry when the API denies authorization", async () => {

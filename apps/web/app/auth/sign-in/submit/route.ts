@@ -1,0 +1,104 @@
+import { NextResponse, type NextRequest } from "next/server";
+import {
+  CandidateProvisioningError,
+  isSafePostingSlug,
+  startCandidateApplication,
+} from "@/lib/candidate-provisioning";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
+
+function safeReturnTo(
+  value: FormDataEntryValue | null,
+): "/candidate" | "/admin" {
+  return value === "/admin" ? "/admin" : "/candidate";
+}
+
+function signInUrl(
+  request: NextRequest,
+  error: string,
+  posting?: string,
+  returnTo: "/candidate" | "/admin" = "/candidate",
+) {
+  const url = new URL("/auth/sign-in", request.url);
+  url.searchParams.set("error", error);
+  if (posting) url.searchParams.set("posting", posting);
+  if (returnTo === "/admin") url.searchParams.set("returnTo", returnTo);
+  return url;
+}
+
+export async function POST(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) {
+    return new NextResponse("Sign-in request rejected", { status: 403 });
+  }
+  const form = await request.formData();
+  const postingValue = form.get("posting");
+  const posting = typeof postingValue === "string" ? postingValue : "";
+  const returnTo = safeReturnTo(form.get("returnTo"));
+  if (posting && !isSafePostingSlug(posting)) {
+    return NextResponse.redirect(
+      signInUrl(request, "posting-unavailable"),
+      303,
+    );
+  }
+  const emailValue = form.get("email");
+  const passwordValue = form.get("password");
+  const email = typeof emailValue === "string" ? emailValue.trim() : "";
+  const password = typeof passwordValue === "string" ? passwordValue : "";
+  if (!email || email.length > 254 || !password || password.length > 1024) {
+    return NextResponse.redirect(
+      signInUrl(request, "credentials", posting || undefined, returnTo),
+      303,
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+  let authResult: {
+    data: { session: { access_token: string } | null };
+    error: unknown;
+  };
+  try {
+    authResult = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+  } catch {
+    return NextResponse.redirect(
+      signInUrl(request, "credentials", posting || undefined, returnTo),
+      303,
+    );
+  }
+  const token = authResult.data.session?.access_token;
+  if (authResult.error || !token) {
+    return NextResponse.redirect(
+      signInUrl(request, "credentials", posting || undefined, returnTo),
+      303,
+    );
+  }
+  if (!posting) {
+    if (returnTo === "/admin") {
+      return NextResponse.redirect(
+        new URL("/auth/mfa?returnTo=/admin", request.url),
+        303,
+      );
+    }
+    return NextResponse.redirect(new URL(returnTo, request.url), 303);
+  }
+  try {
+    const application = await startCandidateApplication(token, posting);
+    return NextResponse.redirect(
+      new URL(`/candidate/applications/${application.id}`, request.url),
+      303,
+    );
+  } catch (error) {
+    if (error instanceof CandidateProvisioningError && error.status === 404) {
+      return NextResponse.redirect(
+        signInUrl(request, "posting-unavailable"),
+        303,
+      );
+    }
+    return NextResponse.redirect(
+      signInUrl(request, "application-access", posting),
+      303,
+    );
+  }
+}

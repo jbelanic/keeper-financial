@@ -76,20 +76,41 @@ The page must present both options without making either look secondary.
 
 ## Candidate portal
 
-- Persistent progress indicator.
-- Save status.
+As implemented by the 2026-07-17 remediation, the published-posting page,
+registration page, posting-bound sign-in page, confirmation callback, and
+bounded recovery errors retain only a server-validated published slug.
+Candidate onboarding appears in portal navigation only after the protected
+dashboard proves a current eligible assignment.
+
+- Every published posting must present two equally clear candidate entry actions: create an account and sign in with an existing account. Both actions must preserve the validated posting slug through authentication and return to that posting-specific application start.
+- Registration confirmation and existing-user sign-in must converge on a supported posting-bound provisioning orchestration that invokes the narrow application-start boundary. Generic sign-in remains non-provisioning and must not infer a posting or grant candidate access.
+- If a user is already confirmed in Supabase but has no local mapping/application relationship, the posting-bound entry flow must explain the denial safely and offer recovery by returning to a published posting and signing in with that preserved posting context. It must not create a candidate relationship without an explicit published-posting start.
+- Authentication errors must retain safe posting context, avoid account-enumeration detail, and provide a visible route back to the selected opportunity.
+- A section outline in normal document flow; it must not be sticky
+  noninteractive text that obscures form content.
+- Draft-save status both at the workflow level and beside the action. The
+  action-local polite live region distinguishes saving, saved, validation,
+  network, and stale-revision states without scrolling the candidate away from
+  the controls.
 - Clear required/optional labels.
 - Review screen before submission.
 - Candidate-visible messages separate from internal notes.
 - Status timeline.
 - Task-oriented onboarding dashboard.
 - Document version and completion state.
+- Candidate portal navigation must expose onboarding when an onboarding assignment is available; the direct route must remain authorization- and lifecycle-protected even when the navigation item is absent or ineligible.
 
 ## Admin portal
+
+As implemented by the 2026-07-17 remediation, the authorized admin shell
+exposes onboarding administration. Review controls display and submit the
+posting-specific application ID and attempt; navigation remains a convenience
+over the FastAPI authorization boundary.
 
 - Queue first.
 - Filters by status, owner, age, and missing requirements.
 - Candidate detail organized into application, documents, review, onboarding, activity.
+- Administration navigation must expose onboarding plan/assignment/task/gate operations to authorized administrators.
 - Clear destructive-action confirmation.
 - Reason required for high-risk status changes.
 - No hidden status changes.
@@ -143,4 +164,26 @@ Create:
 - Touch targets should be practical.
 - Portal navigation must remain usable without hover.
 
-Implemented public reflow guardrails include page-level overflow clipping, `min-width: 0` on layout containers, single-column layouts below 52rem, full-width actions on the smallest breakpoint, crop-safe `next/image` containers, and explicit 36rem narrow-screen rules. Browser/manual WCAG and visual-regression approval remain Phase 1F work.
+Implemented public reflow guardrails include page-level overflow clipping,
+`min-width: 0` on layout containers, one centered max-width geometry shared by
+the header, hero, trust strip, and following sections, single-column layouts
+below 52rem, full-width actions on the smallest breakpoint, intentional
+crop-safe `next/image` sizing/focal positioning, and explicit 36rem
+narrow-screen rules. Genuine Firefox evidence at 320, 375, 768, 1024, 1280,
+1366, 1536, and 1920 CSS pixels showed no horizontal overflow at 100% zoom;
+broader manual WCAG and cross-browser approval remain Phase 1F work.
+
+## 2026-07-18 candidate browser-completion addendum
+
+- The shared candidate shell uses the bounded onboarding-availability projection, not the full protected dashboard. No assignment hides the navigation item and leaves the application portal usable; permanent denials are not polled, and a transient direct-dashboard failure offers one manual retry.
+- Candidate application fields expose the Phase 1C format, length, optionality, and conditional rules before submission. Month values use an accessible month control with canonical `YYYY-MM`; referral detail is rendered and submitted only for employee/agent referral or Other; the interest statement announces its 100-character minimum and current count.
+- Safe API validation failures produce an announced summary linked to affected controls without clearing entered values or displaying internal schema paths.
+- The candidate document area inspects MFA before requesting private metadata. It offers enrollment without a verified factor, challenge at AAL1 with a verified factor, and returns only to an allow-listed exact candidate application `#documents` location after session refresh proves AAL2.
+- After AAL2, private document metadata loads automatically and resolves to a
+  list, explicit empty state, or bounded retry. Upload feedback distinguishes
+  unsupported extension, declared/detected MIME disagreement, PDF/DOC/DOCX
+  structural rejection, file size, malware, scanner availability, storage
+  availability, and authorization without exposing parser or storage details;
+  a successful upload resets only the file control, preserves category, and
+  refreshes the visible metadata.
+- Information-request, interview, decision, and onboarding controls retain the exact selected opportunity and attempt. Information request remains disabled until the selected attempt is `under_review` or `interview`, and conflicts use operation-specific wording.

@@ -12,6 +12,7 @@ from keeper_api.models.domain import (
     AuditEvent,
     Candidate,
     CandidateApplication,
+    CandidateInformationRequest,
     CandidateStatusHistory,
     RecruitmentPosting,
     Role,
@@ -19,6 +20,9 @@ from keeper_api.models.domain import (
     UserIdentity,
     UserRole,
 )
+from keeper_api.services.audit import AuditService
+from keeper_api.services.auth import ExternalIdentity
+from keeper_api.services.candidate_applications import provision_application
 
 PRIVACY_VERSION = "candidate-privacy-disclosure-2026-07-15-v1"
 PRIVACY_PARAGRAPHS = [
@@ -62,7 +66,11 @@ def start_headers(
 
 
 def candidate_headers(subject: str = "new-candidate", aal: str = "aal1") -> dict[str, str]:
-    return {"X-Dev-Auth-Sub": subject, "X-Dev-Auth-AAL": aal}
+    return {
+        "Authorization": "Bearer local-dev-test-token",
+        "X-Dev-Auth-Sub": subject,
+        "X-Dev-Auth-AAL": aal,
+    }
 
 
 def start_application(
@@ -152,14 +160,21 @@ def test_application_start_requires_verified_identity_and_published_posting(
         ).status_code
         == 403
     )
-    draft = published_posting(db, "synthetic-draft")
-    draft.status = "draft"
-    db.commit()
-    unavailable = client.post(
-        "/api/v1/recruitment/postings/synthetic-draft/applications/start",
-        headers=start_headers(),
-    )
-    assert unavailable.status_code == 404
+    for posting_status in ("draft", "closed", "archived"):
+        unavailable_posting = published_posting(db, f"synthetic-{posting_status}")
+        unavailable_posting.status = posting_status
+        db.commit()
+        unavailable = client.post(
+            f"/api/v1/recruitment/postings/synthetic-{posting_status}/applications/start",
+            headers=start_headers(),
+        )
+        assert unavailable.status_code == 404
+    for unavailable_slug in ("synthetic-unknown", "INVALID", "bad--slug"):
+        unavailable = client.post(
+            f"/api/v1/recruitment/postings/{unavailable_slug}/applications/start",
+            headers=start_headers(),
+        )
+        assert unavailable.status_code == 404
     invalid_email = client.post(
         "/api/v1/recruitment/postings/synthetic-candidate-opportunity/applications/start",
         headers=start_headers(email="not-an-email"),
@@ -205,6 +220,36 @@ def test_application_start_atomically_provisions_only_candidate_relationships_an
     ]
 
 
+def test_application_start_transaction_failure_leaves_no_partial_access_rows(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    published_posting(db)
+
+    def fail_audit(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("synthetic transaction failure")
+
+    monkeypatch.setattr(AuditService, "record", fail_audit)
+    with pytest.raises(RuntimeError, match="synthetic transaction failure"):
+        provision_application(
+            db,
+            identity=ExternalIdentity(
+                subject="rollback-subject",
+                email="rollback-candidate@example.test",
+                verified=True,
+                aal="aal1",
+            ),
+            posting_slug="synthetic-candidate-opportunity",
+            request_id="synthetic-rollback",
+        )
+
+    assert db.query(User).count() == 0
+    assert db.query(UserIdentity).count() == 0
+    assert db.query(UserRole).count() == 0
+    assert db.query(Candidate).count() == 0
+    assert db.query(CandidateApplication).count() == 0
+    assert db.query(AuditEvent).count() == 0
+
+
 def test_application_start_retry_returns_the_existing_draft_without_resetting_content(
     client: TestClient, db: Session
 ) -> None:
@@ -237,6 +282,28 @@ def test_application_start_retry_returns_the_existing_draft_without_resetting_co
     assert retry.json()["revision"] == 2
     assert retry.json()["given_name"] == "Preserved"
     assert retry.json()["employment"][0]["employer_name"] == "Synthetic employer"
+
+
+def test_application_start_retry_reuses_a_later_nonterminal_attempt(
+    client: TestClient, db: Session
+) -> None:
+    started = start_application(client, db)
+    application = db.get(CandidateApplication, uuid.UUID(started["id"]))
+    assert application is not None
+    application.state = "submitted"
+    application.status = "conditionally_selected"
+    db.commit()
+
+    retry = client.post(
+        "/api/v1/recruitment/postings/synthetic-candidate-opportunity/applications/start",
+        headers=start_headers(),
+    )
+
+    assert retry.status_code == 200
+    assert retry.json()["id"] == started["id"]
+    assert retry.json()["status"] == "conditionally_selected"
+    assert db.query(CandidateApplication).count() == 1
+    assert db.query(AuditEvent).filter_by(event_type="candidate_application.started").count() == 1
 
 
 def test_withdrawn_candidate_reapplies_as_a_distinct_attempt_without_overwrite(
@@ -458,6 +525,28 @@ def test_candidate_status_is_minimal_and_withdrawal_is_application_specific(
     }
     assert "reason" not in statuses.text
     assert "actor" not in statuses.text
+
+    db.add(
+        CandidateInformationRequest(
+            candidate_id=db.get(CandidateApplication, uuid.UUID(second["id"])).candidate_id,
+            application_id=uuid.UUID(second["id"]),
+            requested_by_user_id=None,
+            status="open",
+            message="Please provide a synthetic candidate-facing clarification.",
+        )
+    )
+    db.commit()
+    visible_request = client.get(
+        "/api/v1/candidate/applications/status", headers=candidate_headers()
+    )
+    visible_by_application = {
+        item["application_id"]: item["messages"] for item in visible_request.json()["applications"]
+    }
+    assert visible_by_application[first["id"]] == []
+    assert visible_by_application[second["id"]] == [
+        "Please provide a synthetic candidate-facing clarification."
+    ]
+    assert "interview_notes" not in visible_request.text
 
     edit = client.patch(
         f"/api/v1/candidate/applications/{first['id']}",

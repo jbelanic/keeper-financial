@@ -50,31 +50,34 @@ Phase 1B does not add notification email, assignment/CRM workflow, export/bulk a
 - Minimal application-specific candidate status, candidate-owned withdrawal, retained read-only access, and same-posting reapplication as a new attempt.
 - Migration `20260715_0003`, generated OpenAPI/TypeScript contracts, accessible public/candidate/admin workflows, and synthetic local fixtures.
 
-Phase 1C deliberately leaves candidate review, information requests/reopening, decisions, onboarding, controlled documents, profile publication, notifications, production malware scanning, and production operations to later approved phases. See `docs/20_PHASE_1C_IMPLEMENTATION_REPORT.md`.
+At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the approved local malware-scanning control were not yet present. Those capabilities are now completed at the Phase 1D, Phase 1E, and ClamAV checkpoints below. Notifications and remaining readiness operations stay in Phase 1F. See `docs/20_PHASE_1C_IMPLEMENTATION_REPORT.md` for the historical Phase 1C evidence.
 
 ## Phase 1D — Review and onboarding
 
-- Admin candidate pipeline.
-- Review and information requests.
-- Decisions.
-- Onboarding templates.
-- Candidate task dashboard.
-- Controlled documents.
-- Acknowledgements.
-- Executed-document status/upload.
-- Activation gates.
+- **Completed at `6349c16`.**
+- Admin candidate review queue/detail, interview status, information requests, lifecycle decisions, and append-oriented evidence.
+- Reusable onboarding plans, candidate assignment, candidate task dashboard/evidence, and administrative task review.
+- Controlled-document projections, version-specific policy acknowledgements, external e-signature envelope tracking, and activation gates.
+- FastAPI routes, Next.js candidate/admin workflows, migration `20260716_0004`, generated contracts, and focused Phase 1D tests.
 
 ## Phase 1E — Agent profiles
 
-- Profile administration.
-- Approval.
-- Public directory.
-- Public detail.
-- Agent-specific attribution.
-- Suspension/archive.
+- **Completed at `384246c`.**
+- Brokerage-admin profile creation, bounded editing, approval/publication lifecycle, and publication evidence.
+- Published-only public directory/detail projections, safe configured attribution, and non-public suspension/archive behavior.
+- Migration `20260717_0005`, generated contracts, Next.js public/admin workflows, and focused Phase 1E tests.
+- Approved local deployment topology implemented with application PostgreSQL,API, frontend, local Supabase Auth, local mail capture, private MinIO, and Docker Compose operations.
+
+## Completed cross-phase control — Local malware scanning
+
+- **Completed at `e9d9f65`.**
+- Local ClamAV `clamd` is healthchecked in Compose and required by production configuration.
+- Candidate file bytes pass bounded type/structure validation and a clean `INSTREAM` scan before private MinIO persistence.
+- Scanner connection, timeout, protocol, and non-clean results fail closed; the scan-only endpoint never persists bytes.
 
 ## Phase 1F — Production readiness
 
+- **Next gate: readiness planning and blocker resolution.**
 - Threat model closure.
 - Privacy review.
 - Accessibility review.
@@ -83,6 +86,8 @@ Phase 1C deliberately leaves candidate review, information requests/reopening, d
 - Incident procedures.
 - Vendor due diligence.
 - Content and regulatory review.
+- Resolve or explicitly disposition the known Alembic model/schema drift before launch approval.
+- Confirm local-only Studio operations, disabled Supabase Storage/S3 protocol, MinIO bucket policy, ClamAV signature operations, and Linux Mint host hardening.
 - Pilot.
 - Launch approval.
 

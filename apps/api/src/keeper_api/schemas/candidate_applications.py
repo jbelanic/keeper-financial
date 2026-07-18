@@ -1,11 +1,30 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+CandidateVisibleStatus = Literal[
+    "application_started",
+    "application_submitted",
+    "under_review",
+    "more_information_required",
+    "interview",
+    "conditionally_selected",
+    "onboarding_in_progress",
+    "pending_fsra_authorization",
+    "pending_system_provisioning",
+    "active",
+    "suspended",
+    "offboarding",
+    "offboarded",
+    "withdrawn",
+    "declined",
+]
 
 COUNTRY_CODES = frozenset(
     [
@@ -268,7 +287,7 @@ _MONTH = re.compile(r"^(19|20)\d{2}-(0[1-9]|1[0-2])$")
 def _single(value: str | None) -> str | None:
     if value is None:
         return None
-    clean = value.strip()
+    clean = unicodedata.normalize("NFKC", value).strip()
     if not clean or _CONTROL_SINGLE.search(clean):
         raise ValueError("enter plain single-line text")
     return clean
@@ -277,7 +296,7 @@ def _single(value: str | None) -> str | None:
 def _multi(value: str | None) -> str | None:
     if value is None:
         return None
-    clean = value.strip()
+    clean = unicodedata.normalize("NFKC", value).strip()
     if not clean or _CONTROL_MULTI.search(clean):
         raise ValueError("enter plain text without control characters")
     return clean
@@ -413,7 +432,7 @@ class CandidateApplicationResponse(BaseModel):
     schema_version: str
     revision: int
     state: Literal["draft", "submitted", "withdrawn"]
-    status: Literal["application_started", "application_submitted", "withdrawn", "declined"]
+    status: CandidateVisibleStatus
     email: str
     given_name: str | None
     family_name: str | None
@@ -446,7 +465,7 @@ class ApplicationListResponse(BaseModel):
 
 class CandidateVisibleApplicationStatus(BaseModel):
     application_id: uuid.UUID
-    status: Literal["application_started", "application_submitted", "withdrawn", "declined"]
+    status: CandidateVisibleStatus
     messages: list[str]
 
 

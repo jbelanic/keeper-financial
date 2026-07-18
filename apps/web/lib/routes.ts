@@ -18,6 +18,7 @@ export const PUBLIC_ROUTES = [
   "/accessibility",
   "/contact",
   "/auth/sign-in",
+  "/auth/mfa",
   "/auth/register",
   "/auth/callback",
 ] as const;

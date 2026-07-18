@@ -69,12 +69,13 @@ Preferred foundation:
 - API: FastAPI.
 - Database: PostgreSQL.
 - ORM/migrations: SQLAlchemy and Alembic.
-- Identity: Supabase Auth.
+- Identity: the repository-tracked local Supabase CLI/Auth stack; no hosted Supabase.
 - Authorization authority: application database roles and lifecycle state.
-- Nonlocal object storage: private Cloudflare R2-compatible storage.
-- Local file storage: permitted only for local development.
-- Local runtime: Docker Compose.
-- Deployment: containerized or managed deployment selected later.
+- Object storage: private local S3-compatible MinIO with path-style addressing.
+- Malware scanning: local ClamAV `clamd` in Docker Compose; validation and a clean scan are required before private-object persistence.
+- Local file storage: test/development fallback only; never the live object store.
+- Live/production runtime: Docker Compose on the local Linux host. The local containers are the deployment targets.
+- Infrastructure boundary: no hosted Supabase, Cloudflare R2, or external cloud infrastructure keys/services.
 - Email: transactional provider selected later.
 - E-signature: established provider selected later; no custom signature system.
 
@@ -140,3 +141,5 @@ Phase 1 is releasable only when:
 ## 11. Change-control rule
 
 Any approved change to scope, architecture, security boundaries, lifecycle states, systems of record, or compliance assumptions must update this file and all affected supporting documents in the same branch.
+
+The deployment decision above supersedes hosted-service and undecided-hosting language in historical implementation reports and bootstrap prompts; those files remain historical evidence rather than current instructions.

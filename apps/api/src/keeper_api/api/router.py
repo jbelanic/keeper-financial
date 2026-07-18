@@ -5,10 +5,14 @@ from keeper_api.api.routes import (
     auth,
     candidate_applications,
     candidate_documents,
+    candidate_onboarding,
     documents,
     integrations,
     leads,
+    onboarding,
     recruitment,
+    review,
+    upload_document,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -21,3 +25,7 @@ api_router.include_router(candidate_applications.privacy_router)
 api_router.include_router(candidate_documents.router)
 api_router.include_router(agents.router)
 api_router.include_router(documents.router)
+api_router.include_router(review.router)
+api_router.include_router(onboarding.router)
+api_router.include_router(candidate_onboarding.router)
+api_router.include_router(upload_document.router)

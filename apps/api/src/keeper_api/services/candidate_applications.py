@@ -19,6 +19,7 @@ from keeper_api.models.domain import (
     UserIdentity,
     UserRole,
 )
+from keeper_api.models.statuses import CandidateStatus
 from keeper_api.schemas.candidate_applications import (
     ApplicationDraftUpdate,
     CandidateApplicationResponse,
@@ -36,6 +37,18 @@ class CandidateApplicationConflict(ValueError):
 
 class CandidateApplicationInvalid(ValueError):
     pass
+
+
+NONTERMINAL_APPLICATION_STATUSES: tuple[str, ...] = tuple(
+    status.value
+    for status in CandidateStatus
+    if status
+    not in {
+        CandidateStatus.PROSPECT,
+        CandidateStatus.WITHDRAWN,
+        CandidateStatus.DECLINED,
+    }
+)
 
 
 def candidate_application_response(
@@ -156,11 +169,21 @@ def provision_application(
             candidate = Candidate(user_id=user.id, status="application_started")
             db.add(candidate)
             db.flush()
+        # Mirror the denied candidate-lifecycle enforcement that authorize_portal
+        # applies to the candidate portal. The anonymous provisioning boundary must
+        # not let a suspended/offboarding/offboarded candidate start applications
+        # even when the account itself remains active (B1).
+        elif CandidateStatus(candidate.status) in (
+            CandidateStatus.SUSPENDED,
+            CandidateStatus.OFFBOARDING,
+            CandidateStatus.OFFBOARDED,
+        ):
+            raise PermissionError("candidate access is unavailable")
         existing = db.scalar(
             select(CandidateApplication).where(
                 CandidateApplication.candidate_id == candidate.id,
                 CandidateApplication.recruitment_posting_id == posting.id,
-                CandidateApplication.status.in_(["application_started", "application_submitted"]),
+                CandidateApplication.status.in_(NONTERMINAL_APPLICATION_STATUSES),
             )
         )
         if existing is not None:
@@ -234,9 +257,7 @@ def provision_application(
                     select(CandidateApplication).where(
                         CandidateApplication.candidate_id == candidate.id,
                         CandidateApplication.recruitment_posting_id == posting.id,
-                        CandidateApplication.status.in_(
-                            ["application_started", "application_submitted"]
-                        ),
+                        CandidateApplication.status.in_(NONTERMINAL_APPLICATION_STATUSES),
                     )
                 )
                 if existing is not None:

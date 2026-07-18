@@ -63,7 +63,7 @@ Do not store raw object files in PostgreSQL.
 
 ### Identity
 
-Supabase Auth supplies:
+The repository-tracked local Supabase CLI stack supplies:
 
 - Sign-up/sign-in.
 - Email verification.
@@ -82,15 +82,13 @@ The API verifies the Supabase JWT and maps the subject to:
 
 No active application relationship means no portal entry.
 
+The current web and API code genuinely depends on Supabase Auth token/session semantics. The supported live approach is therefore the checked-in `supabase/config.toml` started locally on the same Linux host. Hosted Supabase is prohibited. The API reaches its JWKS endpoint through the Docker host gateway while validating the issuer embedded by the local Auth service.
+
 ## Object storage
 
-### Local
+The live object store is the `minio` service in `compose.yaml`. PostgreSQL stores metadata; MinIO stores bytes. The API uses the S3-compatible interface with path-style addressing, the `minio` service name for container traffic, and a loopback host endpoint only when producing short-lived browser download URLs. Local filesystem storage remains a test/development fallback only.
 
-Local development may store files under a configured local-only directory.
-
-### Nonlocal
-
-Use a private Cloudflare R2-compatible bucket.
+The live malware-scanning boundary is the `clamav` Compose service. The API sends bounded in-memory bytes to `clamd` over the internal `clamav:3310` TCP endpoint using framed `INSTREAM`; port 3310 is published on loopback only for operator verification. Candidate bytes are not written to MinIO until type/structure validation and a clean scan both succeed.
 
 Required:
 
@@ -147,23 +145,19 @@ Email must not include:
 - Audit events are not a substitute for logs.
 - Logs are not a substitute for audit events.
 
-## Deployment tiers
+## Deployment topology
 
-Minimum:
+There are two application modes: `local` for isolated development/tests and `production` for the live local Docker deployment. There is no remote staging or hosted production tier.
 
-- `local`
-- `staging_non_sensitive`
-- `production`
+The production topology is one Docker Compose project on the local Linux host:
 
-Nonlocal tiers must fail startup when:
+- `web` calls `api` at `http://api:8000` for server-side traffic; browsers use `http://localhost:8000`.
+- `api` connects to PostgreSQL at the `db` service using `postgresql+psycopg` and to MinIO at `http://minio:9000`.
+- `db` and `minio` use durable named volumes and healthchecks.
+- `minio-init` idempotently creates the configured private bucket and disables anonymous access before API startup; MinIO API CORS uses the server's `MINIO_API_CORS_ALLOW_ORIGIN` environment variable with the exact loopback web origin.
+- browsers access the existing local Supabase CLI Auth endpoint through loopback; the API fetches JWKS through `host.docker.internal`. The CLI owns its separate port bindings, which require host-firewall protection.
 
-- Development-header authentication is enabled.
-- Local file storage is selected.
-- public object URLs are enabled;
-- loopback origins are configured;
-- required secrets are missing;
-- CORS is overly broad;
-- unsafe debug mode is enabled.
+Production validation fails closed when debug/development auth is enabled, admin MFA is not required, local file storage is selected, public object URLs are enabled, required local-service settings are missing, or database/Auth/storage URLs do not match this topology. Alembic migrations are an explicit operator action and never run automatically during service startup.
 
 ## API modules
 

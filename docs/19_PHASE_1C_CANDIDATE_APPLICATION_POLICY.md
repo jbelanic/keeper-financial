@@ -144,10 +144,16 @@ Document rules:
 
 - The candidate must select a category; there is no `other` category.
 - Extension, declared MIME type, and detected file signature must agree. Renaming a file does not make it acceptable.
+- The multipart declared MIME remains the exact format MIME in the table. A
+  structurally valid DOCX may be detected by libmagic as either the official
+  DOCX MIME or a bounded ZIP-family MIME; ZIP detection is acceptable only
+  after the package proves the required Office Open XML/WordprocessingML
+  structure. An arbitrary ZIP, OLE container, or PDF-like prefix is not a
+  permitted document.
 - A candidate may retain at most five files in each category per application attempt.
 - Before submission, candidates may remove their own uploads. After submission, uploads are append-only: a newer file may be marked current, but earlier metadata and audit evidence are retained and the submitted record is not silently replaced.
 - After-submission upload is allowed only for nonterminal application states and requires AAL2. It ends on withdrawal or decline.
-- Files remain private, quarantined until the production malware-scanning control accepts them, and inaccessible through public object URLs.
+- Type/structure validation and the live malware scan must succeed before bytes or metadata are persisted. Rejected or unavailable-scan bytes never reach object storage; accepted files remain private and inaccessible through public object URLs.
 - Phase 1C must not add identity documents, background checks, credit reports, financial records, licensing evidence, suitability evidence, or a generic “other” upload category.
 
 ## 4. Approved candidate privacy disclosure
@@ -196,4 +202,4 @@ Additional rules:
 - A document-upload, restricted-document listing that exposes sensitive metadata, or document-view/download action must step up to AAL2 and re-run server-side ownership, relationship, lifecycle, quarantine, and authorization checks.
 - A short-lived URL does not replace AAL2 or authorization. It may be issued only after the checks succeed.
 - AAL2 must be asserted by the managed identity provider; the application must not accept a caller-supplied MFA flag.
-- Brokerage administrators remain subject to the existing mandatory nonlocal AAL2 policy.
+- Brokerage administrators remain subject to the mandatory live-production AAL2 policy.

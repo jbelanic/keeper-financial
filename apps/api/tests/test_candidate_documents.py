@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import json
 import uuid
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -11,9 +10,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from conftest import create_user
+from document_samples import eicar_bytes, valid_docx, valid_legacy_doc, valid_pdf
 from keeper_api.api.routes import candidate_documents as candidate_document_routes
 from keeper_api.core.config import Settings
 from keeper_api.models.domain import AuditEvent, CandidateDocument
+from keeper_api.services import candidate_files
 from keeper_api.services.audit import AuditService
 from keeper_api.services.malware_scanner import ScanDecision
 from keeper_api.services.storage import LocalPrivateStorage, StorageError
@@ -23,15 +24,7 @@ from test_candidate_applications import (
     start_application,
 )
 
-PDF = b"%PDF-1.7\n% synthetic candidate document\n%%EOF\n"
-
-
-def docx_bytes() -> bytes:
-    output = io.BytesIO()
-    with zipfile.ZipFile(output, "w") as archive:
-        archive.writestr("[Content_Types].xml", "<Types />")
-        archive.writestr("word/document.xml", "<document />")
-    return output.getvalue()
+PDF = valid_pdf()
 
 
 def upload(
@@ -87,19 +80,53 @@ def test_candidate_document_upload_requires_owner_aal2_and_active_application(
 
 
 @pytest.mark.parametrize(
-    "category,filename,content_type,content",
+    "category,filename,content_type,content,detail",
     [
-        ("other", "resume.pdf", "application/pdf", PDF),
-        ("resume", "resume.txt", "text/plain", b"plain text"),
-        ("resume", "resume.exe.pdf", "application/pdf", PDF),
-        ("resume", "resume.pdf", "application/pdf", b"not a pdf"),
-        ("resume", "resume.pdf", "application/msword", PDF),
-        ("resume", "resume.pdf", "application/pdf", b""),
+        ("other", "resume.pdf", "application/pdf", PDF, "unsupported_category"),
+        ("resume", "resume.txt", "text/plain", b"plain text", "unsupported_extension"),
+        ("resume", "resume.exe.pdf", "application/pdf", PDF, "unsupported_extension"),
+        (
+            "resume",
+            "resume.pdf",
+            "application/pdf",
+            b"%PDF-1.7\n%%EOF\n",
+            "pdf_structure_invalid",
+        ),
+        (
+            "resume",
+            "resume.pdf",
+            "application/pdf",
+            b"x" * (10 * 1024 * 1024 + 1),
+            "file_too_large",
+        ),
+        (
+            "resume",
+            "resume.pdf",
+            "application/msword",
+            PDF,
+            "declared_mime_mismatch",
+        ),
+        (
+            "resume",
+            "resume.pdf",
+            "application/pdf",
+            valid_docx(),
+            "detected_mime_mismatch",
+        ),
+        ("resume", "resume.pdf", "application/pdf", b"", "empty_file"),
         (
             "cover_letter",
             "letter.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            b"PK\x03\x04not-an-office-archive",
+            valid_docx()[:-20],
+            "docx_structure_invalid",
+        ),
+        (
+            "resume",
+            "resume.doc",
+            "application/msword",
+            b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + bytes(504),
+            "legacy_doc_invalid",
         ),
     ],
 )
@@ -111,6 +138,7 @@ def test_candidate_document_rejects_unapproved_or_mismatched_files_before_storag
     filename: str,
     content_type: str,
     content: bytes,
+    detail: str,
 ) -> None:
     application_id = start_application(client, db)["id"]
     response = upload(
@@ -122,6 +150,7 @@ def test_candidate_document_rejects_unapproved_or_mismatched_files_before_storag
         content=content,
     )
     assert response.status_code == 422
+    assert response.json() == {"detail": detail}
     assert db.query(CandidateDocument).count() == 0
     assert not list((tmp_path / "objects").rglob("*"))
     audit = db.query(AuditEvent).filter_by(event_type="candidate_document.rejected").one()
@@ -198,7 +227,10 @@ def test_authorized_aal2_admin_can_retrieve_clean_candidate_document(
     assert response.headers["Cache-Control"] == "private, no-store"
 
 
-def test_valid_docx_signature_is_accepted(client: TestClient, db: Session) -> None:
+@pytest.mark.parametrize("data_descriptors", [False, True])
+def test_valid_docx_signature_is_accepted(
+    client: TestClient, db: Session, data_descriptors: bool
+) -> None:
     application_id = start_application(client, db)["id"]
     response = upload(
         client,
@@ -206,9 +238,91 @@ def test_valid_docx_signature_is_accepted(client: TestClient, db: Session) -> No
         category="cover_letter",
         filename="letter.docx",
         content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        content=docx_bytes(),
+        content=valid_docx(data_descriptors=data_descriptors),
     )
     assert response.status_code == 201
+
+
+def test_valid_docx_with_zip_detection_is_accepted_after_structure_proof(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application_id = start_application(client, db)["id"]
+    monkeypatch.setattr(
+        candidate_files.magic,
+        "from_buffer",
+        lambda *_args, **_kwargs: "application/zip",
+    )
+
+    response = upload(
+        client,
+        application_id,
+        filename="resume.docx",
+        content_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        content=valid_docx(data_descriptors=True),
+    )
+
+    assert response.status_code == 201
+
+
+def test_valid_legacy_doc_is_accepted_under_narrow_word_policy(
+    client: TestClient,
+    db: Session,
+) -> None:
+    application_id = start_application(client, db)["id"]
+
+    response = upload(
+        client,
+        application_id,
+        filename="resume.doc",
+        content_type="application/msword",
+        content=valid_legacy_doc(),
+    )
+
+    assert response.status_code == 201
+
+
+def test_common_pdf_with_bounded_trailing_comments_is_accepted(
+    client: TestClient, db: Session
+) -> None:
+    application_id = start_application(client, db)["id"]
+    response = upload(
+        client,
+        application_id,
+        content=valid_pdf(trailing_comments=b"% bounded generator metadata\n"),
+    )
+
+    assert response.status_code == 201
+
+
+def test_validation_failure_never_reaches_scanner_or_persistence(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    application_id = start_application(client, db)["id"]
+
+    def scanner_not_reached(_settings: object) -> object:
+        raise AssertionError("scanner must not be reached")
+
+    monkeypatch.setattr(
+        candidate_document_routes,
+        "build_malware_scanner",
+        scanner_not_reached,
+    )
+
+    response = upload(
+        client,
+        application_id,
+        content=b"%PDF-1.7\n%%EOF\n",
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "pdf_structure_invalid"}
+    assert db.query(CandidateDocument).count() == 0
+    assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
 
 
 def test_candidate_can_remove_only_draft_documents_and_category_is_bounded_to_five(
@@ -256,6 +370,7 @@ def test_scanner_unavailable_fails_closed_without_object_or_metadata(
     settings.malware_scanner_backend = "disabled"
     response = upload(client, application_id)
     assert response.status_code == 503
+    assert response.json() == {"detail": "scanner_unavailable"}
     assert db.query(CandidateDocument).count() == 0
     assert not list((tmp_path / "objects").rglob("*"))
     assert (
@@ -263,16 +378,19 @@ def test_scanner_unavailable_fails_closed_without_object_or_metadata(
     )
 
 
-def test_scanner_rejection_remains_quarantined_and_audited_without_sensitive_metadata(
+def test_scanner_rejection_never_reaches_storage_or_metadata_and_is_safely_audited(
     client: TestClient,
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     application_id = start_application(client, db)["id"]
+    marker = eicar_bytes()
+    content = valid_pdf(comment=marker)
 
     class RejectingScanner:
         def scan(self, content: bytes) -> ScanDecision:
+            assert marker in content
             return ScanDecision(status="rejected", source="synthetic_test")
 
     monkeypatch.setattr(
@@ -280,18 +398,16 @@ def test_scanner_rejection_remains_quarantined_and_audited_without_sensitive_met
         "build_malware_scanner",
         lambda settings: RejectingScanner(),
     )
-    response = upload(client, application_id, filename="private-resume.pdf")
-    assert response.status_code == 422
-    document = db.query(CandidateDocument).one()
-    assert document.scan_status == "rejected"
-    assert [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
-    assert (
-        client.get(
-            f"/api/v1/documents/{document.id}/download",
-            headers=candidate_headers(aal="aal2"),
-        ).status_code
-        == 409
+    response = upload(
+        client,
+        application_id,
+        filename="private-resume.pdf",
+        content=content,
     )
+    assert response.status_code == 422
+    assert response.json() == {"detail": "malware_detected"}
+    assert db.query(CandidateDocument).count() == 0
+    assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
     events = {
         event.event_type: event.safe_metadata
         for event in db.query(AuditEvent)
@@ -305,6 +421,27 @@ def test_scanner_rejection_remains_quarantined_and_audited_without_sensitive_met
     assert events["candidate_document.scan_decision"]["decision"] == "rejected"
     assert events["candidate_document.rejected"]["decision"] == "scanner_rejected"
     assert "private-resume.pdf" not in json.dumps(events)
+
+
+def test_candidate_upload_closes_file_after_success_and_validation_rejection(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application_id = start_application(client, db)["id"]
+    observed_streams: list[io.BufferedIOBase] = []
+    original = candidate_document_routes.validate_candidate_file
+
+    def observe(stream: io.BufferedIOBase, **kwargs: object):
+        observed_streams.append(stream)
+        return original(stream, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(candidate_document_routes, "validate_candidate_file", observe)
+
+    assert upload(client, application_id, filename="success.pdf").status_code == 201
+    assert upload(client, application_id, filename="invalid.pdf", content=b"bad").status_code == 422
+    assert len(observed_streams) == 2
+    assert all(stream.closed for stream in observed_streams)
 
 
 def test_database_failure_after_storage_write_removes_orphan(
@@ -328,10 +465,85 @@ def test_database_failure_after_storage_write_removes_orphan(
     assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
 
 
+def test_refresh_failure_before_commit_attempt_cleans_up_object(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    application_id = start_application(client, db)["id"]
+    commit_attempts = 0
+    original_commit = db.commit
+
+    def count_commit() -> None:
+        nonlocal commit_attempts
+        commit_attempts += 1
+        original_commit()
+
+    def fail_refresh(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("synthetic pre-commit refresh failure")
+
+    monkeypatch.setattr(db, "commit", count_commit)
+    monkeypatch.setattr(db, "refresh", fail_refresh)
+
+    with pytest.raises(RuntimeError, match="synthetic pre-commit refresh failure"):
+        upload(client, application_id)
+
+    assert commit_attempts == 0
+    assert db.query(CandidateDocument).count() == 0
+    assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
+
+
+def test_ambiguous_commit_failure_retains_object_for_reconciliation(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    application_id = start_application(client, db)["id"]
+    original_commit = db.commit
+
+    def commit_then_fail() -> None:
+        original_commit()
+        raise RuntimeError("synthetic ambiguous commit failure")
+
+    monkeypatch.setattr(db, "commit", commit_then_fail)
+
+    with pytest.raises(RuntimeError, match="synthetic ambiguous commit failure"):
+        upload(client, application_id)
+
+    assert db.query(CandidateDocument).count() == 1
+    assert len([path for path in (tmp_path / "objects").rglob("*") if path.is_file()]) == 1
+
+
+def test_precommit_cleanup_failure_does_not_mask_original_database_error(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application_id = start_application(client, db)["id"]
+    original = AuditService.record
+
+    def fail_upload_audit(self: AuditService, event_type: str, *args: object, **kwargs: object):
+        if event_type == "candidate_document.uploaded":
+            raise RuntimeError("synthetic original database failure")
+        return original(self, event_type, *args, **kwargs)  # type: ignore[arg-type]
+
+    def fail_cleanup(self: LocalPrivateStorage, object_key: str) -> None:
+        raise StorageError("synthetic cleanup failure")
+
+    monkeypatch.setattr(AuditService, "record", fail_upload_audit)
+    monkeypatch.setattr(LocalPrivateStorage, "delete", fail_cleanup)
+
+    with pytest.raises(RuntimeError, match="synthetic original database failure"):
+        upload(client, application_id)
+
+
 def test_storage_failure_persists_no_metadata_or_success_audit(
     client: TestClient,
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     application_id = start_application(client, db)["id"]
 
@@ -341,8 +553,31 @@ def test_storage_failure_persists_no_metadata_or_success_audit(
     monkeypatch.setattr(LocalPrivateStorage, "put", fail_put)
     response = upload(client, application_id)
     assert response.status_code == 503
+    assert response.json() == {"detail": "storage_unavailable"}
     assert db.query(CandidateDocument).count() == 0
     assert db.query(AuditEvent).filter_by(event_type="candidate_document.uploaded").count() == 0
+    assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
+
+
+def test_storage_initialization_failure_persists_no_object_or_metadata(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    application_id = start_application(client, db)["id"]
+    monkeypatch.setattr(
+        candidate_document_routes,
+        "build_storage",
+        lambda _settings: (_ for _ in ()).throw(StorageError("synthetic unavailable")),
+    )
+
+    response = upload(client, application_id)
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "storage_unavailable"}
+    assert db.query(CandidateDocument).count() == 0
+    assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
 
 
 def test_quarantined_and_missing_objects_are_not_downloadable(

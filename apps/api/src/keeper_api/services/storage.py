@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import BinaryIO, Protocol
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
 from keeper_api.core.config import Settings
@@ -87,21 +88,30 @@ class LocalPrivateStorage:
             raise StorageError("private storage deletion failed") from exc
 
 
-class R2PrivateStorage:
+class S3PrivateStorage:
     def __init__(self, settings: Settings) -> None:
-        if settings.storage_backend != "r2":
-            raise StorageError("R2 storage is not configured")
+        if settings.storage_backend != "s3":
+            raise StorageError("S3 storage is not configured")
         self.settings = settings
-        self.client = boto3.client(
-            "s3",
-            endpoint_url=settings.r2_endpoint_url,
-            aws_access_key_id=settings.r2_access_key_id,
-            aws_secret_access_key=(
-                settings.r2_secret_access_key.get_secret_value()
-                if settings.r2_secret_access_key
+        client_options = {
+            "aws_access_key_id": settings.s3_access_key_id,
+            "aws_secret_access_key": (
+                settings.s3_secret_access_key.get_secret_value()
+                if settings.s3_secret_access_key
                 else None
             ),
-            region_name=settings.r2_region,
+            "region_name": settings.s3_region,
+            "config": Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+        }
+        self.client = boto3.client(
+            "s3",
+            endpoint_url=settings.s3_endpoint_url,
+            **client_options,
+        )
+        self.presign_client = boto3.client(
+            "s3",
+            endpoint_url=settings.s3_public_endpoint_url,
+            **client_options,
         )
 
     def put(self, stream: BinaryIO, *, content_type: str) -> StoredObject:
@@ -111,7 +121,7 @@ class R2PrivateStorage:
         object_key = f"candidate/{uuid.uuid4().hex}"
         try:
             self.client.put_object(
-                Bucket=self.settings.r2_bucket,
+                Bucket=self.settings.s3_bucket,
                 Key=object_key,
                 Body=data,
                 ContentType=content_type,
@@ -123,9 +133,9 @@ class R2PrivateStorage:
     def authorized_download(self, object_key: str) -> str:
         try:
             return str(
-                self.client.generate_presigned_url(
+                self.presign_client.generate_presigned_url(
                     "get_object",
-                    Params={"Bucket": self.settings.r2_bucket, "Key": object_key},
+                    Params={"Bucket": self.settings.s3_bucket, "Key": object_key},
                     ExpiresIn=self.settings.signed_url_ttl_seconds,
                 )
             )
@@ -134,7 +144,7 @@ class R2PrivateStorage:
 
     def delete(self, object_key: str) -> None:
         try:
-            self.client.delete_object(Bucket=self.settings.r2_bucket, Key=object_key)
+            self.client.delete_object(Bucket=self.settings.s3_bucket, Key=object_key)
         except (BotoCoreError, ClientError) as exc:
             raise StorageError("private storage deletion failed") from exc
 
@@ -142,4 +152,4 @@ class R2PrivateStorage:
 def build_storage(settings: Settings) -> PrivateStorage:
     if settings.storage_backend == "local":
         return LocalPrivateStorage(settings)
-    return R2PrivateStorage(settings)
+    return S3PrivateStorage(settings)
