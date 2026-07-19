@@ -1,11 +1,11 @@
 # Known Limitations
 
-The current approved checkpoint is Phase 1D at `6349c16`, Phase 1E at `384246c`, and fail-closed local ClamAV at `e9d9f65`, operating through Docker on the Linux Mint host. This checkpoint does not itself provide legal/compliance approval, formal accessibility certification, security hardening, or authorization to process real candidate or borrower data. Phase 1F readiness planning and blocker resolution is next.
+The current source checkpoint is merged to `main` at `b906027`. It includes Phase 1D at `6349c16`, Phase 1E at `384246c`, fail-closed local ClamAV at `e9d9f65`, candidate authentication/onboarding completion, genuine private PDF/DOCX upload evidence, and schema reconciliation through `20260718_0007`. This checkpoint does not provide legal/compliance approval, formal accessibility certification, production hardening, pilot approval, deployment authorization, or authority to process real candidate or borrower data. Phase 1F production and controlled-pilot readiness planning is next.
 
 ## Recruitment and privacy boundary
 
 - `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md` resolves the questionnaire, cardinality/reapplication, post-withdrawal access, document categories, candidate disclosure/version, and candidate MFA policy. The implementation does not broaden those allow-lists.
-- **Candidate entry and recovery:** the remediation worktree exposes both registration and existing-user sign-in from a published posting. Both use a server-validated slug and converge on the narrow application-start boundary. Generic sign-in remains non-provisioning, and an unmapped identity without posting context remains denied.
+- **Candidate entry and recovery:** merged registration and existing-user sign-in start from a published posting. Both use a server-validated slug and converge on the narrow application-start boundary. Generic sign-in remains non-provisioning, and an unmapped identity without posting context remains denied.
 - **Session evidence:** source-level tests cover callback exchange, response-cookie persistence, protected-request refresh propagation, and expired/invalid-session denial. The opt-in full local Supabase/Mailpit registration and posting-bound recovery journey passed with fresh synthetic identities on 2026-07-18. The separate genuine-token JWT/JWKS case remains opt-in, and the successful journey is not proof of refresh-token revocation/offboarding behavior.
 - Phase 1D implements the authorized review queue/detail, interview status, information requests, decisions, reusable onboarding plans, candidate task evidence/review, controlled-document projections, exact-version acknowledgement, external envelope tracking, and allow-listed activation gates. Submitted candidate questionnaires remain immutable.
 - **Navigation:** the candidate shell discovers onboarding only when the protected dashboard proves an eligible current assignment; the authorized admin shell exposes onboarding administration. Direct-route/API authorization remains authoritative.
@@ -13,7 +13,7 @@ The current approved checkpoint is Phase 1D at `6349c16`, Phase 1E at `384246c`,
 - **Controlled-document acknowledgement:** each assignment snapshots exact eligible versions. Acknowledgement requires the candidate actor, current assignment, and exact assignment/version relationship; unassigned, cross-candidate, superseded/ineligible, and arbitrary versions fail closed.
 - Activation-gate satisfaction and `activation_ready` calculation are implemented. There is no separately approved final activation operation; readiness must not be described as an activated agent relationship.
 - Agent-profile administration, approval, published directory/detail projections, suspension/archive removal, and safe configured attribution are implemented in Phase 1E. Agent-proposed updates remain P1, and the independent microsite builder remains deferred/P2. Admin profile creation currently identifies an already authorized active local agent relationship by UUID; it does not provision or reactivate agent accounts.
-- Candidate-visible messages are intentionally empty until a later controlled authoring workflow exists. Candidate contracts omit internal reasons, notes, actors, decisions, and audit metadata.
+- Candidate-visible messages are limited to bounded open information requests for the exact application. Candidate contracts omit internal interview notes, reasons, actors, decisions, and audit metadata.
 - No real recruitment posting is supplied. Local seed postings are conspicuously `SYNTHETIC`, `example.test`-only, and gated to `APP_ENV=local`.
 - Legal retention periods remain unresolved. The disclosure truthfully describes policy-controlled categories without a fabricated period; deletion/de-identification jobs, legal/security holds, and production retention operations are not implemented.
 - Email notification behavior/provider is unresolved and no recruitment email is sent. Candidate registration/verification email is delegated to configured Supabase Auth.
@@ -30,14 +30,14 @@ The current approved checkpoint is Phase 1D at `6349c16`, Phase 1E at `384246c`,
   Office formats still retain greater parser risk than PDF or safe raster
   images.
 - MinIO is wired through the implemented private S3 adapter with path-style addressing and a private initialized bucket. Docker access is verified: the immutable MinIO server is healthy and `minio-init` completed successfully. Genuine synthetic candidate AAL2 uploads of standard office-generated PDF and DOCX passed through browser controls and the API, real ClamAV, MinIO persistence, and metadata refresh, with unauthenticated download denied. Authorized signed-download behavior, backup/restore, bucket-policy probes, and orphan reconciliation remain unverified.
-- Current auth/session code genuinely requires Supabase semantics, so the live stack uses the repository-tracked local Supabase CLI configuration. `npx supabase` 2.109.1 is available; no global binary is installed. The config enables email confirmation/local Mailpit capture and TOTP MFA while disabling independently optional services. Mailpit capture is not real mail delivery. The worktree provides a placeholder-only, local-operator admin identity link command plus browser TOTP enrollment/verification; it never links by email automatically or grants a role. The candidate integration journey and genuine admin link/TOTP/AAL2 ceremony now have local synthetic evidence, including authorized `/admin`, `/admin/candidates`, and `/admin/onboarding` navigation. Revocation/offboarding remain operational validation work. The upstream local stack is not production-hardened; its CLI-managed ports bind broadly, require host-firewall protection, and must not be externally reachable. Supabase identity alone still grants no ordinary local portal access; the validated posting-bound start is the explicit narrow operation permitted to create candidate access.
+- Current auth/session code genuinely requires Supabase semantics, so the live stack uses the repository-tracked local Supabase CLI configuration. `npx supabase` 2.109.1 is available; no global binary is installed. The config enables email confirmation/local Mailpit capture and TOTP MFA while disabling independently optional services. Mailpit capture is not real mail delivery. The merged source provides a placeholder-only, local-operator admin identity link command plus browser TOTP enrollment/verification; it never links by email automatically or grants a role. The candidate integration journey and genuine admin link/TOTP/AAL2 ceremony have local synthetic evidence, including authorized `/admin`, `/admin/candidates`, and `/admin/onboarding` navigation. Revocation/offboarding remain operational validation work. The upstream local stack is not production-hardened; its CLI-managed ports bind broadly, require host-firewall protection, and must not be externally reachable. Supabase identity alone still grants no ordinary local portal access; the validated posting-bound start is the explicit narrow operation permitted to create candidate access.
 - Supabase Studio may be enabled only for local operator use and must not be exposed to an untrusted network. Supabase Storage and its S3 protocol remain disabled; they are not an alternative application object store.
-- The candidate remediation introduced `20260717_0006`. The uncommitted Step 9
-  worktree adds forward revision `20260718_0007` for the separate Phase 1D
-  index/foreign-key drift without rewriting issued history. Isolated
-  PostgreSQL upgrade/downgrade/re-upgrade and fresh-head tests preserve
-  synthetic evidence and verify exact catalog definitions; owner review and
-  commit remain required before this becomes an approved checkpoint.
+- Candidate completion introduced `20260717_0006`; merged forward revision
+  `20260718_0007` resolves the separate Phase 1D index/foreign-key drift without
+  rewriting issued history. The source chain has one head, recorded
+  `make migrate-check` evidence is clean, and isolated PostgreSQL
+  upgrade/downgrade/re-upgrade and fresh-head tests preserve synthetic evidence
+  and verify exact catalog definitions.
 - The rebuilt/recreated web and API containers are healthy, and live inspection verifies that web, API, PostgreSQL, and MinIO are loopback-bound. Web `/` and `/agents` return success; API `/health/db` reports the database reachable. This does not change the separate broad Supabase CLI port-binding caveat above.
 - Application start serializes on the published posting and PostgreSQL tests prove concurrent start/submission exactly once. Production-scale contention/load, multi-region behavior, and disaster recovery remain untested.
 
@@ -45,11 +45,8 @@ The current approved checkpoint is Phase 1D at `6349c16`, Phase 1E at `384246c`,
 
 - Phase 1B lead notification/assignment/CRM/export/customer-withdrawal and distributed abuse controls remain deferred. Mortgage redirect and agent-specific destinations are configuration-only and fail closed; no agent mapping is supplied by default. CRM/e-signature provider labels remain disabled.
 - Mortgage origination, borrower identity/financial/document data, underwriting, lender submission, commissions/payroll, custom signing, automated FSRA verification, and independent agent portals remain explicitly out of scope.
-- Production monitoring/error reporting, PostgreSQL/MinIO/Supabase backup and restore drills, incident response, access review, privacy/security operations, host hardening, and release approval remain unresolved. The deployment host itself is no longer an open selection.
-- The uncommitted Step 9 forward migration resolves the known general Phase 1D
-  index/foreign-key metadata drift locally. It is not launch approval: owner
-  review and commit of `20260718_0007` remain required, along with the other
-  Phase 1F readiness gates.
+- Production hosting/release configuration, Supabase Auth and transactional-email configuration, monitoring/error reporting, PostgreSQL/MinIO/identity-configuration backup and isolated restore drills, incident response, access/MFA/role/credential/secrets review, revocation/offboarding exercises, firewall/network review, privacy/security operations, host hardening, and release approval remain unresolved. The deployment host itself is no longer an open selection.
+- Migration `20260718_0007` resolves the known general Phase 1D index/foreign-key metadata drift. That completion is not launch approval: production migration, backup, rollback, restore, and return-to-service procedures still require Phase 1F evidence and owner approval.
 - Legacy review/onboarding rows whose correct application or assignment cannot be proved remain nullable and are rejected by new mutation/readiness paths. No guess-based backfill is performed; an owner-approved data reconciliation would be required if such rows exist in a retained environment.
 - Linux Mint reconstruction proves local operability, not disaster recovery or portability to an untested host. A repeatable rebuild/restore drill and recorded rollback remain Phase 1F work.
 - Audit events are append-oriented through application APIs, but dedicated database privileges, retention, immutable export/tamper evidence, and operational review remain production work.
@@ -58,10 +55,11 @@ The current approved checkpoint is Phase 1D at `6349c16`, Phase 1E at `384246c`,
 
 Current local-Docker operation and validation evidence is recorded in `docs/LOCAL_DEVELOPMENT.md`; historical phase evidence remains in the phase implementation reports.
 
-The browser-completion implementation has deterministic coverage for
+The merged browser-completion implementation has deterministic coverage for
 no-assignment stability, field guidance/`422` mapping, candidate TOTP step-up,
-and application-specific information requests. The fresh genuine candidate
-journey passed, including real TOTP AAL2 and owned document metadata access. A
-fresh genuine admin-browser information request remains required before this
-worktree may be described as ready to commit; source-level success alone is not
-release evidence.
+application-specific information requests, and authorization boundaries. The
+fresh genuine candidate journey passed, including real TOTP AAL2 and owned
+document metadata access. A final owner-operated administrator request ceremony
+and a second genuine cross-candidate denial remain useful additional release
+assurance, but neither is an uncommitted source-completion blocker or production
+approval.

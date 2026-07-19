@@ -122,7 +122,21 @@ It must not claim that:
 - E-signature validity is guaranteed by a custom checkbox.
 - Use of a vendor eliminates the brokerage’s PIPEDA accountability.
 
-## 10. Phase 1 release condition
+## 10. Current implementation checkpoint
+
+The current source checkpoint is merged to `main` at merge commit `b906027`. It includes:
+
+- Phase 1D review/onboarding and Phase 1E agent-profile/local-topology baselines.
+- Posting-bound candidate provisioning while generic sign-in remains non-provisioning.
+- Candidate application, application-specific review/information-request/decision, onboarding-readiness, candidate/admin TOTP/AAL2, and controlled private-document workflows.
+- Strict PDF/DOCX validation, fail-closed ClamAV scanning, private MinIO persistence, and metadata refresh with genuine local synthetic evidence.
+- Forward schema reconciliation through `20260718_0007`, one Alembic source head, and a clean recorded `make migrate-check` result without rewriting issued migrations.
+
+Supabase identity alone grants no application access. `activation_ready` is a calculation and does not perform final activation; no final activation operation is currently implemented.
+
+Phase 1F production and controlled-pilot readiness planning is the next gate. Production deployment, operational evidence, privacy/legal/regulatory/claims/accessibility review, owner decisions, pilot go/no-go approval, and final activation remain outstanding. Optional owner-operated administrator and second-candidate browser ceremonies may add release assurance, but they are not uncommitted source-completion blockers and do not by themselves grant production approval.
+
+## 11. Phase 1 release condition
 
 Phase 1 is releasable only when:
 
@@ -138,7 +152,7 @@ Phase 1 is releasable only when:
 - Required privacy, complaints, accessibility, and consent pages exist.
 - No full mortgage application data is collected.
 
-## 11. Change-control rule
+## 12. Change-control rule
 
 Any approved change to scope, architecture, security boundaries, lifecycle states, systems of record, or compliance assumptions must update this file and all affected supporting documents in the same branch.
 

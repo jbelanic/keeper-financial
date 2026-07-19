@@ -39,7 +39,7 @@
 - Web tests cover published/error/empty recruitment rendering, Supabase registration and safe callback provisioning bridge, a nonobstructing section outline, explicit required/optional labels, linked/focused errors, in-place polite save feedback, save-before-review, disclosure visibility, duplicate guards, withdrawal focus restoration, automatic AAL2 document list/empty/retry states, distinct upload errors/list refresh, and admin lifecycle UI.
 - OpenAPI tests pin Phase 1C security declarations, route inventory, internal-field exclusions, and server-owned draft exclusions. Generation is run twice and hashes must remain stable.
 
-## Phase 1F candidate-entry readiness additions
+## Candidate-entry completion additions
 
 The 2026-07-17 candidate-completion remediation implements the source-level
 and opt-in integration coverage below. The live-stack cases use
@@ -70,7 +70,7 @@ The 2026-07-18 live synthetic run passed both enabled candidate-auth cases: Mail
 ## Phase 1D additions
 
 - Review tests cover admin authorization, queue filtering, suspended/terminal exclusion, interview recording, information requests, allowed/invalid decisions, required decline reasons, status history, and audit evidence.
-- Onboarding tests cover bounded plan/task creation, eligible assignment, candidate-owned dashboard/evidence, administrative review, exact-version acknowledgement, external envelope references, allow-listed gates, and activation-readiness calculation. The Phase 1F readiness additions above are required to close the discovered application-specific lifecycle, active-plan, assignment-bound acknowledgement, and navigation defects.
+- Onboarding tests cover bounded plan/task creation, eligible assignment, candidate-owned dashboard/evidence, administrative review, exact-version acknowledgement, external envelope references, allow-listed gates, and activation-readiness calculation. The candidate-entry completion coverage above closes the discovered application-specific lifecycle, active-plan, assignment-bound acknowledgement, and navigation source defects.
 - Phase 1D contract tests pin review/onboarding route security and response shapes; web tests cover the admin review pipeline, onboarding administration, and candidate task dashboard.
 
 ## Phase 1E additions
@@ -134,7 +134,9 @@ Do not replace database-backed authorization tests with UI visibility tests. Hid
 
 ## Before production
 
-Complete the Phase 1F candidate-entry readiness tests above; add MinIO bucket-policy and signed-URL tests, expanded adversarial document-corpus tests, deployment-level abuse-control tests, browser accessibility automation plus manual WCAG review, continuous dependency/secret scanning, backup/restore exercises, and Linux Mint deployment health/rollback tests.
+Preserve the completed candidate-entry tests above; add MinIO bucket-policy and signed-URL tests, expanded adversarial document-corpus tests, deployment-level abuse-control tests, browser accessibility automation plus manual accessibility review, continuous dependency/secret scanning, backup/restore exercises, alert testing, and Linux Mint deployment health/rollback tests.
+
+An owner-operated administrator information-request browser ceremony and a genuine second-candidate cross-account denial may be retained as additional release assurance. Their absence is not an uncommitted source-completion blocker because deterministic authorization and realistic integration coverage are already part of the merged evidence. Neither ceremony alone is production approval.
 
 ## 2026-07-18 browser-completion additions
 

@@ -84,6 +84,8 @@ No active application relationship means no portal entry.
 
 The current web and API code genuinely depends on Supabase Auth token/session semantics. The supported live approach is therefore the checked-in `supabase/config.toml` started locally on the same Linux host. Hosted Supabase is prohibited. The API reaches its JWKS endpoint through the Docker host gateway while validating the issuer embedded by the local Auth service.
 
+Supabase Studio is optional local-operator tooling only and must not be exposed as a public, shared, or application-facing service. Supabase Storage and its S3 protocol remain disabled; they are not application storage and must not replace MinIO.
+
 ## Object storage
 
 The live object store is the `minio` service in `compose.yaml`. PostgreSQL stores metadata; MinIO stores bytes. The API uses the S3-compatible interface with path-style addressing, the `minio` service name for container traffic, and a loopback host endpoint only when producing short-lived browser download URLs. Local filesystem storage remains a test/development fallback only.
@@ -146,6 +148,8 @@ Email must not include:
 - Logs are not a substitute for audit events.
 
 ## Deployment topology
+
+This is the approved deployment target and an implemented local topology, not evidence of production deployment or release approval. Phase 1F must define and approve the production and controlled-pilot operating plan, evidence, owners, and go/no-go criteria before release.
 
 There are two application modes: `local` for isolated development/tests and `production` for the live local Docker deployment. There is no remote staging or hosted production tier.
 
