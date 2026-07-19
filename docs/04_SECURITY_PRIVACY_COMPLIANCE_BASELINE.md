@@ -79,7 +79,7 @@ The server owns the wording version and acknowledgement timestamp. A wording cha
 
 ## Authentication
 
-- Managed identity provider.
+- Supabase Auth supplies identity; application-database users, roles, relationships, lifecycle, ownership, and resource rules grant access.
 - Verified email for candidate portal entry.
 - MFA mandatory for brokerage administrators.
 - Candidate AAL2 is not required for general portal access, draft saves, or application submission.
@@ -137,7 +137,8 @@ Use identifiers, event names, status, request ID, actor ID, and safe error categ
 - File-size limits.
 - Approved MIME types.
 - Extension/MIME mismatch handling.
-- Malware scanning before acceptance in production.
+- Strict type/structure validation and fail-closed ClamAV scanning before private MinIO persistence.
+- ClamAV health, signature freshness, failure alerting, and patch operations before pilot approval.
 - Download response headers.
 - Short-lived access.
 - Audit access.
@@ -168,15 +169,20 @@ Do not hard-code final legal retention periods without approved policy.
 - Dependency scanning.
 - Secret scanning.
 - Code review.
-- Backup and isolated restore test.
-- Incident response plan.
-- Access review.
-- MFA confirmation.
-- Logging review.
-- Object-storage review.
+- PostgreSQL, MinIO, and identity-configuration backup/reconstruction with isolated restore tests.
+- Incident response, stop criteria, escalation, rollback, and return-to-service procedures.
+- Secrets, credentials, role, access, MFA, revocation, and offboarding review.
+- Production Supabase Auth and transactional-email configuration, including invitation, recovery, refresh-token revocation, and offboarding exercises.
+- Logging/PII review plus application, database, scanner, object-store, and synthetic monitoring with alert tests.
+- MinIO persistence, retention, bucket-policy, signed-download, backup, restore, and orphan-reconciliation review.
+- ClamAV signature-freshness monitoring, health alerts, failure exercises, and fail-closed verification.
+- Firewall, service-binding, network-exposure, and Linux host review.
+- Retention, deletion, correction, data/audit export, legal-hold, and end-of-pilot procedures.
 - Vulnerability remediation process.
 - Privacy notice and data-processing register.
 - Vendor and subprocessor register.
+- Privacy, legal, regulatory, claims, complaints, consent, and accessibility review.
+- Pilot roster, support ownership, evidence documents, go/no-go criteria, and owner release approval.
 
 ## Accessibility
 

@@ -66,7 +66,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Brokerage-admin profile creation, bounded editing, approval/publication lifecycle, and publication evidence.
 - Published-only public directory/detail projections, safe configured attribution, and non-public suspension/archive behavior.
 - Migration `20260717_0005`, generated contracts, Next.js public/admin workflows, and focused Phase 1E tests.
-- Approved local deployment topology implemented with application PostgreSQL,API, frontend, local Supabase Auth, local mail capture, private MinIO, and Docker Compose operations.
+- Approved local deployment topology implemented with application PostgreSQL, API, frontend, local Supabase Auth, local mail capture, private MinIO, and Docker Compose operations.
 
 ## Completed cross-phase control — Local malware scanning
 
@@ -75,21 +75,34 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Candidate file bytes pass bounded type/structure validation and a clean `INSTREAM` scan before private MinIO persistence.
 - Scanner connection, timeout, protocol, and non-clean results fail closed; the scan-only endpoint never persists bytes.
 
+## Completed candidate authentication and onboarding reconciliation
+
+- **Merged to `main` through `b906027`.**
+- Published-posting registration and existing-user sign-in converge on the narrow posting-bound provisioning boundary; generic sign-in remains non-provisioning.
+- Candidate/admin TOTP/AAL2, exact-application review and information requests, assignment-bound onboarding evidence, and stable no-assignment behavior are implemented and tested.
+- Normal office-generated PDF and DOCX files passed genuine local strict validation, ClamAV clean scanning, private MinIO persistence, and metadata refresh.
+- Optional owner-operated administrator and second-candidate browser ceremonies remain useful additional release evidence, not uncommitted source-completion blockers.
+
+## Completed schema reconciliation
+
+- Forward migration `20260718_0007` resolves the bounded Phase 1D SQLAlchemy/Alembic drift without rewriting issued migrations.
+- The source chain has one head and the recorded post-migration `make migrate-check` result is clean.
+
 ## Phase 1F — Production readiness
 
-- **Next gate: readiness planning and blocker resolution.**
+- **Next gate: production and controlled-pilot readiness planning, evidence definition, and owner approval.**
 - Threat model closure.
-- Privacy review.
-- Accessibility review.
-- Backup/restore test.
-- Monitoring.
-- Incident procedures.
-- Vendor due diligence.
-- Content and regulatory review.
-- Resolve or explicitly disposition the known Alembic model/schema drift before launch approval.
-- Confirm local-only Studio operations, disabled Supabase Storage/S3 protocol, MinIO bucket policy, ClamAV signature operations, and Linux Mint host hardening.
-- Pilot.
-- Launch approval.
+- Privacy, legal, regulatory, claims, consent, complaints, and accessibility review.
+- Production Supabase Auth and transactional-email configuration, including invitation, recovery, refresh-token revocation, and offboarding exercises.
+- Access, MFA, role, credential, and secrets review.
+- PostgreSQL, MinIO, and identity-configuration backup/reconstruction plus isolated restore tests.
+- Retention, deletion, correction, data/audit export, legal-hold, and end-of-pilot procedures.
+- MinIO bucket/persistence/retention controls and ClamAV signature freshness, monitoring, alerting, and failure exercises.
+- Firewall, service binding, network exposure, Linux Mint host hardening, logging/PII safety, monitoring, and synthetic checks.
+- Incident escalation, stop criteria, rollback, and return-to-service procedures.
+- Migration/rollback/restore operating boundaries that preserve the resolved `0007` chain.
+- Pilot roster, eligibility, support ownership, evidence documents, go/no-go criteria, and owner launch approval.
+- Separately approved final activation operation and production deployment.
 
 ## 30/60/90/180-day interpretation
 
