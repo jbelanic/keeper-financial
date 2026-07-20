@@ -2,8 +2,8 @@
 
 - **Status:** Draft for owner decisions and approval
 - **Date:** 2026-07-19
-- **Source branch:** `feat/admin-workflow-operator-ux`
-- **Source baseline:** owner-accepted administrator/operator commit `17e1b43`, integrated for publication with local `main` content commit `07895c2`; both descend from `3331519`
+- **Source branch:** `main`
+- **Source baseline:** owner-accepted Phase 1 checkpoint `2239441505cc47235ad387070bcfd7a9e2a2f4c6`, merged through PR #4 and containing administrator/operator commit `17e1b43` plus approved-content commit `07895c2`
 - **Candidate migration head:** `20260719_0008`
 - **Authority:** `AGENTS.md`, `docs/00_PROJECT_SOURCE_OF_TRUTH.md`, approved decisions in `docs/09_DECISIONS_ASSUMPTIONS_AND_OPEN_QUESTIONS.md`, and the current architecture, security, lifecycle, delivery, API/data, test, limitations, and implementation-evidence documents
 

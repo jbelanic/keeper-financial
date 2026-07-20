@@ -124,7 +124,7 @@ It must not claim that:
 
 ## 10. Current implementation checkpoint
 
-The owner-accepted Phase 1 publication candidate combines administrator/operator commit `17e1b43` with local `main` content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027` and:
+The current owner-accepted Phase 1 source checkpoint is merged to `main` at `2239441505cc47235ad387070bcfd7a9e2a2f4c6` through PR #4. It combines administrator/operator commit `17e1b43` with approved-content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027` and:
 
 - Phase 1D review/onboarding and Phase 1E agent-profile/local-topology baselines.
 - Posting-bound candidate provisioning while generic sign-in remains non-provisioning.
@@ -134,7 +134,7 @@ The owner-accepted Phase 1 publication candidate combines administrator/operator
 
 Supabase identity alone grants no application access. `activation_ready` is a calculation and does not perform final activation; no final activation operation is currently implemented.
 
-The owner has explicitly accepted the Phase 1 source implementation, including the operator-workflow refinement committed at `17e1b43` on `feat/admin-workflow-operator-ux`. That refinement adds editable unused onboarding plans with ordered task authoring; permanent plan immutability after first assignment; exact-assignment manual gate, policy-acknowledgement, and e-sign evidence; Documenso-authoritative status refresh and replacement history; operator-facing exact-application and eligible-agent selectors; permanent published-slug reservation; removal of the nonfunctional `/admin/content` placeholder; and candidate Alembic head `20260719_0008`.
+The merged owner-accepted operator-workflow refinement adds editable unused onboarding plans with ordered task authoring; permanent plan immutability after first assignment; exact-assignment manual gate, policy-acknowledgement, and e-sign evidence; Documenso-authoritative status refresh and replacement history; operator-facing exact-application and eligible-agent selectors; permanent published-slug reservation; removal of the nonfunctional `/admin/content` placeholder; and Alembic head `20260719_0008`.
 
 Source acceptance is not production, controlled-pilot, deployment, final-activation, legal, privacy, regulatory, claims, or accessibility approval. It does not authorize commit, push, pull request, merge, history rewriting, a candidate-to-agent transition, an agent-role grant, shared-database migration, credential or external-service changes, or destructive operations.
 

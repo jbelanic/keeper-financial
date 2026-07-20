@@ -15,9 +15,9 @@ Report contradictions. Do not silently select code, memory, a generated artifact
 
 ## Current Implementation Checkpoint
 
-The owner-accepted Phase 1 publication candidate consists of administrator/operator commit `17e1b43` integrated without history rewriting with local `main` content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027`. Verify Git before stating whether the publication candidate has merged to remote `main`.
+The current owner-accepted Phase 1 source checkpoint is merged to `main` at `2239441505cc47235ad387070bcfd7a9e2a2f4c6` through PR #4. It combines administrator/operator commit `17e1b43` with approved-content commit `07895c2` without rewriting history; both descend from `3331519`, which includes implementation merge `b906027`.
 
-The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement on `feat/admin-workflow-operator-ux`. The accepted refinement is committed at `17e1b43`; do not describe the combined publication candidate as merged unless Git proves that state.
+The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement committed at `17e1b43`. GitHub CI passed and PR #4 merged the combined accepted source to `main` at `2239441`.
 
 This is source acceptance only. It does not authorize commit, push, pull request, merge, history rewriting, production or controlled-pilot operation, deployment, shared-database migration, final candidate activation, candidate-to-agent transition, agent-role grant, legal/privacy/regulatory/claims/accessibility approval, credential or external-service changes, destructive operations, or Phase 1F implementation.
 
