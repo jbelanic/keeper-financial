@@ -18,6 +18,7 @@ import type {
   InterviewStatusUpdate,
   InformationRequestCreate,
   InformationRequestResponse,
+  PlanSummary,
 } from "@/lib/review-onboarding-api";
 
 type Requester = (path: string, init?: RequestInit) => Promise<Response>;
@@ -48,9 +49,11 @@ class ReviewRequestError extends Error {
 
 export function CandidateReviewPipeline({
   initialQueue,
+  initialPlans,
   requester = adminBrowserRequest,
 }: {
   initialQueue: CandidateQueueResponse;
+  initialPlans: PlanSummary[];
   requester?: Requester;
 }) {
   const [queue, setQueue] = useState(initialQueue);
@@ -59,6 +62,7 @@ export function CandidateReviewPipeline({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [onboardingPlanId, setOnboardingPlanId] = useState("");
 
   const [decisionTarget, setDecisionTarget] =
     useState<CandidateReviewSummary | null>(null);
@@ -268,6 +272,48 @@ export function CandidateReviewPipeline({
     }
   }
 
+  async function assignOnboarding(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (
+      !selected ||
+      !detail ||
+      detail.application_id !== selected.application_id ||
+      detail.status !== "conditionally_selected" ||
+      !onboardingPlanId ||
+      busy
+    )
+      return;
+    setBusy(true);
+    setErrors([]);
+    setNotice("Assigning onboarding plan to this exact application…");
+    try {
+      const response = await requester(
+        `/api/v1/admin/candidates/${selected.candidate_id}/assign-onboarding?plan_id=${encodeURIComponent(onboardingPlanId)}&application_id=${encodeURIComponent(selected.application_id)}`,
+        { method: "POST" },
+      );
+      if (!response.ok) throw new ReviewRequestError(response.status);
+      setDetail((current) =>
+        current ? { ...current, status: "onboarding_in_progress" } : current,
+      );
+      setQueue((current) => ({
+        ...current,
+        items: current.items.map((item) =>
+          item.application_id === selected.application_id
+            ? { ...item, status: "onboarding_in_progress" }
+            : item,
+        ),
+      }));
+      setNotice("Onboarding assigned to the selected application attempt.");
+    } catch {
+      setErrors([
+        "Onboarding assignment was rejected. Confirm this exact application is conditionally selected and the plan remains active.",
+      ]);
+      setNotice("");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="review-pipeline">
       <p role="status" aria-live="polite">
@@ -463,6 +509,45 @@ export function CandidateReviewPipeline({
               Mark withdrawn
             </Button>
           </div>
+          {detail.status === "conditionally_selected" ? (
+            <form className="card" onSubmit={assignOnboarding} aria-busy={busy}>
+              <h3>Assign onboarding to this application</h3>
+              <p>
+                Candidate:{" "}
+                <strong>
+                  {detail.given_name ?? "Candidate"} {detail.family_name ?? ""}
+                </strong>
+                <br />
+                Opportunity: <strong>{detail.source_posting_title}</strong>
+                <br />
+                Application attempt: <strong>{detail.attempt_number}</strong>
+              </p>
+              <label htmlFor="onboarding-plan">Active onboarding plan</label>
+              <select
+                id="onboarding-plan"
+                value={onboardingPlanId}
+                onChange={(event) => setOnboardingPlanId(event.target.value)}
+                required
+              >
+                <option value="">Select a plan</option>
+                {initialPlans
+                  .filter((plan) => plan.is_active)
+                  .map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </option>
+                  ))}
+              </select>
+              <p>
+                Confirming creates a new assignment generation for this exact
+                application. It does not activate the candidate or grant an
+                agent role.
+              </p>
+              <Button type="submit" disabled={busy || !onboardingPlanId}>
+                Confirm onboarding assignment
+              </Button>
+            </form>
+          ) : null}
         </Card>
       ) : selected ? (
         <p role="status">Loading candidate detail…</p>

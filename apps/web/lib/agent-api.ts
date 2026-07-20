@@ -8,6 +8,7 @@ export type PublicAgentProfileList =
 export type AdminAgentProfile = components["schemas"]["AdminAgentProfile"];
 export type AdminAgentProfileList =
   components["schemas"]["AdminAgentProfileList"];
+export type EligibleAgent = components["schemas"]["EligibleAgent"];
 
 async function optionalServerBearer(): Promise<Headers> {
   const headers = new Headers();

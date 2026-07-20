@@ -67,6 +67,7 @@ class EsignEnvelopeStatus(StrEnum):
     SENT = "sent"
     VIEWED = "viewed"
     COMPLETED = "completed"
+    REJECTED = "rejected"
     VOIDED = "voided"
 
 

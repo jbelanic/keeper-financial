@@ -22,7 +22,9 @@ Public or internal opportunity with publication lifecycle.
 
 ### OnboardingPlan
 
-Reusable template containing ordered tasks.
+Reusable template containing ordered tasks. It may be edited only while no
+assignment references it; first use makes the plan and task set permanently
+immutable.
 
 ### CandidateOnboardingTask
 
@@ -54,9 +56,25 @@ Evidence that a candidate acknowledged a specific eligible document version
 through the candidate's current application-bound onboarding assignment. It is
 not a signature.
 
+### ProgrammaticGate and GateEvidenceEvent
+
+An exact-assignment gate projection plus append-oriented manual evidence and
+reopen history. Only background check, FSRA authorization, and system
+provisioning accept manual evidence. Policy acknowledgement and executed
+agreements are derived from assignment-specific records and cannot be manually
+asserted or reopened.
+
+### CandidateEsignEnvelope
+
+A bounded Documenso envelope reference linked to one exact assignment.
+Provider-authoritative completion may satisfy executed agreements. A rejected
+envelope may be replaced without deleting predecessor history.
+
 ### AgentProfile
 
 Brokerage-controlled public profile with separate draft and publication state.
+The first publication permanently locks and reserves its public slug, including
+while the profile is later non-public.
 
 ### LeadInquiry
 
@@ -116,6 +134,8 @@ conditionally_selected → declined
 - Onboarding assignment requires the selected application to be `conditionally_selected` and the selected plan to be active.
 - Every assignment snapshots exact currently issued, non-superseded controlled-document versions. A required assigned version that later becomes superseded remains readiness-blocking unless its exact version was already acknowledged; it cannot be acknowledged after becoming ineligible.
 - `activation_ready` is a calculation over the current application-bound assignment, required tasks, exact assigned policy acknowledgements, and configured gates. It does not activate an agent.
+- Gate, acknowledgement, and e-sign satisfaction never crosses assignment generations. Administrators can satisfy/reopen only the three manual gates; the two derived gates are recalculated from exact-assignment evidence.
+- Completed Documenso envelopes satisfy `executed_agreements`; rejected or replaced predecessors do not. Provider refresh is authoritative and failures leave readiness unsatisfied.
 
 ## Agent-profile lifecycle
 
@@ -135,6 +155,7 @@ Rules:
 - Published requires authorized approval.
 - Suspended is not public.
 - Archived is not public and cannot be republished without an explicit restore workflow.
+- The slug is selected before first publication, server-checked for availability, and becomes immutable and permanently reserved at first publication. Suspension, archive, or other unpublishing does not release it.
 
 ## Recruitment-posting lifecycle
 

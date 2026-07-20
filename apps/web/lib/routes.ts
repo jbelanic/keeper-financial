@@ -57,5 +57,4 @@ export const ADMIN_ROUTES = [
   "/admin/candidates",
   "/admin/onboarding",
   "/admin/agents",
-  "/admin/content",
 ] as const;

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
 from keeper_api.models.statuses import (
     CandidateStatus,
@@ -203,6 +204,7 @@ class PlanSummary(BaseModel):
     name: str
     description: str
     is_active: bool
+    is_locked: bool
 
 
 class PlanWithTasks(BaseModel):
@@ -212,6 +214,7 @@ class PlanWithTasks(BaseModel):
     name: str
     description: str
     is_active: bool
+    is_locked: bool
     tasks: list[OnboardingTaskResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -243,6 +246,7 @@ class CandidateOnboardingTaskResponse(BaseModel):
     candidate_id: uuid.UUID
     assignment_id: uuid.UUID | None
     onboarding_task_id: uuid.UUID
+    title: str = Field(validation_alias=AliasPath("template", "title"))
     status: OnboardingTaskStatus
     due_at: datetime | None
     completed_at: datetime | None
@@ -332,15 +336,10 @@ class PolicyAcknowledgementResponse(BaseModel):
 class EsignEnvelopeCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    document_version_id: uuid.UUID | None = None
-    envelope_id: str | None = Field(default=None, max_length=255)
-    envelope_url: str = Field(min_length=1, max_length=2048)
-    status: EsignEnvelopeStatus = EsignEnvelopeStatus.SENT
+    provider_envelope_id: str = Field(min_length=1, max_length=255)
 
-    _v_url = field_validator("envelope_url")(
-        lambda v: v.strip()
-        if v and not _HTML.search(v)
-        else (_ for _ in ()).throw(ValueError("envelope url must be plain text"))
+    _v_id = field_validator("provider_envelope_id")(
+        lambda v: _plain_text(v, maximum=255, field_name="provider envelope id")
     )
 
 
@@ -357,10 +356,15 @@ class EsignEnvelopeResponse(BaseModel):
 
     id: uuid.UUID
     candidate_id: uuid.UUID
+    assignment_id: uuid.UUID | None
     document_version_id: uuid.UUID | None
+    provider: str
     status: EsignEnvelopeStatus
     envelope_id: str | None
     envelope_url: str | None
+    last_synced_at: datetime | None
+    superseded_at: datetime | None
+    replacement_envelope_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -375,10 +379,59 @@ class ActivationGateResponse(BaseModel):
 
     id: uuid.UUID
     candidate_id: uuid.UUID
+    assignment_id: uuid.UUID | None
     code: str
     label: str
     status: GateStatus
     satisfied_at: datetime | None
+    evidence_kind: Literal["manual", "derived"]
+
+
+class ManualGateEvidenceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    verified_on: date
+    evidence_source: str = Field(min_length=1, max_length=120)
+    evidence_reference: str = Field(min_length=1, max_length=160)
+
+    _source = field_validator("evidence_source")(
+        lambda v: _plain_text(v, maximum=120, field_name="evidence source")
+    )
+    _reference = field_validator("evidence_reference")(
+        lambda v: _plain_text(v, maximum=160, field_name="evidence reference")
+    )
+
+
+class GateReopenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=500)
+
+    _reason = field_validator("reason")(
+        lambda v: _plain_text(v, maximum=500, field_name="reason")
+    )
+
+
+class AdminOnboardingAssignmentSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    assignment_id: uuid.UUID
+    candidate_id: uuid.UUID
+    application_id: uuid.UUID
+    candidate_name: str
+    candidate_email: str
+    opportunity_title: str
+    attempt_number: int
+    plan_name: str
+    status: OnboardingAssignmentStatus
+    created_at: datetime
+    activation_ready: bool
+
+
+class AdminOnboardingAssignmentDetail(AdminOnboardingAssignmentSummary):
+    tasks: list[CandidateOnboardingTaskResponse]
+    gates: list[ActivationGateResponse]
+    esign_envelopes: list[EsignEnvelopeResponse]
 
 
 class ActivationGateListResponse(BaseModel):

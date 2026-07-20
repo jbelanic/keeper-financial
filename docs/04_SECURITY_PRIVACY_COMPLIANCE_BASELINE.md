@@ -97,6 +97,7 @@ The server owns the wording version and acknowledgement timestamp. A wording cha
 - Internal notes never returned in candidate schemas.
 - Document access checked on every request.
 - Public profile publication is separate from profile editing.
+- Public profile publication is server-eligibility checked; the first published slug is permanently locked and reserved after unpublishing.
 
 ## Audit events
 
@@ -111,12 +112,20 @@ Record high-risk events including:
 - document uploaded, viewed, accepted, rejected, or superseded;
 - policy acknowledged;
 - onboarding task completed or overridden;
+- manual onboarding gate satisfied or reopened, with the exact assignment and bounded evidence metadata;
+- Documenso envelope linked, provider-refreshed, or replaced, with the exact assignment and safe status metadata;
 - agent profile approved, published, suspended, or archived;
 - marketing consent granted or withdrawn;
 - export performed;
 - admin impersonation, if ever introduced.
 
 Audit records should be append-oriented and restricted from ordinary editing.
+
+Manual gate satisfaction/reopening uses assignment-bound append-oriented
+`GateEvidenceEvent` rows with verifier/evidence or reopen reason. E-sign envelope
+link, refresh, and replacement emit bounded audit events; replacement also
+preserves the predecessor row and links the successor. Dedicated production
+audit export and tamper evidence remain Phase 1F work.
 
 ## Logging
 

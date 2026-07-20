@@ -88,9 +88,22 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Forward migration `20260718_0007` resolves the bounded Phase 1D SQLAlchemy/Alembic drift without rewriting issued migrations.
 - The source chain has one head and the recorded post-migration `make migrate-check` result is clean.
 
+## Accepted pre-Phase-1F operator-workflow refinement
+
+- **Phase 1 source implementation is owner-accepted on `feat/admin-workflow-operator-ux`; the refinement remains uncommitted and unmerged at the verified acceptance-reconciliation state.**
+- Administrators select exact applications and active plans by human-readable context rather than normal-operation UUID entry.
+- Unused plans support ordered task authoring/editing and become immutable on first assignment.
+- Manual gate evidence, policy acknowledgements, and e-sign envelopes are exact-assignment records. Only background check, FSRA authorization, and system provisioning are manual; policy acknowledgement and executed agreements are derived.
+- Self-hosted Documenso envelope status is refreshed server-side through a fixed-origin, no-redirect adapter. Rejected envelope replacement preserves predecessor history.
+- Eligible agents are selected by human-readable identity; readable slug availability is server checked; first publication permanently locks and reserves the slug.
+- The nonfunctional content-administration placeholder is removed; repository-controlled content remains authoritative.
+- Forward migration `20260719_0008`, generated contracts, focused API/web tests, and isolated PostgreSQL upgrade/check/downgrade/re-upgrade evidence accompany the accepted source state.
+- Source acceptance does not authorize commit, push, pull request, merge, history rewriting, deployment, shared-database migration, production/pilot operation, final activation, lifecycle/role transition, credential/external-service changes, or legal/privacy/regulatory/claims/accessibility approval.
+
 ## Phase 1F — Production readiness
 
-- **Next gate: production and controlled-pilot readiness planning, evidence definition, and owner approval.**
+- **Next gate: production and controlled-pilot readiness planning, evidence definition, and owner approval.** The draft is `docs/26_PHASE_1F_PRODUCTION_AND_CONTROLLED_PILOT_READINESS_PLAN.md` and remains unapproved for execution.
+- Phase 1F implementation remains prohibited until its plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
 - Threat model closure.
 - Privacy, legal, regulatory, claims, consent, complaints, and accessibility review.
 - Production Supabase Auth and transactional-email configuration, including invitation, recovery, refresh-token revocation, and offboarding exercises.
@@ -100,9 +113,9 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - MinIO bucket/persistence/retention controls and ClamAV signature freshness, monitoring, alerting, and failure exercises.
 - Firewall, service binding, network exposure, Linux Mint host hardening, logging/PII safety, monitoring, and synthetic checks.
 - Incident escalation, stop criteria, rollback, and return-to-service procedures.
-- Migration/rollback/restore operating boundaries that preserve the resolved `0007` chain.
+- Migration/rollback/restore operating boundaries that preserve the accepted source chain through `20260719_0008`; applying it to any shared or live database remains separately prohibited pending approval.
 - Pilot roster, eligibility, support ownership, evidence documents, go/no-go criteria, and owner launch approval.
-- Separately approved final activation operation and production deployment.
+- Production deployment requires separate approval. Final activation, candidate-to-agent transition, and agent-role grant remain deferred outside Phase 1F and are not authorized readiness operations.
 
 ## 30/60/90/180-day interpretation
 

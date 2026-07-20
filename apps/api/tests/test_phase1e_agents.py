@@ -502,3 +502,64 @@ def test_agent_attribution_uses_only_approved_mapping_and_fails_closed(
     )
     assert approved.status_code == 307
     assert approved.headers["location"] == "https://apply.keeper.example/synthetic-agent"
+
+
+def test_eligible_agent_selector_excludes_existing_profiles(client: TestClient, db: Session) -> None:
+    create_user(db, subject="phase1e-admin", role_code="brokerage_admin")
+    first, _ = _agent_account(db, subject="eligible-agent")
+    second, _ = _agent_account(db, subject="profiled-agent")
+    payload = _profile_payload(str(second.id))
+    payload["slug"] = "profiled-agent"
+    assert (
+        client.post("/api/v1/admin/agent-profiles", json=payload, headers=ADMIN_HEADERS).status_code
+        == 201
+    )
+
+    response = client.get("/api/v1/admin/eligible-agents", headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "user_id": str(first.id),
+            "display_name": first.display_name,
+            "email": first.email,
+        }
+    ]
+
+
+def test_slug_availability_and_first_publication_lock(client: TestClient, db: Session) -> None:
+    created = _create_profile(client, db)
+    available = client.get(
+        "/api/v1/admin/agent-profiles/slug-availability?slug=available-agent",
+        headers=ADMIN_HEADERS,
+    )
+    assert available.status_code == 200
+    assert available.json() == {"slug": "available-agent", "available": True}
+
+    for target in ["pending_approval", "published"]:
+        assert (
+            client.post(
+                f"/api/v1/agents/{created['id']}/status",
+                json={"status": target},
+                headers=ADMIN_HEADERS,
+            ).status_code
+            == 200
+        )
+    profile = db.get(AgentProfile, uuid.UUID(created["id"]))
+    assert profile is not None and profile.slug_locked_at is not None
+
+    changed = client.patch(
+        f"/api/v1/admin/agent-profiles/{created['id']}",
+        json={"slug": "changed-after-publication"},
+        headers=ADMIN_HEADERS,
+    )
+    assert changed.status_code == 409
+    assert changed.json()["detail"] == "published profile slugs cannot be changed"
+
+    biography = client.patch(
+        f"/api/v1/admin/agent-profiles/{created['id']}",
+        json={"biography": "A permitted content correction."},
+        headers=ADMIN_HEADERS,
+    )
+    assert biography.status_code == 200
+    assert biography.json()["slug"] == "synthetic-agent"
+    assert biography.json()["slug_locked_at"] is not None

@@ -27,11 +27,20 @@ const draft = {
   social_links: [],
   status: "draft",
   version: 1,
+  slug_locked_at: null,
   created_at: "2026-07-16T12:00:00Z",
   updated_at: "2026-07-16T12:00:00Z",
   approved_at: null,
   published_at: null,
 } satisfies AdminAgentProfile;
+
+const eligibleAgents = [
+  {
+    user_id: draft.user_id,
+    email: "synthetic.agent@example.test",
+    display_name: "Synthetic Agent",
+  },
+];
 
 describe("admin agent profile manager", () => {
   it("creates a bounded profile and can select it for editing", async () => {
@@ -43,9 +52,15 @@ describe("admin agent profile manager", () => {
     const { AgentProfileManager } = await import(
       "@/app/(admin)/admin/agents/agent-profile-manager"
     );
-    render(<AgentProfileManager initialProfiles={[]} requester={requester} />);
+    render(
+      <AgentProfileManager
+        initialProfiles={[]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
 
-    fireEvent.change(screen.getByLabelText(/agent user id/i), {
+    fireEvent.change(screen.getByLabelText(/eligible agent/i), {
       target: { value: draft.user_id },
     });
     fireEvent.change(screen.getByLabelText(/^slug/i), {
@@ -110,6 +125,7 @@ describe("admin agent profile manager", () => {
     render(
       <AgentProfileManager
         initialProfiles={[published]}
+        initialEligibleAgents={eligibleAgents}
         requester={requester}
       />,
     );
@@ -149,6 +165,7 @@ describe("admin agent profile manager", () => {
       <AgentProfileManager
         key="draft"
         initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
         requester={vi.fn()}
       />,
     );
@@ -162,6 +179,7 @@ describe("admin agent profile manager", () => {
       <AgentProfileManager
         key="pending"
         initialProfiles={[{ ...draft, status: "pending_approval" }]}
+        initialEligibleAgents={eligibleAgents}
         requester={vi.fn()}
       />,
     );
@@ -173,6 +191,7 @@ describe("admin agent profile manager", () => {
       <AgentProfileManager
         key="suspended"
         initialProfiles={[{ ...draft, status: "suspended" }]}
+        initialEligibleAgents={eligibleAgents}
         requester={vi.fn()}
       />,
     );

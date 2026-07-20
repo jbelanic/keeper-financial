@@ -109,7 +109,11 @@ describe("application-specific administrator information requests", () => {
       "@/app/(admin)/admin/candidates/candidate-review-pipeline"
     );
     render(
-      <CandidateReviewPipeline initialQueue={queue} requester={requester} />,
+      <CandidateReviewPipeline
+        initialQueue={queue}
+        initialPlans={[]}
+        requester={requester}
+      />,
     );
 
     const initiallyDisabled = screen.getByRole("button", {
@@ -156,7 +160,11 @@ describe("application-specific administrator information requests", () => {
       "@/app/(admin)/admin/candidates/candidate-review-pipeline"
     );
     render(
-      <CandidateReviewPipeline initialQueue={queue} requester={requester} />,
+      <CandidateReviewPipeline
+        initialQueue={queue}
+        initialPlans={[]}
+        requester={requester}
+      />,
     );
     fireEvent.click(
       screen.getByRole("button", {

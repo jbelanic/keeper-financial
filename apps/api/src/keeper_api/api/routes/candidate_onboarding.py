@@ -29,6 +29,7 @@ from keeper_api.schemas.review_onboarding import (
 )
 from keeper_api.services.auth import Principal, require_candidate
 from keeper_api.services.onboarding import (
+    DERIVED_GATE_CODES,
     OnboardingError,
     acknowledge_policy,
     activation_ready,
@@ -127,7 +128,12 @@ def onboarding_dashboard(
             _task_out(t)
             for t in get_candidate_tasks(db, candidate_id=candidate.id, assignment_id=assignment.id)
         ],
-        gates=[_gate_out(g) for g in candidate_gates(db, candidate_id=candidate.id)],
+        gates=[
+            _gate_out(g)
+            for g in candidate_gates(
+                db, candidate_id=candidate.id, assignment_id=assignment.id
+            )
+        ],
         documents=[_doc_out(document, version) for document, version in documents],
         acknowledgements=[
             _ack_out(a)
@@ -136,9 +142,14 @@ def onboarding_dashboard(
             )
         ],
         esign_envelopes=[
-            _esign_out(e) for e in candidate_esign_envelopes(db, candidate_id=candidate.id)
+            _esign_out(e)
+            for e in candidate_esign_envelopes(
+                db, candidate_id=candidate.id, assignment_id=assignment.id
+            )
         ],
-        activation_ready=activation_ready(db, candidate_id=candidate.id),
+        activation_ready=activation_ready(
+            db, candidate_id=candidate.id, assignment_id=assignment.id
+        ),
     )
 
 
@@ -224,7 +235,16 @@ def _task_out(t: CandidateOnboardingTask) -> CandidateOnboardingTaskResponse:
 
 
 def _gate_out(g: Any) -> ActivationGateResponse:
-    return ActivationGateResponse.model_validate(g, from_attributes=True)
+    return ActivationGateResponse(
+        id=g.id,
+        candidate_id=g.candidate_id,
+        assignment_id=g.assignment_id,
+        code=g.code,
+        label=g.label,
+        status=g.status,
+        satisfied_at=g.satisfied_at,
+        evidence_kind="derived" if g.code in DERIVED_GATE_CODES else "manual",
+    )
 
 
 def _doc_out(d: Any, version: DocumentVersion) -> ControlledDocumentResponse:

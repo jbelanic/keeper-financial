@@ -34,7 +34,8 @@ describe("route inventory", () => {
     ).toBe(true);
     expect(ADMIN_ROUTES).toContain("/admin/leads");
     expect(ADMIN_ROUTES).toContain("/admin/recruitment");
-    expect(ADMIN_ROUTES).toHaveLength(7);
+    expect(ADMIN_ROUTES).toHaveLength(6);
+    expect(ADMIN_ROUTES).not.toContain("/admin/content");
     expect(ADMIN_ROUTES.every((route) => route.startsWith("/admin"))).toBe(
       true,
     );

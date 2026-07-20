@@ -18,6 +18,10 @@ export type InformationRequestResponse =
 export type PlanSummary = components["schemas"]["PlanSummary"];
 export type PlanWithTasks = components["schemas"]["PlanWithTasks"];
 export type PlanCreateIn = components["schemas"]["PlanCreateIn"];
+export type AdminOnboardingAssignmentSummary =
+  components["schemas"]["AdminOnboardingAssignmentSummary"];
+export type AdminOnboardingAssignmentDetail =
+  components["schemas"]["AdminOnboardingAssignmentDetail"];
 export type CandidateOnboardingDashboard =
   components["schemas"]["CandidateOnboardingDashboard"];
 export type CandidateOnboardingAvailability =

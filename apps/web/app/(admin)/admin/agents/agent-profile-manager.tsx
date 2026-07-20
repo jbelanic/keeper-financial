@@ -8,7 +8,7 @@ import {
   FormField,
   StatusBadge,
 } from "@keeper/ui";
-import type { AdminAgentProfile } from "@/lib/agent-api";
+import type { AdminAgentProfile, EligibleAgent } from "@/lib/agent-api";
 import { adminBrowserRequest } from "@/lib/admin-browser-api";
 
 type Requester = (path: string, init?: RequestInit) => Promise<Response>;
@@ -47,11 +47,22 @@ function optionalValue(value: FormDataEntryValue | null): string | null {
   return normalized || null;
 }
 
+function publicSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+}
+
 export function AgentProfileManager({
   initialProfiles,
+  initialEligibleAgents,
   requester = adminBrowserRequest,
 }: {
   initialProfiles: AdminAgentProfile[];
+  initialEligibleAgents: EligibleAgent[];
   requester?: Requester;
 }) {
   const [profiles, setProfiles] = useState(initialProfiles);
@@ -61,6 +72,9 @@ export function AgentProfileManager({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugAvailability, setSlugAvailability] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const actionTriggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -99,7 +113,9 @@ export function AgentProfileManager({
       ...(!editing
         ? { user_id: String(form.get("user_id") ?? "").trim() }
         : {}),
-      slug: String(form.get("slug") ?? "").trim(),
+      slug: editing?.slug_locked_at
+        ? editing.slug
+        : String(form.get("slug") ?? "").trim(),
       licensed_name: String(form.get("licensed_name") ?? "").trim(),
       approved_title: String(form.get("approved_title") ?? "").trim(),
       licence_number: String(form.get("licence_number") ?? "").trim(),
@@ -133,6 +149,9 @@ export function AgentProfileManager({
           : [profile, ...items];
       });
       setEditing(null);
+      setSelectedAgentId("");
+      setSlug("");
+      setSlugAvailability("");
       formElement.reset();
       setNotice(
         editing
@@ -146,6 +165,25 @@ export function AgentProfileManager({
       setNotice("");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function checkSlugAvailability(candidateSlug: string) {
+    if (editing?.slug_locked_at || !candidateSlug) return;
+    setSlugAvailability("Checking slug availability…");
+    try {
+      const response = await requester(
+        `/api/v1/admin/agent-profiles/slug-availability?slug=${encodeURIComponent(candidateSlug)}`,
+      );
+      if (!response.ok) throw new Error("unavailable");
+      const result = (await response.json()) as { available: boolean };
+      setSlugAvailability(
+        result.available || editing?.slug === candidateSlug
+          ? "Slug is available."
+          : "Slug is already reserved.",
+      );
+    } catch {
+      setSlugAvailability("Slug availability could not be verified.");
     }
   }
 
@@ -179,7 +217,14 @@ export function AgentProfileManager({
       setProfiles((items) =>
         items.map((item) =>
           item.id === pendingAction.profile.id
-            ? { ...item, status: result.status }
+            ? {
+                ...item,
+                status: result.status,
+                slug_locked_at:
+                  pendingAction.target === "published"
+                    ? (item.slug_locked_at ?? new Date().toISOString())
+                    : item.slug_locked_at,
+              }
             : item,
         ),
       );
@@ -219,30 +264,62 @@ export function AgentProfileManager({
         <div className="form-grid">
           <FormField
             id="agent-user-id"
-            label="Agent user ID (required)"
-            hint="The active local user must have the agent role."
+            label="Eligible agent (required)"
+            hint="Only an active local agent without an existing profile is listed."
           >
-            <input
+            <select
               id="agent-user-id"
               name="user_id"
-              defaultValue={editing?.user_id ?? ""}
+              value={editing?.user_id ?? selectedAgentId}
               disabled={Boolean(editing)}
+              onChange={(event) => {
+                const userId = event.target.value;
+                setSelectedAgentId(userId);
+                const agent = initialEligibleAgents.find(
+                  (item) => item.user_id === userId,
+                );
+                if (agent && !slug) setSlug(publicSlug(agent.display_name));
+              }}
               required
-            />
+            >
+              <option value="">Select an eligible agent</option>
+              {initialEligibleAgents.map((agent) => (
+                <option key={agent.user_id} value={agent.user_id}>
+                  {agent.display_name} — {agent.email}
+                </option>
+              ))}
+              {editing &&
+              !initialEligibleAgents.some(
+                (item) => item.user_id === editing.user_id,
+              ) ? (
+                <option value={editing.user_id}>{editing.licensed_name}</option>
+              ) : null}
+            </select>
           </FormField>
           <FormField
             id="agent-slug"
             label="Slug (required)"
-            hint="Lowercase words separated by hyphens."
+            hint={
+              editing?.slug_locked_at
+                ? "Locked permanently on first publication."
+                : "Generated from the selected agent; lowercase words separated by hyphens."
+            }
           >
             <input
               id="agent-slug"
               name="slug"
               pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
               maxLength={100}
-              defaultValue={editing?.slug ?? ""}
+              value={editing?.slug_locked_at ? editing.slug : slug}
+              disabled={Boolean(editing?.slug_locked_at)}
+              onChange={(event) => {
+                setSlug(publicSlug(event.target.value));
+                setSlugAvailability("");
+              }}
+              onBlur={(event) => checkSlugAvailability(event.target.value)}
               required
             />
+            <span aria-live="polite">{slugAvailability}</span>
           </FormField>
           <FormField id="agent-licensed-name" label="Licensed name (required)">
             <input
@@ -387,7 +464,12 @@ export function AgentProfileManager({
           {editing ? (
             <Button
               type="button"
-              onClick={() => setEditing(null)}
+              onClick={() => {
+                setEditing(null);
+                setSelectedAgentId("");
+                setSlug("");
+                setSlugAvailability("");
+              }}
               disabled={busy}
             >
               Cancel editing
@@ -416,7 +498,12 @@ export function AgentProfileManager({
                   {profile.status !== "archived" ? (
                     <Button
                       type="button"
-                      onClick={() => setEditing(profile)}
+                      onClick={() => {
+                        setEditing(profile);
+                        setSelectedAgentId(profile.user_id);
+                        setSlug(profile.slug);
+                        setSlugAvailability("");
+                      }}
                       disabled={busy}
                       aria-label={`Edit ${profile.licensed_name}`}
                     >

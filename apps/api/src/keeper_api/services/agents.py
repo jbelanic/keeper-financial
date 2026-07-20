@@ -87,6 +87,29 @@ def admin_profiles(db: Session, *, limit: int, offset: int) -> tuple[list[AgentP
     return rows, total
 
 
+def eligible_agent_accounts(db: Session) -> list[User]:
+    return list(
+        db.scalars(
+            select(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .outerjoin(Candidate, Candidate.user_id == User.id)
+            .outerjoin(AgentProfile, AgentProfile.user_id == User.id)
+            .where(_eligible_profile_condition(), AgentProfile.id.is_(None))
+            .order_by(User.display_name, User.email, User.id)
+        ).all()
+    )
+
+
+def slug_is_available(
+    db: Session, slug: str, *, excluding_profile_id: uuid.UUID | None = None
+) -> bool:
+    conditions = [AgentProfile.slug == slug]
+    if excluding_profile_id is not None:
+        conditions.append(AgentProfile.id != excluding_profile_id)
+    return db.scalar(select(AgentProfile.id).where(*conditions)) is None
+
+
 def _commit(db: Session) -> None:
     try:
         db.commit()
@@ -145,6 +168,12 @@ def update_profile(
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise AgentProfileConflict("at least one profile field must change")
+    if (
+        profile.slug_locked_at is not None
+        and "slug" in changes
+        and changes["slug"] != profile.slug
+    ):
+        raise AgentProfileConflict("published profile slugs cannot be changed")
     nonnullable = {
         "slug",
         "licensed_name",
@@ -244,6 +273,8 @@ class AgentProfileLifecycleService:
             profile.approved_by_user_id = actor_user_id
             profile.approved_at = datetime.now(UTC)
             profile.published_at = datetime.now(UTC)
+            if profile.slug_locked_at is None:
+                profile.slug_locked_at = datetime.now(UTC)
         profile.status = target.value
         AuditService(self.db).record(
             f"agent_profile.{target.value}",

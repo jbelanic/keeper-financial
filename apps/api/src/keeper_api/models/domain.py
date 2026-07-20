@@ -315,6 +315,8 @@ class CandidateOnboardingTask(IdTimestampsMixin, Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     review_notes: Mapped[str | None] = mapped_column(String(1000), default=None)
 
+    template: Mapped[OnboardingTask] = relationship("OnboardingTask")
+
 
 class CandidateOnboardingAssignment(IdTimestampsMixin, Base):
     __tablename__ = "candidate_onboarding_assignments"
@@ -439,7 +441,13 @@ class CandidateDocument(IdTimestampsMixin, Base):
 
 class PolicyAcknowledgement(IdTimestampsMixin, Base):
     __tablename__ = "policy_acknowledgements"
-    __table_args__ = (UniqueConstraint("candidate_id", "document_version_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id",
+            "document_version_id",
+            name="uq_policy_acknowledgements_assignment_version",
+        ),
+    )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
     assignment_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -504,35 +512,81 @@ class CandidateEsignEnvelope(IdTimestampsMixin, Base):
             "created_at",
             "id",
         ),
+        Index("ix_candidate_esign_envelopes_assignment", "assignment_id", "created_at", "id"),
+        Index(
+            "uq_candidate_esign_envelopes_active_assignment",
+            "assignment_id",
+            unique=True,
+            postgresql_where=text("assignment_id IS NOT NULL AND superseded_at IS NULL"),
+            sqlite_where=text("assignment_id IS NOT NULL AND superseded_at IS NULL"),
+        ),
+        UniqueConstraint("provider", "envelope_id", name="uq_esign_provider_envelope"),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_onboarding_assignments.id", ondelete="RESTRICT"), default=None
+    )
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
     document_version_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("document_versions.id", ondelete="SET NULL")
     )
+    provider: Mapped[str] = mapped_column(String(32), default="documenso")
     status: Mapped[str] = mapped_column(String(32), default=EsignEnvelopeStatus.SENT.value)
     envelope_id: Mapped[str | None] = mapped_column(String(255), default=None)
     envelope_url: Mapped[str | None] = mapped_column(String(2048), default=None)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    replacement_envelope_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_esign_envelopes.id", ondelete="RESTRICT"), default=None
+    )
 
 
 class ProgrammaticGate(IdTimestampsMixin, Base):
     __tablename__ = "programmatic_gates"
     __table_args__ = (
         status_check("status", [item.value for item in GateStatus], "ck_programmatic_gate_status"),
-        UniqueConstraint("candidate_id", "code"),
+        UniqueConstraint("assignment_id", "code", name="uq_programmatic_gates_assignment_code"),
         Index("ix_programmatic_gates_candidate", "candidate_id", "created_at", "id"),
+        Index("ix_programmatic_gates_assignment", "assignment_id", "created_at", "id"),
     )
 
     candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("candidate_onboarding_assignments.id", ondelete="RESTRICT"), default=None
+    )
     code: Mapped[str] = mapped_column(String(64))
     label: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(32), default=GateStatus.OPEN.value)
     satisfied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     satisfied_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class GateEvidenceEvent(IdTimestampsMixin, Base):
+    __tablename__ = "gate_evidence_events"
+    __table_args__ = (
+        status_check(
+            "event_type",
+            ["satisfied", "reopened"],
+            "ck_gate_evidence_event_type",
+        ),
+        Index("ix_gate_evidence_events_gate", "gate_id", "created_at", "id"),
+    )
+
+    gate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("programmatic_gates.id", ondelete="RESTRICT")
+    )
+    event_type: Mapped[str] = mapped_column(String(32))
+    verified_on: Mapped[date | None] = mapped_column(Date)
+    evidence_source: Mapped[str | None] = mapped_column(String(120))
+    evidence_reference: Mapped[str | None] = mapped_column(String(160))
+    reason: Mapped[str | None] = mapped_column(String(500))
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
     )
 
 
@@ -568,6 +622,7 @@ class AgentProfile(IdTimestampsMixin, Base):
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    slug_locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class LeadInquiry(IdTimestampsMixin, Base):
@@ -639,6 +694,7 @@ __all__ = [
     "ConsentRecord",
     "ControlledDocument",
     "DocumentVersion",
+    "GateEvidenceEvent",
     "LeadInquiry",
     "OnboardingPlan",
     "OnboardingTask",
