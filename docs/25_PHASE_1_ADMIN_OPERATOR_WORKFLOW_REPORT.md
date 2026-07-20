@@ -18,6 +18,10 @@ Phase 1F production and controlled-pilot readiness planning is the next gate. Ph
 
 After separate owner authorization, the accepted refinement was committed at `17e1b43` and integrated into the publication candidate with local `main` content commit `07895c2` without history rewriting. Validation, pull-request, CI, and remote-merge evidence remain authoritative for subsequent publication status. This update does not revise the report's original evidence moment or grant deployment, production/pilot, shared-database, activation, lifecycle/role, external-service, credential, destructive-operation, or Phase 1F implementation authority.
 
+## 2026-07-20 post-merge note
+
+PR #4 passed API and web CI and merged the combined accepted source to `main` at `2239441505cc47235ad387070bcfd7a9e2a2f4c6`. This post-merge note records only the later publication outcome; it does not revise the report's original evidence moment or expand any deployment, production/pilot, shared-database, activation, lifecycle/role, external-service, credential, destructive-operation, or Phase 1F authority.
+
 ## Scope
 
 This branch implements the owner-approved Phase 1 administrator/operator workflow refinement:

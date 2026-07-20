@@ -90,7 +90,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 ## Accepted pre-Phase-1F operator-workflow refinement
 
-- **Phase 1 source implementation is owner-accepted and committed at `17e1b43` on `feat/admin-workflow-operator-ux`; the publication candidate integrates local `main` content commit `07895c2` without history rewriting.**
+- **Phase 1 source implementation is owner-accepted and merged to `main` at `2239441` through PR #4; it combines administrator/operator commit `17e1b43` with approved-content commit `07895c2` without history rewriting.**
 - Administrators select exact applications and active plans by human-readable context rather than normal-operation UUID entry.
 - Unused plans support ordered task authoring/editing and become immutable on first assignment.
 - Manual gate evidence, policy acknowledgements, and e-sign envelopes are exact-assignment records. Only background check, FSRA authorization, and system provisioning are manual; policy acknowledgement and executed agreements are derived.
@@ -119,7 +119,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 ## Phase 1G — Approved public/candidate copy (bounded content)
 
-- **The owner-approved content implementation is commit `07895c2` from `content/approved-copy-C01-C17`; it is integrated with the administrator/operator publication candidate. Verify Git for current remote-merge state.**
+- **The owner-approved content implementation from commit `07895c2` is merged with the administrator/operator refinement through PR #4 at `2239441`.**
 - Applied the owner-approved exact public, auth, candidate, and onboarding copy register (C-01–C-17) plus the G renames/removals/internal-text strips.
 - Public site (C-01–C-11), `/apply` handoff and unavailable states (C-12), auth/register/sign-in/MFA plain-language copy (C-13), candidate status/list/application instruction/withdrawal (C-14–C-15), and onboarding renames (C-16).
 - Stale routes removed: `/admin/content` and the standalone `/candidate/documents`; `ConfirmationDialog` gained optional `confirmLabel`/`cancelLabel`.
