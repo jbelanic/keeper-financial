@@ -83,8 +83,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <div className="footer-brand">
             <Brand />
             <p>
-              Plain-language mortgage guidance and a secure path forward for
-              people across Ontario.
+              Plain-language mortgage information and a secure way to take the
+              next step.
             </p>
             <p className="regulatory-line">
               {siteConfig.legalName} · {siteConfig.regulatoryText}
@@ -121,7 +121,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
                 <Link href="/about">About</Link>
               </li>
               <li>
-                <Link href="/agents">Our agents</Link>
+                <Link href="/agents">Find an Agent</Link>
               </li>
               <li>
                 <Link href="/careers">Join Keeper Financial</Link>

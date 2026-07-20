@@ -22,7 +22,7 @@ export async function generateMetadata({
   if (!service) return {};
   return createPageMetadata({
     title: service.title,
-    description: service.summary,
+    description: service.lead,
     path: `/mortgages/${service.slug}`,
   });
 }
@@ -41,28 +41,30 @@ export default async function MortgageServicePage({
       <div className="container">
         <InteriorPageHeader
           title={service.title}
-          description={service.summary}
+          description={service.lead}
           parent={{ label: "Mortgages", href: "/mortgages" }}
         />
       </div>
       <section className="section section-no-top">
         <div className="container reading-grid">
           <article className="prose-card">
-            <h2>Start with the purpose</h2>
-            <p>{service.introduction}</p>
-            <p>
-              This information is general education. Mortgage suitability,
-              rates, terms, and approval depend on a complete review by the
-              appropriate parties.
-            </p>
-          </article>
-          <aside className="paper-panel">
-            <h2>Topics for an early conversation</h2>
+            <h2>Consider:</h2>
             <ul className="check-list">
               {service.considerations.map((consideration) => (
                 <li key={consideration}>{consideration}</li>
               ))}
             </ul>
+          </article>
+          <aside className="paper-panel">
+            <h2>
+              General information here. Detailed information in the application.
+            </h2>
+            <p>
+              Use this website for general information and basic contact
+              details. Provide income, assets, liabilities, credit consent,
+              identity information and supporting documents only through an
+              authorized secure process.
+            </p>
           </aside>
         </div>
       </section>
@@ -88,7 +90,7 @@ export default async function MortgageServicePage({
         <div className="container">
           <CtaBand
             title="Choose your next step"
-            description="Talk with Keeper Financial first or continue to the approved secure application."
+            description="Ask a general question or continue to the mortgage application."
             primaryHref="/apply"
             primaryLabel="Get started"
             secondaryHref="/contact"

@@ -112,12 +112,14 @@ export function CandidateOnboardingDashboardView({
       <ErrorSummary errors={errors} />
 
       <Card>
-        <h2>Activation readiness</h2>
+        <h2>Onboarding status</h2>
         {dashboard.activation_ready ? (
           <p>
-            <StatusBadge tone="success">Activation ready</StatusBadge> Required
-            assigned tasks, policies, and gates are complete. This does not
-            perform final activation.
+            <StatusBadge tone="success">
+              Onboarding requirements complete
+            </StatusBadge>{" "}
+            Required assigned tasks, policies, and gates are complete. This does
+            not perform final activation.
           </p>
         ) : (
           <p>
@@ -180,7 +182,7 @@ export function CandidateOnboardingDashboardView({
       </section>
 
       <section aria-labelledby="gates-heading">
-        <h2 id="gates-heading">Activation gates</h2>
+        <h2 id="gates-heading">Other requirements</h2>
         <GateList gates={dashboard.gates} />
       </section>
 
@@ -292,7 +294,7 @@ export function CandidateOnboardingDashboardView({
                   ),
               },
               {
-                label: "Activation ready",
+                label: "Onboarding requirements complete",
                 complete: dashboard.activation_ready,
               },
             ]}
@@ -305,7 +307,7 @@ export function CandidateOnboardingDashboardView({
 
 function GateList({ gates }: { gates: ActivationGateResponse[] }) {
   if (gates.length === 0)
-    return <p>No activation gates are configured for your onboarding.</p>;
+    return <p>No other requirements are configured for your onboarding.</p>;
   return (
     <ul>
       {gates.map((gate) => (

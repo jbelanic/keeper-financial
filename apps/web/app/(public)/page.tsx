@@ -5,12 +5,11 @@ import { SectionHeading } from "@keeper/ui";
 import { CtaBand, Icon, PageHero, ServiceCard } from "@/lib/public-components";
 import { mortgageServices, processSteps } from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
-import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Ontario mortgage guidance",
+  title: "Start with your mortgage goal",
   description:
-    "Explore mortgage services, speak with Keeper Financial, or continue to the approved secure mortgage application.",
+    "Explore common mortgage topics, ask a general question, or continue to the mortgage application when you are ready to provide detailed information.",
   path: "/",
 });
 
@@ -26,52 +25,42 @@ export default function HomePage() {
   return (
     <>
       <PageHero
-        eyebrow="Mortgage guidance for Ontario"
-        title="Make your next mortgage decision with a clearer path."
-        description="Start with plain-language information, a real conversation, or Keeper Financial’s approved secure application—whichever fits where you are today."
+        eyebrow="Mortgage guidance"
+        title="Start with your mortgage goal. Continue securely when you’re ready."
+        description="Explore common mortgage topics, ask a general question, or continue to the mortgage application when you are ready to provide detailed information."
         image="/images/home-conversation.png"
         imageAlt="A couple having a relaxed conversation in their living room"
         imagePriority
       >
         <div className="button-row">
-          <Link className="button-link" href="/apply">
+          <Link className="button-link" href="/mortgages">
+            Explore mortgage topics
+          </Link>
+          <Link className="button-link button-secondary" href="/apply">
             Get started
           </Link>
-          <a
-            className="button-link button-secondary"
-            href={siteConfig.phoneHref}
-          >
-            Call {siteConfig.phoneDisplay}
-          </a>
         </div>
       </PageHero>
 
-      <div
-        className="container trust-strip"
-        aria-label="Keeper Financial service commitments"
-      >
+      <div className="container trust-strip" aria-label="What to expect">
         <div>
           <Icon name="conversation" />
           <span>
-            <strong>Conversation first</strong>Start with your questions
+            <strong>Clear information</strong>General questions first
           </span>
         </div>
         <div>
           <Icon name="shield" />
           <span>
-            <strong>Privacy-aware</strong>Keep sensitive details secure
+            <strong>General questions first</strong>Sensitive details stay in
+            the application
           </span>
         </div>
         <div>
           <Icon name="building" />
           <span>
-            <strong>Ontario focused</strong>Local brokerage guidance
-          </span>
-        </div>
-        <div>
-          <Icon name="arrow" />
-          <span>
-            <strong>Clear next steps</strong>Choose the path that fits
+            <strong>Sensitive details stay in the application</strong>Keep
+            detailed information in the mortgage application
           </span>
         </div>
       </div>
@@ -79,9 +68,9 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <SectionHeading
-            eyebrow="Mortgage services"
-            title="How we can help"
-            description="Explore common mortgage needs without turning this website into an eligibility assessment or application."
+            eyebrow="Common mortgage goals"
+            title="Where would you like to begin?"
+            description="Choose the topic closest to your current goal. These pages provide general information and do not determine eligibility, rates or approval."
             align="center"
           />
           <div className="service-grid">
@@ -101,9 +90,9 @@ export default function HomePage() {
       <section className="section section-muted">
         <div className="container process-layout">
           <SectionHeading
-            eyebrow="A straightforward process"
-            title="Know what happens next"
-            description="Keeper Financial separates early guidance from the secure collection of detailed mortgage information."
+            eyebrow="How it works"
+            title="A clear first step"
+            description="Choose your topic. Review general information without providing financial or identity documents. Ask a question. Contact Keeper Financial using basic contact details and non-sensitive context. Continue to the application. Use the configured mortgage application service when detailed information is required."
           />
           <ol className="process-list">
             {processSteps.map((step, index) => (
@@ -124,33 +113,30 @@ export default function HomePage() {
       <section className="section">
         <div className="container split-feature">
           <div>
-            <p className="eyebrow">Two honest ways to begin</p>
-            <h2>Talk first or continue securely.</h2>
+            <p className="eyebrow">Prefer to contact a specific agent?</p>
+            <h2>
+              Browse currently published profiles and choose an agent to
+              contact.
+            </h2>
             <p>
-              Use a minimal contact route if you want to discuss your goal. If
-              you are ready to share detailed information, continue to the
-              approved external application platform.
+              Browse currently published profiles and choose an agent to
+              contact.
             </p>
-            <ul className="check-list">
-              <li>
-                Phone and email use the published Keeper Financial contacts.
-              </li>
-              <li>The contact form asks only for basic information.</li>
-              <li>Financial details and documents stay out of this website.</li>
-            </ul>
-            <Link className="button-link" href="/apply">
-              Compare both paths
+            <Link className="button-link" href="/agents">
+              Find an Agent
             </Link>
           </div>
           <aside className="paper-panel">
             <Icon name="shield" />
-            <h3>Your privacy matters from the first step.</h3>
+            <h3>Keep sensitive information out of general messages.</h3>
             <p>
-              Never send a SIN, banking details, tax records, identification,
-              passwords, or mortgage documents through a general contact form.
+              Do not send a SIN, banking information, tax records, identity
+              documents, passwords or mortgage documents through a public
+              contact form or general email. Use the mortgage application or
+              another authorized secure channel when requested.
             </p>
-            <Link className="text-link" href="/privacy">
-              Read the privacy notice <Icon name="arrow" />
+            <Link className="text-link" href="/contact">
+              Contact Keeper Financial <Icon name="arrow" />
             </Link>
           </aside>
         </div>
@@ -160,13 +146,13 @@ export default function HomePage() {
         <div className="container recruitment-grid">
           <div className="recruitment-copy">
             <p className="eyebrow eyebrow-light">Join Keeper Financial</p>
-            <h2>Build your mortgage career with a modern Ontario brokerage.</h2>
+            <h2>Explore currently published opportunities.</h2>
             <p>
-              Learn about the brokerage, its recruitment process, and how to
-              start an honest conversation about future opportunities.
+              Each posting describes its own responsibilities, requirements and
+              application process. You do not need an account to browse.
             </p>
             <Link className="button-link" href="/careers">
-              Explore the brokerage
+              Join Keeper Financial
             </Link>
           </div>
           <div className="recruitment-image">
@@ -183,8 +169,8 @@ export default function HomePage() {
       <section className="section section-tight">
         <div className="container">
           <CtaBand
-            title="Ready for a clear next step?"
-            description="Choose a conversation-first route or continue to the secure mortgage application."
+            title="Choose your next step"
+            description="Ask a general question or continue to the mortgage application."
             primaryHref="/apply"
             primaryLabel="Get started"
             secondaryHref="/contact"

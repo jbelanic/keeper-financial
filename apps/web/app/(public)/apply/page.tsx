@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Card } from "@keeper/ui";
-import { InteriorPageHeader, Icon } from "@/lib/public-components";
+import { InteriorPageHeader, Icon, CtaBand } from "@/lib/public-components";
 import { safeAgentAttribution } from "@/lib/lead-attribution";
 import { createPageMetadata } from "@/lib/metadata";
 import { getPublicSiteConfig, siteConfig } from "@/lib/site-config";
@@ -31,8 +31,8 @@ export function ApplyPaths({
     <>
       <div className="container">
         <InteriorPageHeader
-          title="Choose the path that works for you"
-          description="Speak with Keeper Financial using minimal contact information, or continue to the approved external platform for a full mortgage application."
+          title="Choose how you’d like to begin"
+          description="Ask a general question using basic contact details, or continue to the mortgage application when you are ready to provide detailed information."
         />
         <p className="notice apply-warning">
           Do not submit financial, identity, health, credential, or underwriting
@@ -47,11 +47,10 @@ export function ApplyPaths({
               <Icon name="conversation" />
             </div>
             <p className="eyebrow">Option one</p>
-            <h2>Speak with someone first</h2>
+            <h2>Ask a general question</h2>
             <p>
-              Provide only enough information for the team to contact you. Do
-              not include sensitive financial, identity, health, credential, or
-              underwriting information.
+              Share your name, contact details, general mortgage objective and
+              optional non-sensitive context.
             </p>
             <p className="contact-shortcuts">
               Prefer to call?{" "}
@@ -73,31 +72,37 @@ export function ApplyPaths({
               <Icon name="shield" />
             </div>
             <p className="eyebrow">Option two</p>
-            <h2>Start a secure full application</h2>
+            <h2>Continue to the mortgage application</h2>
             <p>
-              Detailed financial and underwriting information belongs in the
-              approved external mortgage-application platform—not on Keeper
-              Financial’s public website.
+              Use the configured mortgage application service for detailed
+              financial, credit, identity and document information.
             </p>
-            <ul className="check-list">
-              <li>The destination is fixed in controlled configuration.</li>
-              <li>The API requires HTTPS and an exact allowed host.</li>
-              <li>No destination is accepted from a visitor-supplied URL.</li>
-              <li>No sensitive information is added to the redirect URL.</li>
-            </ul>
             <a
               className="button-link"
               href={`${apiBase}/api/v1/integrations/mortgage-application${attribution}`}
             >
-              Continue to the secure application
+              Continue to the mortgage application
             </a>
             <p className="fine-print">
-              You are leaving the Keeper Financial public website. Review the
-              provider’s privacy and security information before submitting. If
-              the provider is unavailable, call {config.phoneDisplay} or email{" "}
-              {config.email}.
+              You will leave the Keeper Financial public website and enter the
+              mortgage application service configured by Keeper Financial.
+              Review the destination’s privacy and security information before
+              providing detailed information. If the application service is
+              unavailable, call {config.phoneDisplay} or email {config.email}.
             </p>
           </Card>
+        </div>
+      </section>
+      <section className="section section-tight">
+        <div className="container">
+          <CtaBand
+            title="Not ready to continue yet?"
+            description="Return to the contact options if you only have a general question."
+            primaryHref="/contact"
+            primaryLabel="Return to contact options"
+            secondaryHref="/how-it-works"
+            secondaryLabel="See how the process works"
+          />
         </div>
       </section>
     </>

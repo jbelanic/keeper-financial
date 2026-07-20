@@ -30,16 +30,11 @@ export default async function MfaPage({
         ← Return to {candidateFlow ? "the candidate application" : "sign in"}
       </Link>
       <header className="foundation-header">
-        <p className="eyebrow">
-          {candidateFlow
-            ? "Secure candidate documents"
-            : "Secure administration"}
-        </p>
-        <h1>Verify multi-factor authentication</h1>
+        <p className="eyebrow">Account security</p>
+        <h1>Verify with your authenticator app</h1>
         <p>
-          {candidateFlow
-            ? "Private candidate document actions require a verified TOTP authenticator. Candidate ownership and document authorization are checked separately."
-            : "Administration requires a verified TOTP authenticator and an active local brokerage administrator relationship."}
+          Enter the current code from your authenticator app to continue to
+          protected documents or administration.
         </p>
       </header>
       <Card>

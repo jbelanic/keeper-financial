@@ -49,7 +49,7 @@ export default async function AgentProfilePage({ params }: Props) {
       <div className="container reading-layout">
         <Breadcrumbs
           items={[
-            { label: "Our agents", href: "/agents" },
+            { label: "Find an Agent", href: "/agents" },
             { label: agent.licensed_name },
           ]}
         />
@@ -67,16 +67,16 @@ export default async function AgentProfilePage({ params }: Props) {
             />
           ) : null}
           <header className="foundation-header">
-            <p className="eyebrow">Published Keeper Financial agent</p>
+            <p className="eyebrow">Keeper Financial agent</p>
             <h1>{agent.licensed_name}</h1>
             <p className="page-lead">{agent.approved_title}</p>
             <p>Licence {agent.licence_number}</p>
             <Link
               className="button-link"
               href={`/apply?agent=${encodeURIComponent(agent.slug)}`}
-              aria-label={`Contact or apply with ${agent.licensed_name}`}
+              aria-label={`Contact ${agent.licensed_name}`}
             >
-              Contact or apply with this agent
+              Contact this agent
             </Link>
           </header>
         </div>
@@ -96,11 +96,11 @@ export default async function AgentProfilePage({ params }: Props) {
               </div>
               <div>
                 <dt>Service areas</dt>
-                <dd>{agent.service_areas.join(", ") || "Ontario"}</dd>
+                <dd>{agent.service_areas.join(", ")}</dd>
               </div>
               <div>
                 <dt>Specialties</dt>
-                <dd>{agent.specialties.join(", ") || "Mortgage guidance"}</dd>
+                <dd>{agent.specialties.join(", ")}</dd>
               </div>
             </dl>
           </section>
@@ -146,10 +146,8 @@ export default async function AgentProfilePage({ params }: Props) {
             <a href={siteConfig.emailHref}>{siteConfig.email}</a>
           </p>
           <p className="fine-print">
-            Agent-specific application attribution uses Keeper Financial’s
-            controlled configuration. When no approved mapping exists, the
-            external destination remains unavailable rather than falling back to
-            an unverified URL.
+            Agent-specific application attribution is managed through Keeper
+            Financial’s application configuration.
           </p>
         </aside>
       </div>

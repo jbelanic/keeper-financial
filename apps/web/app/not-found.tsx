@@ -8,8 +8,8 @@ export default function NotFound() {
     >
       <h1 id="not-found-title">Page not found</h1>
       <p>
-        The requested public resource is unavailable or is not approved for
-        publication.
+        We could not find that page. Check the address or return to the home
+        page.
       </p>
       <Link className="button-link" href="/">
         Return home

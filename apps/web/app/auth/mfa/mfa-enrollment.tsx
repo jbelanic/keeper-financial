@@ -193,11 +193,8 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
   if (stage === "verified") {
     return (
       <section aria-labelledby="mfa-complete-title">
-        <h2 id="mfa-complete-title">Multi-factor authentication verified</h2>
-        <p role="status">
-          This browser session now has AAL2. Application authorization is still
-          checked separately.
-        </p>
+        <h2 id="mfa-complete-title">Verification complete.</h2>
+        <p role="status">Continue to the protected page.</p>
         <Link className="button button-primary" href={returnTo}>
           Continue to{" "}
           {returnTo === "/admin"
@@ -212,10 +209,12 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
   if (stage === "enroll") {
     return (
       <section aria-labelledby="mfa-enroll-title">
-        <h2 id="mfa-enroll-title">Enroll an authenticator app</h2>
+        <h2 id="mfa-enroll-title">
+          Add Keeper Financial to your authenticator app
+        </h2>
         <p>
-          Use a TOTP authenticator controlled by the local operator. No
-          service-role credential is required.
+          Scan the QR code or enter the setup key manually. Keep the setup key
+          private.
         </p>
         <ErrorSummary errors={error ? [error] : []} />
         <Button type="button" onClick={beginEnrollment} disabled={isEnrolling}>
@@ -227,12 +226,9 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
   if (stage === "error") {
     return (
       <section role="alert" className="error-summary">
-        <h2>Multi-factor authentication is unavailable</h2>
+        <h2>Multi-factor authentication is temporarily unavailable</h2>
         <p>{error ?? GENERIC_ERROR}</p>
-        <p>
-          Return to sign in and retry with the local Supabase Auth service
-          running.
-        </p>
+        <p>Return to sign in or contact support.</p>
       </section>
     );
   }
@@ -263,7 +259,7 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
       ) : null}
       <form onSubmit={verify}>
         <ErrorSummary errors={error ? [error] : []} />
-        <FormField id="totp-code" label="Six-digit authenticator code">
+        <FormField id="totp-code" label="Six-digit authentication code">
           <input
             id="totp-code"
             name="code"
@@ -280,7 +276,7 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
             }
           />
         </FormField>
-        <Button type="submit">Verify authenticator</Button>
+        <Button type="submit">Verify code</Button>
       </form>
     </section>
   );

@@ -73,7 +73,9 @@ describe("candidate registration", () => {
       }),
     );
     expect(
-      screen.getByRole("link", { name: /sign in and continue/i }),
+      screen.getByRole("link", {
+        name: /sign in to continue this application/i,
+      }),
     ).toHaveAttribute("href", "/auth/sign-in?posting=synthetic-opportunity");
   });
 

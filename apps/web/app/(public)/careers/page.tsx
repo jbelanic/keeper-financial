@@ -6,7 +6,8 @@ import { getPublishedPostings } from "@/lib/recruitment-api";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Join Keeper Financial",
-  description: "Browse approved, published Keeper Financial opportunities.",
+  description:
+    "Explore currently published opportunities with Keeper Financial.",
   path: "/careers",
 });
 
@@ -21,11 +22,12 @@ export default async function CareersPage() {
     <>
       <header className="page-hero">
         <div className="container reading-layout">
-          <p className="eyebrow">Recruitment opportunities</p>
+          <p className="eyebrow">Opportunities</p>
           <h1>Join Keeper Financial</h1>
           <p className="page-lead">
-            Browse opportunities that the brokerage has explicitly published.
-            Candidate information is collected only after you select a posting.
+            Explore currently published opportunities. Each posting describes
+            its own responsibilities, requirements and application process. You
+            do not need an account to browse.
           </p>
         </div>
       </header>
@@ -34,13 +36,11 @@ export default async function CareersPage() {
           <h2 id="opportunities-heading">Current opportunities</h2>
           {result === null ? (
             <ErrorState title="Opportunities are temporarily unavailable">
-              Please try again later. No unpublished posting is shown when the
-              recruitment service cannot be reached.
+              Please try again later.
             </ErrorState>
           ) : result.items.length === 0 ? (
-            <EmptyState title="No approved opportunities are published">
-              Draft, closed, archived, and placeholder postings do not appear
-              here.
+            <EmptyState title="No opportunities are currently published">
+              Check this page again later for future opportunities.
             </EmptyState>
           ) : (
             <div className="grid-2 posting-grid">

@@ -6,9 +6,9 @@ import { mortgageServices } from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Mortgage services",
+  title: "Information for the mortgage decision in front of you",
   description:
-    "Plain-language information about purchases, refinancing, renewals, first homes, and investment-property mortgages in Ontario.",
+    "Review common mortgage topics in plain language. When you are ready, you can ask a general question or continue to the mortgage application.",
   path: "/mortgages",
 });
 
@@ -18,9 +18,9 @@ export default function MortgagesPage() {
   return (
     <>
       <PageHero
-        eyebrow="Mortgage services"
+        eyebrow="Mortgage topics"
         title="Information for the mortgage decision in front of you."
-        description="Explore common mortgage paths in plain language, then choose whether to ask a question or continue to a secure application."
+        description="Review common mortgage topics in plain language. When you are ready, you can ask a general question or continue to the mortgage application."
       >
         <div className="button-row">
           <Link className="button-link" href="/apply">
@@ -34,8 +34,8 @@ export default function MortgagesPage() {
       <section className="section">
         <div className="container">
           <SectionHeading
-            title="Choose a mortgage topic"
-            description="These pages are educational. They do not advertise a rate, determine eligibility, or replace advice based on a complete application."
+            title="Choose a topic"
+            description="This information is general. It does not advertise a rate, determine eligibility, or replace a review of your complete circumstances."
           />
           <div className="service-grid">
             {mortgageServices.map((service, index) => (
@@ -54,19 +54,19 @@ export default function MortgagesPage() {
         <div className="container reading-layout">
           <SectionHeading
             eyebrow="A useful boundary"
-            title="Education here. Detailed information in the secure platform."
+            title="General information here. Detailed information in the application."
           />
           <div>
             <p>
-              Keeper Financial’s public pages help you frame questions and
-              understand the sequence. They do not collect income, assets,
-              liabilities, credit consent, identity documents, or mortgage
-              documents.
+              Use this website for general information and basic contact
+              details. Provide income, assets, liabilities, credit consent,
+              identity information and supporting documents only through an
+              authorized secure process.
             </p>
             <p>
               When you are ready for a complete review, the Get Started page
-              links through a validated route to the approved external
-              application platform.
+              links through a validated route to the configured mortgage
+              application service.
             </p>
           </div>
         </div>

@@ -278,7 +278,7 @@ describe("candidate application UI", () => {
     });
     fireEvent.click(withdraw);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep application" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(withdraw).toHaveFocus();
   });
@@ -305,7 +305,9 @@ describe("candidate application UI", () => {
     });
     fireEvent.click(withdraw);
     const dialog = screen.getByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: /confirm/i }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /withdraw application/i }),
+    );
     expect(
       await screen.findByText(/application withdrawn/i),
     ).toBeInTheDocument();

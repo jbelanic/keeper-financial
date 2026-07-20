@@ -46,8 +46,9 @@ export default async function CandidateApplicationPage({
         <p className="eyebrow">Candidate application</p>
         <h1>{application.source_posting_title}</h1>
         <p>
-          Save incomplete work, review every required section, and submit only
-          when you are ready.
+          Complete the requested fields, save your draft when needed and review
+          your answers before submitting. You cannot edit this application after
+          submission.
         </p>
       </header>
       <CandidateApplicationForm

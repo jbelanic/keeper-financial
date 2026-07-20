@@ -71,12 +71,10 @@ describe("candidate document MFA", () => {
     render(<MfaEnrollment returnTo={returnTo} />);
 
     fireEvent.change(
-      await screen.findByLabelText(/six-digit authenticator code/i),
+      await screen.findByLabelText(/six-digit authentication code/i),
       { target: { value: "123456" } },
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: /verify authenticator/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /verify code/i }));
 
     await waitFor(() => expect(refreshSession).toHaveBeenCalledOnce());
     expect(

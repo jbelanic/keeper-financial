@@ -51,11 +51,11 @@ describe("local administrator TOTP workflow", () => {
     const { MfaEnrollment } = await import("@/app/auth/mfa/mfa-enrollment");
     render(<MfaEnrollment returnTo="/admin" />);
 
-    const input = await screen.findByLabelText(/six-digit authenticator code/i);
-    fireEvent.change(input, { target: { value: "123456" } });
-    fireEvent.click(
-      screen.getByRole("button", { name: /verify authenticator/i }),
+    const input = await screen.findByLabelText(
+      /six-digit authentication code/i,
     );
+    fireEvent.change(input, { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: /verify code/i }));
 
     await waitFor(() =>
       expect(mfa.challengeAndVerify).toHaveBeenCalledWith({
@@ -111,12 +111,10 @@ describe("local administrator TOTP workflow", () => {
       await screen.findByAltText("TOTP enrollment QR code"),
     ).toHaveAttribute("src", qrCode);
     expect(await screen.findByText("SYNTHETICSETUPKEY")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/six-digit authenticator code/i), {
+    fireEvent.change(screen.getByLabelText(/six-digit authentication code/i), {
       target: { value: "654321" },
     });
-    fireEvent.click(
-      screen.getByRole("button", { name: /verify authenticator/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /verify code/i }));
 
     await waitFor(() =>
       expect(mfa.enroll).toHaveBeenCalledWith({
@@ -271,14 +269,12 @@ describe("local administrator TOTP workflow", () => {
       await screen.findByRole("button", { name: /begin totp enrollment/i }),
     );
     fireEvent.change(
-      await screen.findByLabelText(/six-digit authenticator code/i),
+      await screen.findByLabelText(/six-digit authentication code/i),
       {
         target: { value: "123456" },
       },
     );
-    fireEvent.click(
-      screen.getByRole("button", { name: /verify authenticator/i }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /verify code/i }));
 
     const error = await screen.findByRole("alert");
     expect(error).toHaveTextContent(/verification code was not accepted/i);
@@ -311,7 +307,7 @@ describe("local administrator TOTP workflow", () => {
     render(<MfaEnrollment returnTo="/admin" />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /multi-factor authentication is unavailable/i,
+      /multi-factor authentication is temporarily unavailable/i,
     );
     expect(screen.queryByText(/raw provider payload/i)).not.toBeInTheDocument();
   });

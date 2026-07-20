@@ -136,6 +136,8 @@ Supabase identity alone grants no application access. `activation_ready` is a ca
 
 Phase 1F production and controlled-pilot readiness planning is the next gate. Production deployment, operational evidence, privacy/legal/regulatory/claims/accessibility review, owner decisions, pilot go/no-go approval, and final activation remain outstanding. Optional owner-operated administrator and second-candidate browser ceremonies may add release assurance, but they are not uncommitted source-completion blockers and do not by themselves grant production approval.
 
+A bounded approved-content branch `content/approved-copy-C01-C17` (from `3331519`) applies the exact owner-approved C-01–C-17 public/auth/candidate/onboarding copy and G renames/removals, omitting unresolved `[FW-00x]` placeholders and blocking legal/policy pages D-01–D-06, `/terms`, and consent/disclosure versions (still DRAFT). See `docs/07_DELIVERY_PLAN.md` (Phase 1G).
+
 ## 11. Phase 1 release condition
 
 Phase 1 is releasable only when:

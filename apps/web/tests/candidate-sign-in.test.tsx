@@ -141,7 +141,9 @@ describe("posting-bound existing-user sign-in", () => {
       screen.getByRole("link", { name: /brokerage administrator sign in/i }),
     ).toHaveAttribute("href", "/auth/sign-in?returnTo=/admin");
     expect(
-      screen.getByText(/existing active Keeper Financial account/i),
+      screen.getByText(
+        /sign in to an existing keeper financial portal account/i,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -161,14 +163,13 @@ describe("posting-bound existing-user sign-in", () => {
 
     expect(
       screen.getByText(
-        /create or reuse your candidate access and application/i,
+        /this route will continue only to the selected published opportunity/i,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Subsequent portal access depends/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/existing active Keeper Financial account/i),
+      screen.queryByText(
+        /sign in to an existing keeper financial portal account/i,
+      ),
     ).not.toBeInTheDocument();
   });
 

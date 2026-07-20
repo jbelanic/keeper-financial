@@ -19,9 +19,9 @@ export default async function CandidateOnboardingPage() {
         <p className="eyebrow">Candidate</p>
         <h1>Your onboarding</h1>
         <p>
-          Complete assigned tasks, acknowledge required policies, and finish
-          external signing steps. The portal calculates activation readiness;
-          final activation remains a separate approved administrative step.
+          Complete the tasks and document steps assigned to you. Onboarding
+          progress does not by itself mean that you are an active agent,
+          employee or contractor.
         </p>
       </header>
       {dashboard?.assignment ? (

@@ -81,7 +81,7 @@ describe("published agent profiles", () => {
     expect(screen.getByText("FSCO # 13696")).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: /contact or apply with synthetic agent/i,
+        name: /contact synthetic agent/i,
       }),
     ).toHaveAttribute("href", "/apply?agent=synthetic-agent");
     expect(document.body.textContent).not.toMatch(

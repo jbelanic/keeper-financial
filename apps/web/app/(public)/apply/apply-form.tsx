@@ -128,11 +128,11 @@ export function ApplyForm({
           ]);
         } else if (response.status === 503) {
           setErrors([
-            `The contact service is temporarily unavailable. Please use ${unavailableContact}.`,
+            `The mortgage application is temporarily unavailable. No application information has been submitted. Try again later or contact Keeper Financial using the published telephone number or email address.`,
           ]);
         } else {
           setErrors([
-            `The contact request could not be submitted right now. Please try again or use ${unavailableContact}.`,
+            `We could not send your request. Review the form and try again. If the problem continues, contact Keeper Financial using the published telephone number or email address.`,
           ]);
         }
         return;
@@ -162,8 +162,9 @@ export function ApplyForm({
       <ErrorSummary errors={errors} />
       {submitted ? (
         <p role="status" aria-live="polite" className="notice notice-success">
-          Thank you. Your minimal contact request was recorded. Keeper Financial
-          can respond using your selected contact method.
+          Your contact request has been received. Keep sensitive information out
+          of follow-up email. Use an authorized secure process if documents are
+          requested.
         </p>
       ) : null}
       <div className="grid-2">
@@ -245,7 +246,7 @@ export function ApplyForm({
       <FormField
         id="message"
         label="Brief message (optional)"
-        hint="Do not include your SIN, banking or card details, tax information, debts, identification, medical information, or passwords."
+        hint="Do not include a SIN, banking information, tax records, credit information, passwords, identity documents or mortgage documents."
       >
         <textarea id="message" name="message" maxLength={1000} />
       </FormField>
