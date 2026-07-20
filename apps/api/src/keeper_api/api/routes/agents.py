@@ -15,9 +15,11 @@ from keeper_api.schemas.agents import (
     AdminAgentProfileList,
     AgentProfileCreate,
     AgentProfileUpdate,
+    EligibleAgent,
     PublicAgentProfile,
     PublicAgentProfileList,
     PublicAgentProfileSummary,
+    SlugAvailability,
 )
 from keeper_api.schemas.lifecycle import AgentStatusResponse, AgentTransitionRequest
 from keeper_api.services.agents import (
@@ -26,9 +28,11 @@ from keeper_api.services.agents import (
     InvalidAgentProfileTransition,
     admin_profiles,
     create_profile,
+    eligible_agent_accounts,
     get_admin_profile,
     public_profile_by_slug,
     public_profiles,
+    slug_is_available,
     update_profile,
 )
 from keeper_api.services.auth import Principal, require_admin
@@ -121,6 +125,52 @@ def list_admin_agent_profiles(
     return AdminAgentProfileList(
         items=[_admin(item) for item in rows], total=total, limit=limit, offset=offset
     )
+
+
+@router.get(
+    "/admin/eligible-agents",
+    response_model=list[EligibleAgent],
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+    },
+)
+def list_eligible_agents(
+    response: Response,
+    _: Principal = Depends(require_agent_profile_admin),
+    db: Session = Depends(get_db),
+) -> list[EligibleAgent]:
+    response.headers.update(NO_STORE)
+    return [
+        EligibleAgent(user_id=user.id, display_name=user.display_name, email=user.email)
+        for user in eligible_agent_accounts(db)
+    ]
+
+
+@router.get(
+    "/admin/agent-profiles/slug-availability",
+    response_model=SlugAvailability,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        422: {"description": "Invalid slug"},
+    },
+)
+def agent_slug_availability(
+    response: Response,
+    slug: Annotated[
+        str,
+        Query(
+            min_length=1,
+            max_length=100,
+            pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        ),
+    ],
+    _: Principal = Depends(require_agent_profile_admin),
+    db: Session = Depends(get_db),
+) -> SlugAvailability:
+    response.headers.update(NO_STORE)
+    return SlugAvailability(slug=slug, available=slug_is_available(db, slug))
 
 
 @router.post(

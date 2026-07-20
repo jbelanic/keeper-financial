@@ -62,7 +62,7 @@ export function CandidateRegistrationForm({ posting }: { posting: string }) {
       <FormField
         id="registration-password"
         label="Password"
-        hint="Use at least 12 characters."
+        hint="Use a unique password that you do not use for another account."
       >
         <input
           id="registration-password"

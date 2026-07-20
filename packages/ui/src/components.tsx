@@ -286,6 +286,8 @@ export function ConfirmationDialog({
   onConfirm,
   dialogRef,
   busy = false,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
 }: {
   title: string;
   children: ReactNode;
@@ -294,6 +296,8 @@ export function ConfirmationDialog({
   onConfirm: () => void;
   dialogRef: RefObject<HTMLDialogElement | null>;
   busy?: boolean;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }) {
   if (!open) return null;
   return (
@@ -346,7 +350,7 @@ export function ConfirmationDialog({
       <div>{children}</div>
       <div className="button-row">
         <Button type="button" onClick={onCancel} autoFocus disabled={busy}>
-          Cancel
+          {cancelLabel}
         </Button>
         <Button
           type="button"
@@ -354,7 +358,7 @@ export function ConfirmationDialog({
           onClick={onConfirm}
           disabled={busy}
         >
-          Confirm
+          {confirmLabel}
         </Button>
       </div>
     </dialog>

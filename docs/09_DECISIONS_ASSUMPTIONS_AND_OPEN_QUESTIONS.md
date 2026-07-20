@@ -11,7 +11,7 @@
 7. Build brokerage-controlled public agent profile pages.
 8. Defer a full mortgage-client CRM.
 9. Assess current Filogix CRM capability before buying or building another CRM.
-10. Do not build custom e-signature functionality.
+10. Do not build custom e-signature functionality. Use self-hosted Documenso as the approved e-sign provider through a server-side adapter with a fixed configured origin, redirects disabled, and provider-authoritative status refresh.
 11. Use the exact Phase 1C candidate questionnaire, posting-specific application cardinality, optional résumé/cover-letter categories, privacy disclosure version, and candidate MFA policy in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 12. Permit multiple concurrent posting-specific applications, with no more than one nonterminal application per candidate/posting and immutable new attempts for permitted reapplication.
 13. Require candidate AAL2 for document upload and restricted-document access, but not for general portal access, draft saves, or application submission.
@@ -23,6 +23,15 @@
 19. Permit Supabase Studio only for local operator use. It is not a public, shared, or application-facing service.
 20. Keep Supabase Storage and its S3 protocol disabled. They are not approved application storage and must not replace MinIO.
 21. Treat Phase 1F production and controlled-pilot readiness planning, evidence definition, and owner approval as the next decision gate. Phase 1D, Phase 1E, candidate authentication/onboarding completion, private-document remediation, and schema-drift reconciliation are merged implementation checkpoints, not pending Phase 1F implementation.
+22. Permit unused onboarding plans, including ordered initial tasks, to be edited. A plan becomes permanently immutable as soon as any onboarding assignment references it. Do not add clone, version, or supersession lifecycle in this refinement.
+23. Bind gate, policy-acknowledgement, and e-sign evidence to one exact onboarding assignment. Manual gates are limited to `background_check`, `fsra_authorization`, and `system_provisioning`; `policy_acknowledgement` and `executed_agreements` are derived-only.
+24. Require concise evidence and verifier attribution when satisfying a manual gate. Reopening requires a reason and append-oriented evidence; administrators cannot manually satisfy or reopen derived gates.
+25. Treat verified Documenso state or server-side reconciliation as authoritative. Completed envelopes satisfy executed agreements; rejected envelopes may be replaced while predecessor history remains preserved and non-satisfying.
+26. Permit the authorized brokerage administrator to publish only server-eligible agent profiles. Generate and check a readable slug through the server, permanently lock it on first publication, and keep it reserved after unpublishing.
+27. Remove `/admin/content` without replacement. Public site content remains typed and repository-controlled.
+28. Keep `activation_ready` derived-only. This refinement adds no final activation endpoint, agent-role grant, or candidate-to-agent lifecycle transition.
+29. Accept the Phase 1 source implementation, including the administrator/operator workflow refinement on `feat/admin-workflow-operator-ux`. This source acceptance does not authorize commit, push, pull request, merge, history rewriting, deployment, shared-database migration, production or controlled-pilot operation, final activation, candidate-to-agent transition, agent-role grant, credential or external-service changes, destructive operations, or legal/privacy/regulatory/claims/accessibility approval. Phase 1F readiness planning remains the next gate, and Phase 1F implementation requires separate approval of its plan, evidence requirements, owner decisions, scope, and acceptance criteria.
+30. Separately authorize the accepted `feat/admin-workflow-operator-ux` source to be committed, integrated with the current local `main` without history rewriting, fully validated, pushed, reviewed through a GitHub pull request and CI, and merged if checks pass. This authorization is limited to Git publication and does not authorize deployment, shared-database mutation, production/pilot operation, final activation, lifecycle/role grant, external-service or credential changes, destructive operations, or Phase 1F implementation.
 
 ## Initial assumptions requiring confirmation
 
@@ -33,11 +42,10 @@
 - The brokerage-wide secure application URL is approved as `https://apply.keeperfinancial.ca/`. Agent attribution support remains unknown and no agent-specific link is fabricated.
 - Preferred booking tool.
 - Preferred transactional email provider.
-- Preferred e-signature provider.
+- Exact deployed Documenso version, API compatibility, webhook names/signatures, backup/restore procedure, and production origin/certificate configuration.
 - Final retention periods.
 - Whether active-agent resources remain in this portal after onboarding.
-- Who may approve public agent profiles.
-- Whether agents may propose their own profile edits.
+- Whether agents may propose their own profile edits; administrators remain the only current approver/publisher.
 
 ## UI questions remaining after mockup implementation
 
@@ -80,3 +88,6 @@ Record approved decisions here with date, owner, rationale, and affected documen
 - 2026-07-17 — Onboarding evidence decision: an assignment is bound to the selected application and snapshots all currently issued, non-superseded controlled-document versions. Acknowledgement requires that exact assignment/version relationship. Superseded unacknowledged required versions block readiness and require a supported new assignment generation; no custom signing or final activation operation is introduced.
 - 2026-07-18 — Browser-completion decision: no onboarding assignment is a normal stable candidate state exposed through a minimal availability projection; candidate document MFA reuses the approved TOTP ceremony with an exact allow-listed application/document return; and information requests are permitted only for the exact selected `under_review` or `interview` application. Candidate-facing request messages remain bounded and separate from internal interview notes.
 - 2026-07-19 — Checkpoint reconciliation: PR #2 merged candidate authentication/onboarding completion and forward schema reconciliation to `main` at `b906027`. Migration `20260718_0007` follows `20260717_0006`; the source chain has one head and recorded `make migrate-check` evidence is clean. Optional additional browser ceremonies remain release evidence rather than source-commit blockers. Phase 1F planning, production operations, legal/privacy/regulatory/accessibility review, owner go/no-go approval, final activation, and deployment remain outstanding.
+- 2026-07-19 — Owner-approved pre-Phase-1F operator-workflow refinement: unused-plan editing and permanent usage locking; exact-assignment gate/acknowledgement/e-sign evidence; three manual and two derived gates; self-hosted Documenso with provider-authoritative refresh and replacement history; eligible-agent selection; permanent first-publication slug locking/reservation; and removal of the repository-controlled-content placeholder. Final activation, deployment, provider webhook assumptions, and production/pilot approval remain excluded.
+- 2026-07-19 — Owner acceptance decision: the Phase 1 source implementation, including the administrator/operator workflow refinement, is accepted. The refinement remains uncommitted and unmerged unless later Git evidence proves otherwise. Acceptance is confined to source and does not grant publication, deployment, shared-database migration, production/pilot operation, final activation, lifecycle/role transition, legal/privacy/regulatory/claims/accessibility approval, credential/external-service changes, or Phase 1F implementation authority. Phase 1F readiness planning is the next gate.
+- 2026-07-19 — Git publication decision: separately authorize commit of the accepted administrator/operator branch, integration of the current local `main` without history rewriting, full combined-source validation, push, GitHub pull request/CI review, and merge after successful checks. Deployment, shared-database mutation, production/pilot operation, final activation, lifecycle/role grant, external-service or credential changes, destructive operations, and Phase 1F implementation remain unauthorized.

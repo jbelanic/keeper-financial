@@ -2082,6 +2082,155 @@
         }
       }
     },
+    "/api/v1/admin/eligible-agents": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "List Eligible Agents",
+        "operationId": "list_eligible_agents_api_v1_admin_eligible_agents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EligibleAgent"
+                  },
+                  "title": "Response List Eligible Agents Api V1 Admin Eligible Agents Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-profiles/slug-availability": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Agent Slug Availability",
+        "operationId": "agent_slug_availability_api_v1_admin_agent_profiles_slug_availability_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlugAvailability"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Invalid slug"
+          }
+        }
+      }
+    },
     "/api/v1/admin/agent-profiles/{profile_id}": {
       "get": {
         "tags": [
@@ -3265,6 +3414,193 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Update Plan",
+        "operationId": "update_plan_api_v1_admin_onboarding_plans__plan_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanUpdateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanWithTasks"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Plan not found"
+          },
+          "409": {
+            "description": "Referenced plan is immutable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/plans/{plan_id}/availability": {
+      "patch": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Update Plan Availability",
+        "operationId": "update_plan_availability_api_v1_admin_onboarding_plans__plan_id__availability_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanAvailabilityIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanWithTasks"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Plan not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/onboarding/candidates/{candidate_id}/tasks/{task_id}/review": {
@@ -3373,13 +3709,13 @@
         }
       }
     },
-    "/api/v1/admin/onboarding/candidates/{candidate_id}/esign-envelopes": {
-      "post": {
+    "/api/v1/admin/onboarding/assignments": {
+      "get": {
         "tags": [
           "admin onboarding"
         ],
-        "summary": "Link Envelope",
-        "operationId": "link_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes_post",
+        "summary": "List Assignments",
+        "operationId": "list_assignments_api_v1_admin_onboarding_assignments_get",
         "security": [
           {
             "HTTPBearer": []
@@ -3387,13 +3723,179 @@
         ],
         "parameters": [
           {
-            "name": "candidate_id",
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminOnboardingAssignmentSummary"
+                  },
+                  "title": "Response List Assignments Api V1 Admin Onboarding Assignments Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/assignments/{assignment_id}": {
+      "get": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Get Assignment",
+        "operationId": "get_assignment_api_v1_admin_onboarding_assignments__assignment_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Candidate Id"
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOnboardingAssignmentDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Assignment not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/gates/{code}/satisfy": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Satisfy Activation Gate",
+        "operationId": "satisfy_activation_gate_api_v1_admin_onboarding_assignments__assignment_id__gates__code__satisfy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
             }
           },
           {
@@ -3428,20 +3930,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EsignLinkIn"
+                "$ref": "#/components/schemas/ManualGateEvidenceCreate"
               }
             }
           }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Link Envelope Api V1 Admin Onboarding Candidates  Candidate Id  Esign Envelopes Post"
+                  "$ref": "#/components/schemas/ActivationGateResponse"
                 }
               }
             }
@@ -3453,7 +3953,10 @@
             "description": "Admin denied"
           },
           "404": {
-            "description": "Candidate not found"
+            "description": "Assignment not found"
+          },
+          "409": {
+            "description": "Gate cannot be satisfied manually"
           },
           "422": {
             "description": "Validation Error",
@@ -3468,13 +3971,13 @@
         }
       }
     },
-    "/api/v1/admin/onboarding/candidates/{candidate_id}/esign-envelopes/{envelope_id}": {
-      "patch": {
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/gates/{code}/reopen": {
+      "post": {
         "tags": [
           "admin onboarding"
         ],
-        "summary": "Update Envelope",
-        "operationId": "update_envelope_api_v1_admin_onboarding_candidates__candidate_id__esign_envelopes__envelope_id__patch",
+        "summary": "Reopen Activation Gate",
+        "operationId": "reopen_activation_gate_api_v1_admin_onboarding_assignments__assignment_id__gates__code__reopen_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3482,13 +3985,214 @@
         ],
         "parameters": [
           {
-            "name": "candidate_id",
+            "name": "assignment_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Candidate Id"
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GateReopenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationGateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Assignment not found"
+          },
+          "409": {
+            "description": "Gate cannot be reopened"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Link Envelope",
+        "operationId": "link_envelope_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EsignEnvelopeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EsignEnvelopeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Assignment not found"
+          },
+          "409": {
+            "description": "Envelope cannot be linked"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/replace": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Replace Envelope",
+        "operationId": "replace_envelope_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes__envelope_id__replace_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
             }
           },
           {
@@ -3533,20 +4237,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EsignUpdateIn"
+                "$ref": "#/components/schemas/EsignEnvelopeCreate"
               }
             }
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Update Envelope Api V1 Admin Onboarding Candidates  Candidate Id  Esign Envelopes  Envelope Id  Patch"
+                  "$ref": "#/components/schemas/EsignEnvelopeResponse"
                 }
               }
             }
@@ -3558,7 +4260,10 @@
             "description": "Admin denied"
           },
           "404": {
-            "description": "Not found"
+            "description": "Assignment or envelope not found"
+          },
+          "409": {
+            "description": "Envelope cannot be replaced"
           },
           "422": {
             "description": "Validation Error",
@@ -3573,13 +4278,13 @@
         }
       }
     },
-    "/api/v1/admin/onboarding/candidates/{candidate_id}/gates": {
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh": {
       "post": {
         "tags": [
           "admin onboarding"
         ],
-        "summary": "Satisfy Activation Gate",
-        "operationId": "satisfy_activation_gate_api_v1_admin_onboarding_candidates__candidate_id__gates_post",
+        "summary": "Refresh Envelope",
+        "operationId": "refresh_envelope_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes__envelope_id__refresh_post",
         "security": [
           {
             "HTTPBearer": []
@@ -3587,13 +4292,23 @@
         ],
         "parameters": [
           {
-            "name": "candidate_id",
+            "name": "assignment_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Candidate Id"
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "envelope_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Envelope Id"
             }
           },
           {
@@ -3623,25 +4338,13 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GateSatisfyIn"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Satisfy Activation Gate Api V1 Admin Onboarding Candidates  Candidate Id  Gates Post"
+                  "$ref": "#/components/schemas/EsignEnvelopeResponse"
                 }
               }
             }
@@ -3653,10 +4356,13 @@
             "description": "Admin denied"
           },
           "404": {
-            "description": "Candidate not found"
+            "description": "Assignment or envelope not found"
           },
           "409": {
-            "description": "Unknown gate"
+            "description": "Envelope cannot be refreshed"
+          },
+          "503": {
+            "description": "Documenso unavailable or returned invalid evidence"
           },
           "422": {
             "description": "Validation Error",
@@ -4198,6 +4904,18 @@
             "format": "uuid",
             "title": "Candidate Id"
           },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
           "code": {
             "type": "string",
             "title": "Code"
@@ -4220,16 +4938,26 @@
               }
             ],
             "title": "Satisfied At"
+          },
+          "evidence_kind": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "derived"
+            ],
+            "title": "Evidence Kind"
           }
         },
         "type": "object",
         "required": [
           "id",
           "candidate_id",
+          "assignment_id",
           "code",
           "label",
           "status",
-          "satisfied_at"
+          "satisfied_at",
+          "evidence_kind"
         ],
         "title": "ActivationGateResponse"
       },
@@ -4377,6 +5105,18 @@
               }
             ],
             "title": "Published At"
+          },
+          "slug_locked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug Locked At"
           }
         },
         "additionalProperties": false,
@@ -4402,7 +5142,8 @@
           "created_at",
           "updated_at",
           "approved_at",
-          "published_at"
+          "published_at",
+          "slug_locked_at"
         ],
         "title": "AdminAgentProfile"
       },
@@ -4437,6 +5178,164 @@
           "offset"
         ],
         "title": "AdminAgentProfileList"
+      },
+      "AdminOnboardingAssignmentDetail": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "candidate_name": {
+            "type": "string",
+            "title": "Candidate Name"
+          },
+          "candidate_email": {
+            "type": "string",
+            "title": "Candidate Email"
+          },
+          "opportunity_title": {
+            "type": "string",
+            "title": "Opportunity Title"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number"
+          },
+          "plan_name": {
+            "type": "string",
+            "title": "Plan Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingAssignmentStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "activation_ready": {
+            "type": "boolean",
+            "title": "Activation Ready"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOnboardingTaskResponse"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/ActivationGateResponse"
+            },
+            "type": "array",
+            "title": "Gates"
+          },
+          "esign_envelopes": {
+            "items": {
+              "$ref": "#/components/schemas/EsignEnvelopeResponse"
+            },
+            "type": "array",
+            "title": "Esign Envelopes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assignment_id",
+          "candidate_id",
+          "application_id",
+          "candidate_name",
+          "candidate_email",
+          "opportunity_title",
+          "attempt_number",
+          "plan_name",
+          "status",
+          "created_at",
+          "activation_ready",
+          "tasks",
+          "gates",
+          "esign_envelopes"
+        ],
+        "title": "AdminOnboardingAssignmentDetail"
+      },
+      "AdminOnboardingAssignmentSummary": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "candidate_name": {
+            "type": "string",
+            "title": "Candidate Name"
+          },
+          "candidate_email": {
+            "type": "string",
+            "title": "Candidate Email"
+          },
+          "opportunity_title": {
+            "type": "string",
+            "title": "Opportunity Title"
+          },
+          "attempt_number": {
+            "type": "integer",
+            "title": "Attempt Number"
+          },
+          "plan_name": {
+            "type": "string",
+            "title": "Plan Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingAssignmentStatus"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "activation_ready": {
+            "type": "boolean",
+            "title": "Activation Ready"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assignment_id",
+          "candidate_id",
+          "application_id",
+          "candidate_name",
+          "candidate_email",
+          "opportunity_title",
+          "attempt_number",
+          "plan_name",
+          "status",
+          "created_at",
+          "activation_ready"
+        ],
+        "title": "AdminOnboardingAssignmentSummary"
       },
       "AdminPosting": {
         "properties": {
@@ -5934,6 +6833,10 @@
             "format": "uuid",
             "title": "Onboarding Task Id"
           },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
           "status": {
             "$ref": "#/components/schemas/OnboardingTaskStatus"
           },
@@ -6026,6 +6929,7 @@
           "candidate_id",
           "assignment_id",
           "onboarding_task_id",
+          "title",
           "status",
           "due_at",
           "completed_at",
@@ -6536,6 +7440,31 @@
         ],
         "title": "EducationEntryResponse"
       },
+      "EligibleAgent": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "display_name",
+          "email"
+        ],
+        "title": "EligibleAgent"
+      },
       "EmploymentEntryInput": {
         "properties": {
           "employer_name": {
@@ -6652,6 +7581,22 @@
         ],
         "title": "EmploymentEntryResponse"
       },
+      "EsignEnvelopeCreate": {
+        "properties": {
+          "provider_envelope_id": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Provider Envelope Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider_envelope_id"
+        ],
+        "title": "EsignEnvelopeCreate"
+      },
       "EsignEnvelopeResponse": {
         "properties": {
           "id": {
@@ -6664,6 +7609,18 @@
             "format": "uuid",
             "title": "Candidate Id"
           },
+          "assignment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignment Id"
+          },
           "document_version_id": {
             "anyOf": [
               {
@@ -6675,6 +7632,10 @@
               }
             ],
             "title": "Document Version Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
           },
           "status": {
             "$ref": "#/components/schemas/EsignEnvelopeStatus"
@@ -6700,6 +7661,42 @@
               }
             ],
             "title": "Envelope Url"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "superseded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded At"
+          },
+          "replacement_envelope_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Envelope Id"
           },
           "created_at": {
             "type": "string",
@@ -6716,10 +7713,15 @@
         "required": [
           "id",
           "candidate_id",
+          "assignment_id",
           "document_version_id",
+          "provider",
           "status",
           "envelope_id",
           "envelope_url",
+          "last_synced_at",
+          "superseded_at",
+          "replacement_envelope_id",
           "created_at",
           "updated_at"
         ],
@@ -6731,106 +7733,26 @@
           "sent",
           "viewed",
           "completed",
+          "rejected",
           "voided"
         ],
         "title": "EsignEnvelopeStatus"
       },
-      "EsignLinkIn": {
+      "GateReopenRequest": {
         "properties": {
-          "envelope_url": {
+          "reason": {
             "type": "string",
-            "maxLength": 2048,
+            "maxLength": 500,
             "minLength": 1,
-            "title": "Envelope Url"
-          },
-          "envelope_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Envelope Id"
-          },
-          "document_version_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Version Id"
-          },
-          "status": {
-            "$ref": "#/components/schemas/EsignEnvelopeStatus"
+            "title": "Reason"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "envelope_url",
-          "status"
+          "reason"
         ],
-        "title": "EsignLinkIn"
-      },
-      "EsignUpdateIn": {
-        "properties": {
-          "envelope_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Envelope Id"
-          },
-          "envelope_url": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2048
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Envelope Url"
-          },
-          "status": {
-            "$ref": "#/components/schemas/EsignEnvelopeStatus"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "EsignUpdateIn"
-      },
-      "GateSatisfyIn": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Code"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "code"
-        ],
-        "title": "GateSatisfyIn"
+        "title": "GateReopenRequest"
       },
       "GateStatus": {
         "type": "string",
@@ -7283,6 +8205,35 @@
         ],
         "title": "LeadListResponse"
       },
+      "ManualGateEvidenceCreate": {
+        "properties": {
+          "verified_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Verified On"
+          },
+          "evidence_source": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Evidence Source"
+          },
+          "evidence_reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Evidence Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "verified_on",
+          "evidence_source",
+          "evidence_reference"
+        ],
+        "title": "ManualGateEvidenceCreate"
+      },
       "OnboardingAssignmentResponse": {
         "properties": {
           "id": {
@@ -7365,6 +8316,39 @@
         ],
         "title": "OnboardingAssignmentStatus"
       },
+      "OnboardingTaskCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "is_required": {
+            "type": "boolean",
+            "title": "Is Required",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "OnboardingTaskCreate"
+      },
       "OnboardingTaskResponse": {
         "properties": {
           "id": {
@@ -7416,6 +8400,20 @@
         ],
         "title": "OnboardingTaskStatus"
       },
+      "PlanAvailabilityIn": {
+        "properties": {
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "is_active"
+        ],
+        "title": "PlanAvailabilityIn"
+      },
       "PlanCreateIn": {
         "properties": {
           "name": {
@@ -7425,14 +8423,20 @@
             "title": "Name"
           },
           "description": {
-            "type": "string",
-            "maxLength": 1000,
-            "title": "Description",
-            "default": ""
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "tasks": {
             "items": {
-              "$ref": "#/components/schemas/TaskTemplateIn"
+              "$ref": "#/components/schemas/OnboardingTaskCreate"
             },
             "type": "array",
             "maxItems": 100,
@@ -7464,6 +8468,10 @@
           "is_active": {
             "type": "boolean",
             "title": "Is Active"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
           }
         },
         "type": "object",
@@ -7471,9 +8479,46 @@
           "id",
           "name",
           "description",
-          "is_active"
+          "is_active",
+          "is_locked"
         ],
         "title": "PlanSummary"
+      },
+      "PlanUpdateIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingTaskCreate"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Tasks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PlanUpdateIn"
       },
       "PlanWithTasks": {
         "properties": {
@@ -7493,6 +8538,10 @@
           "is_active": {
             "type": "boolean",
             "title": "Is Active"
+          },
+          "is_locked": {
+            "type": "boolean",
+            "title": "Is Locked"
           },
           "tasks": {
             "items": {
@@ -7518,6 +8567,7 @@
           "name",
           "description",
           "is_active",
+          "is_locked",
           "created_at",
           "updated_at"
         ],
@@ -7998,6 +9048,25 @@
         ],
         "title": "PublicPostingSummary"
       },
+      "SlugAvailability": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "available"
+        ],
+        "title": "SlugAvailability"
+      },
       "TaskEvidenceIn": {
         "properties": {
           "evidence": {
@@ -8039,33 +9108,6 @@
           "approved"
         ],
         "title": "TaskReviewIn"
-      },
-      "TaskTemplateIn": {
-        "properties": {
-          "title": {
-            "type": "string",
-            "maxLength": 160,
-            "minLength": 1,
-            "title": "Title"
-          },
-          "instructions": {
-            "type": "string",
-            "maxLength": 2000,
-            "title": "Instructions",
-            "default": ""
-          },
-          "is_required": {
-            "type": "boolean",
-            "title": "Is Required",
-            "default": true
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "title"
-        ],
-        "title": "TaskTemplateIn"
       },
       "ValidationError": {
         "properties": {

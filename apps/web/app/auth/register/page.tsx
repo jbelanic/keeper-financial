@@ -33,10 +33,10 @@ export default async function CandidateRegistrationPage({
       </Link>
       <header className="foundation-header">
         <p className="eyebrow">Candidate account</p>
-        <h1>Create your candidate account</h1>
+        <h1>Create an account to apply</h1>
         <p>
-          Verify your email before Keeper Financial creates narrowly scoped
-          local access for the selected published posting.
+          Create an account for this opportunity. After you confirm your email
+          address, you can continue to the application.
         </p>
       </header>
       <Card>
@@ -51,9 +51,13 @@ export default async function CandidateRegistrationPage({
               <Link
                 href={`/auth/sign-in?posting=${encodeURIComponent(publishedPosting.slug)}`}
               >
-                Sign in and continue this application
+                Sign in to continue this application
               </Link>
               .
+            </p>
+            <p>
+              <Link href="/privacy">Read the candidate privacy disclosure</Link>{" "}
+              before submitting your application.
             </p>
           </>
         ) : (

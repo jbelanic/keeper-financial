@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     mortgage_application_allowed_hosts: str = ""
     mortgage_application_agent_links: dict[str, str] = Field(default_factory=dict)
     esign_provider: str = "disabled"
+    documenso_api_base_url: str | None = None
+    documenso_public_base_url: str | None = None
+    documenso_api_token: SecretStr | None = None
+    documenso_timeout_seconds: float = Field(default=5.0, gt=0, le=15)
     crm_provider: str = "disabled"
 
     @field_validator("mortgage_application_agent_links", mode="before")
@@ -216,6 +220,40 @@ class Settings(BaseSettings):
             if not all(s3_values):
                 raise ValueError(
                     "S3 storage requires internal/public endpoints, credentials, and a private bucket"
+                )
+        if self.esign_provider == "documenso":
+            if not all(
+                [
+                    self.documenso_api_base_url,
+                    self.documenso_public_base_url,
+                    self.documenso_api_token,
+                ]
+            ):
+                raise ValueError("Documenso requires API/public URLs and an API token")
+            api = urlparse(self.documenso_api_base_url or "")
+            public = urlparse(self.documenso_public_base_url or "")
+            if (
+                api.scheme != "https"
+                or not api.hostname
+                or api.username
+                or api.password
+                or api.query
+                or api.fragment
+                or api.path.rstrip("/") != "/api/v2"
+            ):
+                raise ValueError("Documenso API URL must be an exact HTTPS /api/v2 origin")
+            if (
+                public.scheme != "https"
+                or public.hostname != "sign.keeperfinancial.ca"
+                or public.port not in {None, 443}
+                or public.username
+                or public.password
+                or public.query
+                or public.fragment
+                or public.path not in {"", "/"}
+            ):
+                raise ValueError(
+                    "Documenso public URL must be exactly https://sign.keeperfinancial.ca"
                 )
         return self
 

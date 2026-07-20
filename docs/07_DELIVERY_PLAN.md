@@ -88,9 +88,22 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Forward migration `20260718_0007` resolves the bounded Phase 1D SQLAlchemy/Alembic drift without rewriting issued migrations.
 - The source chain has one head and the recorded post-migration `make migrate-check` result is clean.
 
+## Accepted pre-Phase-1F operator-workflow refinement
+
+- **Phase 1 source implementation is owner-accepted and committed at `17e1b43` on `feat/admin-workflow-operator-ux`; the publication candidate integrates local `main` content commit `07895c2` without history rewriting.**
+- Administrators select exact applications and active plans by human-readable context rather than normal-operation UUID entry.
+- Unused plans support ordered task authoring/editing and become immutable on first assignment.
+- Manual gate evidence, policy acknowledgements, and e-sign envelopes are exact-assignment records. Only background check, FSRA authorization, and system provisioning are manual; policy acknowledgement and executed agreements are derived.
+- Self-hosted Documenso envelope status is refreshed server-side through a fixed-origin, no-redirect adapter. Rejected envelope replacement preserves predecessor history.
+- Eligible agents are selected by human-readable identity; readable slug availability is server checked; first publication permanently locks and reserves the slug.
+- The nonfunctional content-administration placeholder is removed; repository-controlled content remains authoritative.
+- Forward migration `20260719_0008`, generated contracts, focused API/web tests, and isolated PostgreSQL upgrade/check/downgrade/re-upgrade evidence accompany the accepted source state.
+- Source acceptance does not authorize commit, push, pull request, merge, history rewriting, deployment, shared-database migration, production/pilot operation, final activation, lifecycle/role transition, credential/external-service changes, or legal/privacy/regulatory/claims/accessibility approval.
+
 ## Phase 1F — Production readiness
 
-- **Next gate: production and controlled-pilot readiness planning, evidence definition, and owner approval.**
+- **Next gate: production and controlled-pilot readiness planning, evidence definition, and owner approval.** The draft is `docs/26_PHASE_1F_PRODUCTION_AND_CONTROLLED_PILOT_READINESS_PLAN.md` and remains unapproved for execution.
+- Phase 1F implementation remains prohibited until its plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
 - Threat model closure.
 - Privacy, legal, regulatory, claims, consent, complaints, and accessibility review.
 - Production Supabase Auth and transactional-email configuration, including invitation, recovery, refresh-token revocation, and offboarding exercises.
@@ -100,9 +113,19 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - MinIO bucket/persistence/retention controls and ClamAV signature freshness, monitoring, alerting, and failure exercises.
 - Firewall, service binding, network exposure, Linux Mint host hardening, logging/PII safety, monitoring, and synthetic checks.
 - Incident escalation, stop criteria, rollback, and return-to-service procedures.
-- Migration/rollback/restore operating boundaries that preserve the resolved `0007` chain.
+- Migration/rollback/restore operating boundaries that preserve the accepted source chain through `20260719_0008`; applying it to any shared or live database remains separately prohibited pending approval.
 - Pilot roster, eligibility, support ownership, evidence documents, go/no-go criteria, and owner launch approval.
-- Separately approved final activation operation and production deployment.
+- Production deployment requires separate approval. Final activation, candidate-to-agent transition, and agent-role grant remain deferred outside Phase 1F and are not authorized readiness operations.
+
+## Phase 1G — Approved public/candidate copy (bounded content)
+
+- **The owner-approved content implementation is commit `07895c2` from `content/approved-copy-C01-C17`; it is integrated with the administrator/operator publication candidate. Verify Git for current remote-merge state.**
+- Applied the owner-approved exact public, auth, candidate, and onboarding copy register (C-01–C-17) plus the G renames/removals/internal-text strips.
+- Public site (C-01–C-11), `/apply` handoff and unavailable states (C-12), auth/register/sign-in/MFA plain-language copy (C-13), candidate status/list/application instruction/withdrawal (C-14–C-15), and onboarding renames (C-16).
+- Stale routes removed: `/admin/content` and the standalone `/candidate/documents`; `ConfirmationDialog` gained optional `confirmLabel`/`cancelLabel`.
+- Unresolved `[FW-00x]` factual placeholders omitted/hidden; regulator label left as `FSCO # 13696`; brokerage legal name/address/phone/email taken only from existing config.
+- Blocked (DRAFT, separate owner/legal/privacy/regulatory/accessibility approval required): legal/policy pages D-01–D-06, the `/terms` route/link, marketing/privacy-consent version strings, and candidate-disclosure version. External e-signature validity (C-16D) and password-recovery links hidden.
+- Remaining dependencies before any publication: FW-001–FW-030 facts (brokerage identity, regulator/licence, principal broker, contact confirmation, agent evidence, opportunity content, compensation, consent/disclosure versions, retention, providers/subprocessors, complaints regulator, accessibility process) and completed D-01–D-06 professional review.
 
 ## 30/60/90/180-day interpretation
 

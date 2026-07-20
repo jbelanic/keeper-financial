@@ -77,7 +77,7 @@ Preferred foundation:
 - Live/production runtime: Docker Compose on the local Linux host. The local containers are the deployment targets.
 - Infrastructure boundary: no hosted Supabase, Cloudflare R2, or external cloud infrastructure keys/services.
 - Email: transactional provider selected later.
-- E-signature: established provider selected later; no custom signature system.
+- E-signature: self-hosted Documenso behind a configured server-side adapter; no custom signature system. Provider status refresh is authoritative, uses one configured API origin, rejects redirects, and fails closed.
 
 ## 7. Authorization rule
 
@@ -124,7 +124,7 @@ It must not claim that:
 
 ## 10. Current implementation checkpoint
 
-The current source checkpoint is merged to `main` at merge commit `b906027`. It includes:
+The owner-accepted Phase 1 publication candidate combines administrator/operator commit `17e1b43` with local `main` content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027` and:
 
 - Phase 1D review/onboarding and Phase 1E agent-profile/local-topology baselines.
 - Posting-bound candidate provisioning while generic sign-in remains non-provisioning.
@@ -134,7 +134,15 @@ The current source checkpoint is merged to `main` at merge commit `b906027`. It 
 
 Supabase identity alone grants no application access. `activation_ready` is a calculation and does not perform final activation; no final activation operation is currently implemented.
 
-Phase 1F production and controlled-pilot readiness planning is the next gate. Production deployment, operational evidence, privacy/legal/regulatory/claims/accessibility review, owner decisions, pilot go/no-go approval, and final activation remain outstanding. Optional owner-operated administrator and second-candidate browser ceremonies may add release assurance, but they are not uncommitted source-completion blockers and do not by themselves grant production approval.
+The owner has explicitly accepted the Phase 1 source implementation, including the operator-workflow refinement committed at `17e1b43` on `feat/admin-workflow-operator-ux`. That refinement adds editable unused onboarding plans with ordered task authoring; permanent plan immutability after first assignment; exact-assignment manual gate, policy-acknowledgement, and e-sign evidence; Documenso-authoritative status refresh and replacement history; operator-facing exact-application and eligible-agent selectors; permanent published-slug reservation; removal of the nonfunctional `/admin/content` placeholder; and candidate Alembic head `20260719_0008`.
+
+Source acceptance is not production, controlled-pilot, deployment, final-activation, legal, privacy, regulatory, claims, or accessibility approval. It does not authorize commit, push, pull request, merge, history rewriting, a candidate-to-agent transition, an agent-role grant, shared-database migration, credential or external-service changes, or destructive operations.
+
+The owner subsequently authorized only the Git publication workflow for this accepted source: commit the dedicated branch, integrate the current local `main` without rewriting history, validate the combined source, push it, open and review a GitHub pull request, and merge after successful checks. This separate authorization does not grant deployment, shared-database mutation, production/pilot operation, final activation, lifecycle/role grant, external-service or credential changes, destructive operations, or Phase 1F implementation.
+
+Phase 1F production and controlled-pilot readiness planning is the next gate. The draft plan is `docs/26_PHASE_1F_PRODUCTION_AND_CONTROLLED_PILOT_READINESS_PLAN.md`; its evidence requirements, owner decisions, scope, and acceptance criteria must be approved before Phase 1F implementation. Production deployment, operational evidence, privacy/legal/regulatory/claims/accessibility review, and pilot go/no-go approval remain outstanding. Final activation, candidate-to-agent transition, and agent-role grant remain separately deferred outside Phase 1F. The draft plan's genuine authenticated administrator/operator browser ceremonies are operational evidence blockers for pilot and production, not source-completion blockers, and do not by themselves grant either approval.
+
+A bounded approved-content branch `content/approved-copy-C01-C17` (from `3331519`) applies the exact owner-approved C-01–C-17 public/auth/candidate/onboarding copy and G renames/removals, omitting unresolved `[FW-00x]` placeholders and blocking legal/policy pages D-01–D-06, `/terms`, and consent/disclosure versions (still DRAFT). See `docs/07_DELIVERY_PLAN.md` (Phase 1G).
 
 ## 11. Phase 1 release condition
 

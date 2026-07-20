@@ -118,12 +118,17 @@ The API or server-rendered route validates redirects. Never allow arbitrary quer
 
 ## E-signature
 
-Use an adapter boundary. Initial supported modes may be:
+Use the server-side adapter boundary. The selected provider is self-hosted
+Documenso or `disabled`. The adapter accepts one configured API base URL and
+token, constructs only the exact allow-listed envelope-status URL, rejects
+redirects, bounds response size and timeout, verifies the returned envelope ID,
+and accepts only deployed-version-confirmed statuses. Provider or network
+ambiguity fails closed and never marks an agreement complete.
 
-- `external_manual`
-- `docusign`
-- `adobe_sign`
-- `disabled`
+Envelope records belong to one exact onboarding assignment. Replacement creates
+a new current envelope and retains the rejected predecessor as non-satisfying
+history. Webhooks are not implemented until the deployed Documenso version's
+exact event names and signature scheme are separately confirmed.
 
 Do not represent a typed name or checkbox as a legal electronic signature unless approved requirements and legal review support that use.
 

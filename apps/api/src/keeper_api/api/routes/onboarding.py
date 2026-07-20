@@ -4,30 +4,53 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
-from keeper_api.models.domain import CandidateEsignEnvelope, CandidateOnboardingTask
-from keeper_api.models.statuses import EsignEnvelopeStatus
+from keeper_api.models.domain import (
+    CandidateApplication,
+    CandidateEsignEnvelope,
+    CandidateOnboardingAssignment,
+    CandidateOnboardingTask,
+    OnboardingPlan,
+    OnboardingTask,
+)
 from keeper_api.schemas.review_onboarding import (
+    ActivationGateResponse,
+    AdminOnboardingAssignmentDetail,
+    AdminOnboardingAssignmentSummary,
     CandidateOnboardingTaskResponse,
     ControlledDocumentResponse,
     DocumentVersionResponse,
+    EsignEnvelopeCreate,
+    EsignEnvelopeResponse,
+    GateReopenRequest,
+    ManualGateEvidenceCreate,
+    OnboardingPlanCreate,
     OnboardingTaskResponse,
     PlanSummary,
     PlanWithTasks,
 )
 from keeper_api.services.auth import Principal, require_admin
+from keeper_api.services.documenso import DocumensoError
 from keeper_api.services.onboarding import (
+    DERIVED_GATE_CODES,
     OnboardingError,
+    activation_ready,
+    candidate_esign_envelopes,
+    candidate_gates,
+    get_candidate_tasks,
     link_esign_envelope,
     list_controlled_documents,
+    refresh_esign_envelope,
+    reopen_gate,
+    replace_esign_envelope,
     review_task,
     satisfy_gate,
-    update_esign_envelope,
-)
-from keeper_api.services.review import (
-    get_review_candidate,
+    set_onboarding_plan_active,
+    update_onboarding_plan,
 )
 
 router = APIRouter(prefix="/admin/onboarding", tags=["admin onboarding"])
@@ -40,41 +63,31 @@ class TaskReviewIn(BaseModel):
     review_notes: str | None = Field(default=None, max_length=1000)
 
 
-class EsignLinkIn(BaseModel):
+class PlanAvailabilityIn(BaseModel):
     model_config = {"extra": "forbid"}
-    envelope_url: str = Field(min_length=1, max_length=2048)
-    envelope_id: str | None = Field(default=None, max_length=255)
-    document_version_id: uuid.UUID | None = None
-    status: EsignEnvelopeStatus
+    is_active: bool
 
 
-class EsignUpdateIn(BaseModel):
-    model_config = {"extra": "forbid"}
-    envelope_id: str | None = Field(default=None, max_length=255)
-    envelope_url: str | None = Field(default=None, max_length=2048)
-    status: EsignEnvelopeStatus
+class PlanCreateIn(OnboardingPlanCreate):
+    pass
 
 
-class GateSatisfyIn(BaseModel):
-    model_config = {"extra": "forbid"}
-    code: str = Field(min_length=1, max_length=64)
+class PlanUpdateIn(PlanCreateIn):
+    pass
 
 
-class TaskTemplateIn(BaseModel):
-    model_config = {"extra": "forbid"}
-    title: str = Field(min_length=1, max_length=160)
-    instructions: str = Field(default="", max_length=2000)
-    is_required: bool = True
+def _plan_is_locked(db: Session, plan_id: uuid.UUID) -> bool:
+    return (
+        db.scalar(
+            select(CandidateOnboardingAssignment.id)
+            .where(CandidateOnboardingAssignment.onboarding_plan_id == plan_id)
+            .limit(1)
+        )
+        is not None
+    )
 
 
-class PlanCreateIn(BaseModel):
-    model_config = {"extra": "forbid"}
-    name: str = Field(min_length=1, max_length=160)
-    description: str = Field(default="", max_length=1000)
-    tasks: list[TaskTemplateIn] = Field(default_factory=list, max_length=100)
-
-
-def _plan_out(plan: object) -> PlanWithTasks:
+def _plan_out(db: Session, plan: object) -> PlanWithTasks:
     from keeper_api.models.domain import OnboardingPlan as Plan
 
     assert isinstance(plan, Plan)
@@ -84,6 +97,7 @@ def _plan_out(plan: object) -> PlanWithTasks:
         name=plan.name,
         description=plan.description,
         is_active=plan.is_active,
+        is_locked=_plan_is_locked(db, plan.id),
         tasks=[
             OnboardingTaskResponse(
                 id=t.id,
@@ -97,6 +111,70 @@ def _plan_out(plan: object) -> PlanWithTasks:
         ],
         created_at=plan.created_at,
         updated_at=plan.updated_at,
+    )
+
+
+def _gate_out(gate: object) -> ActivationGateResponse:
+    from keeper_api.models.domain import ProgrammaticGate
+
+    assert isinstance(gate, ProgrammaticGate)
+    return ActivationGateResponse(
+        id=gate.id,
+        candidate_id=gate.candidate_id,
+        assignment_id=gate.assignment_id,
+        code=gate.code,
+        label=gate.label,
+        status=gate.status,
+        satisfied_at=gate.satisfied_at,
+        evidence_kind="derived" if gate.code in DERIVED_GATE_CODES else "manual",
+    )
+
+
+def _assignment_row(
+    db: Session, assignment_id: uuid.UUID
+) -> tuple[CandidateOnboardingAssignment, CandidateApplication, OnboardingPlan]:
+    row = db.execute(
+        select(CandidateOnboardingAssignment, CandidateApplication, OnboardingPlan)
+        .join(
+            CandidateApplication,
+            CandidateApplication.id == CandidateOnboardingAssignment.application_id,
+        )
+        .join(
+            OnboardingPlan,
+            OnboardingPlan.id == CandidateOnboardingAssignment.onboarding_plan_id,
+        )
+        .where(CandidateOnboardingAssignment.id == assignment_id)
+    ).one_or_none()
+    if row is None:
+        raise LookupError("onboarding assignment not found")
+    return row.tuple()
+
+
+def _assignment_summary(
+    db: Session,
+    assignment: CandidateOnboardingAssignment,
+    application: CandidateApplication,
+    plan: OnboardingPlan,
+) -> AdminOnboardingAssignmentSummary:
+    name = " ".join(
+        item for item in (application.given_name, application.family_name) if item
+    ).strip()
+    return AdminOnboardingAssignmentSummary(
+        assignment_id=assignment.id,
+        candidate_id=assignment.candidate_id,
+        application_id=application.id,
+        candidate_name=name or application.email,
+        candidate_email=application.email,
+        opportunity_title=application.source_posting_title,
+        attempt_number=application.attempt_number,
+        plan_name=plan.name,
+        status=assignment.status,
+        created_at=assignment.created_at,
+        activation_ready=activation_ready(
+            db,
+            candidate_id=assignment.candidate_id,
+            assignment_id=assignment.id,
+        ),
     )
 
 
@@ -117,11 +195,12 @@ def create_plan(
     db: Session = Depends(get_db),
 ) -> PlanWithTasks:
     response.headers.update(NO_STORE)
-    from keeper_api.models.domain import OnboardingTask
-
     task_objs = [
         OnboardingTask(
-            title=t.title, instructions=t.instructions, is_required=t.is_required, sequence=i + 1
+            title=t.title,
+            instructions=t.instructions or "",
+            is_required=t.is_required,
+            sequence=i + 1,
         )
         for i, t in enumerate(payload.tasks)
     ]
@@ -135,7 +214,7 @@ def create_plan(
         actor_user_id=principal.user_id,
         request_id=request.state.request_id,
     )
-    return _plan_out(plan)
+    return _plan_out(db, plan)
 
 
 @router.get(
@@ -156,10 +235,25 @@ def list_plans(
     response.headers.update(NO_STORE)
     from keeper_api.services.onboarding import list_onboarding_plans
 
-    plans, _ = list_onboarding_plans(db, limit=limit, offset=offset)
+    plans, _ = list_onboarding_plans(db, active_only=False, limit=limit, offset=offset)
+    locked_plan_ids = set(
+        db.scalars(
+            select(CandidateOnboardingAssignment.onboarding_plan_id)
+            .where(
+                CandidateOnboardingAssignment.onboarding_plan_id.in_([plan.id for plan in plans])
+            )
+            .distinct()
+        ).all()
+    )
     return [
-        PlanSummary(id=p.id, name=p.name, description=p.description, is_active=p.is_active)
-        for p in plans
+        PlanSummary(
+            id=plan.id,
+            name=plan.name,
+            description=plan.description,
+            is_active=plan.is_active,
+            is_locked=plan.id in locked_plan_ids,
+        )
+        for plan in plans
     ]
 
 
@@ -185,7 +279,86 @@ def get_plan(
         plan = get_onboarding_plan(db, plan_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="plan not found") from exc
-    return _plan_out(plan)
+    return _plan_out(db, plan)
+
+
+@router.patch(
+    "/plans/{plan_id}",
+    response_model=PlanWithTasks,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Plan not found"},
+        409: {"description": "Referenced plan is immutable"},
+    },
+)
+def update_plan(
+    plan_id: uuid.UUID,
+    payload: PlanUpdateIn,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PlanWithTasks:
+    response.headers.update(NO_STORE)
+    tasks = [
+        OnboardingTask(
+            title=task.title,
+            instructions=task.instructions or "",
+            is_required=task.is_required,
+            sequence=position,
+        )
+        for position, task in enumerate(payload.tasks, start=1)
+    ]
+    try:
+        plan = update_onboarding_plan(
+            db,
+            plan_id=plan_id,
+            name=payload.name,
+            description=payload.description,
+            tasks=tasks,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="plan not found") from exc
+    except OnboardingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _plan_out(db, plan)
+
+
+@router.patch(
+    "/plans/{plan_id}/availability",
+    response_model=PlanWithTasks,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Plan not found"},
+    },
+)
+def update_plan_availability(
+    plan_id: uuid.UUID,
+    payload: PlanAvailabilityIn,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> PlanWithTasks:
+    response.headers.update(NO_STORE)
+    plan = db.get(OnboardingPlan, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="plan not found")
+    try:
+        plan = set_onboarding_plan_active(
+            db,
+            plan=plan,
+            is_active=payload.is_active,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except OnboardingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _plan_out(db, plan)
 
 
 @router.post(
@@ -225,111 +398,276 @@ def review_candidate_task(
     return CandidateOnboardingTaskResponse.model_validate(task, from_attributes=True)
 
 
-@router.post(
-    "/candidates/{candidate_id}/esign-envelopes",
-    status_code=status.HTTP_201_CREATED,
+@router.get(
+    "/assignments",
+    response_model=list[AdminOnboardingAssignmentSummary],
     responses={
         401: {"description": "Authentication required"},
         403: {"description": "Admin denied"},
-        404: {"description": "Candidate not found"},
     },
 )
-def link_envelope(
-    candidate_id: uuid.UUID,
-    payload: EsignLinkIn,
-    request: Request,
+def list_assignments(
     response: Response,
-    principal: Principal = Depends(require_admin),
+    _principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> dict[str, object]:
+) -> list[AdminOnboardingAssignmentSummary]:
+    response.headers.update(NO_STORE)
+    rows = db.execute(
+        select(CandidateOnboardingAssignment, CandidateApplication, OnboardingPlan)
+        .join(
+            CandidateApplication,
+            CandidateApplication.id == CandidateOnboardingAssignment.application_id,
+        )
+        .join(
+            OnboardingPlan,
+            OnboardingPlan.id == CandidateOnboardingAssignment.onboarding_plan_id,
+        )
+        .order_by(
+            CandidateOnboardingAssignment.created_at.desc(),
+            CandidateOnboardingAssignment.id.desc(),
+        )
+        .limit(100)
+    ).all()
+    return [
+        _assignment_summary(db, assignment, application, plan)
+        for assignment, application, plan in rows
+    ]
+
+
+@router.get(
+    "/assignments/{assignment_id}",
+    response_model=AdminOnboardingAssignmentDetail,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Assignment not found"},
+    },
+)
+def get_assignment(
+    assignment_id: uuid.UUID,
+    response: Response,
+    _principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminOnboardingAssignmentDetail:
     response.headers.update(NO_STORE)
     try:
-        candidate = get_review_candidate(db, candidate_id)
+        assignment, application, plan = _assignment_row(db, assignment_id)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail="candidate not found") from exc
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    envelope = link_esign_envelope(
-        db,
-        candidate=candidate,
-        envelope_id=payload.envelope_id,
-        envelope_url=payload.envelope_url,
-        document_version_id=payload.document_version_id,
-        status=payload.status,
-        actor_user_id=principal.user_id,
-        request_id=request.state.request_id,
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    summary = _assignment_summary(db, assignment, application, plan)
+    return AdminOnboardingAssignmentDetail(
+        **summary.model_dump(),
+        tasks=[
+            CandidateOnboardingTaskResponse.model_validate(task, from_attributes=True)
+            for task in get_candidate_tasks(
+                db, candidate_id=assignment.candidate_id, assignment_id=assignment.id
+            )
+        ],
+        gates=[
+            _gate_out(gate)
+            for gate in candidate_gates(
+                db, candidate_id=assignment.candidate_id, assignment_id=assignment.id
+            )
+        ],
+        esign_envelopes=[
+            EsignEnvelopeResponse.model_validate(envelope, from_attributes=True)
+            for envelope in candidate_esign_envelopes(
+                db, candidate_id=assignment.candidate_id, assignment_id=assignment.id
+            )
+        ],
     )
-    return {"envelope_id": str(envelope.id), "status": envelope.status}
-
-
-@router.patch(
-    "/candidates/{candidate_id}/esign-envelopes/{envelope_id}",
-    responses={
-        401: {"description": "Authentication required"},
-        403: {"description": "Admin denied"},
-        404: {"description": "Not found"},
-    },
-)
-def update_envelope(
-    candidate_id: uuid.UUID,
-    envelope_id: uuid.UUID,
-    payload: EsignUpdateIn,
-    request: Request,
-    response: Response,
-    principal: Principal = Depends(require_admin),
-    db: Session = Depends(get_db),
-) -> dict[str, object]:
-    response.headers.update(NO_STORE)
-    envelope = db.get(CandidateEsignEnvelope, envelope_id)
-    if envelope is None or envelope.candidate_id != candidate_id:
-        raise HTTPException(status_code=404, detail="envelope not found")
-    update_esign_envelope(
-        db,
-        envelope=envelope,
-        envelope_id=payload.envelope_id,
-        envelope_url=payload.envelope_url,
-        status=payload.status,
-        actor_user_id=principal.user_id,
-        request_id=request.state.request_id,
-    )
-    return {"envelope_id": str(envelope.id), "status": envelope.status}
 
 
 @router.post(
-    "/candidates/{candidate_id}/gates",
+    "/assignments/{assignment_id}/gates/{code}/satisfy",
+    response_model=ActivationGateResponse,
     responses={
         401: {"description": "Authentication required"},
         403: {"description": "Admin denied"},
-        404: {"description": "Candidate not found"},
-        409: {"description": "Unknown gate"},
+        404: {"description": "Assignment not found"},
+        409: {"description": "Gate cannot be satisfied manually"},
     },
 )
 def satisfy_activation_gate(
-    candidate_id: uuid.UUID,
-    payload: GateSatisfyIn,
+    assignment_id: uuid.UUID,
+    code: str,
+    payload: ManualGateEvidenceCreate,
     request: Request,
     response: Response,
     principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
-) -> dict[str, object]:
+) -> ActivationGateResponse:
     response.headers.update(NO_STORE)
-    try:
-        candidate = get_review_candidate(db, candidate_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail="candidate not found") from exc
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="onboarding assignment not found")
     try:
         gate = satisfy_gate(
             db,
-            candidate=candidate,
-            code=payload.code,
+            assignment=assignment,
+            code=code,
+            verified_on=payload.verified_on,
+            evidence_source=payload.evidence_source,
+            evidence_reference=payload.evidence_reference,
             actor_user_id=principal.user_id,
             request_id=request.state.request_id,
         )
     except OnboardingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"candidate_id": str(candidate.id), "code": gate.code, "status": gate.status}
+    return _gate_out(gate)
+
+
+@router.post(
+    "/assignments/{assignment_id}/gates/{code}/reopen",
+    response_model=ActivationGateResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Assignment not found"},
+        409: {"description": "Gate cannot be reopened"},
+    },
+)
+def reopen_activation_gate(
+    assignment_id: uuid.UUID,
+    code: str,
+    payload: GateReopenRequest,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> ActivationGateResponse:
+    response.headers.update(NO_STORE)
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="onboarding assignment not found")
+    try:
+        gate = reopen_gate(
+            db,
+            assignment=assignment,
+            code=code,
+            reason=payload.reason,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except OnboardingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _gate_out(gate)
+
+
+@router.post(
+    "/assignments/{assignment_id}/esign-envelopes",
+    response_model=EsignEnvelopeResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Assignment not found"},
+        409: {"description": "Envelope cannot be linked"},
+    },
+)
+def link_envelope(
+    assignment_id: uuid.UUID,
+    payload: EsignEnvelopeCreate,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> EsignEnvelopeResponse:
+    response.headers.update(NO_STORE)
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    if assignment is None:
+        raise HTTPException(status_code=404, detail="onboarding assignment not found")
+    try:
+        envelope = link_esign_envelope(
+            db,
+            assignment=assignment,
+            provider_envelope_id=payload.provider_envelope_id,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except OnboardingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return EsignEnvelopeResponse.model_validate(envelope, from_attributes=True)
+
+
+@router.post(
+    "/assignments/{assignment_id}/esign-envelopes/{envelope_id}/replace",
+    response_model=EsignEnvelopeResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Assignment or envelope not found"},
+        409: {"description": "Envelope cannot be replaced"},
+    },
+)
+def replace_envelope(
+    assignment_id: uuid.UUID,
+    envelope_id: uuid.UUID,
+    payload: EsignEnvelopeCreate,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> EsignEnvelopeResponse:
+    response.headers.update(NO_STORE)
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    envelope = db.get(CandidateEsignEnvelope, envelope_id)
+    if assignment is None or envelope is None or envelope.assignment_id != assignment.id:
+        raise HTTPException(status_code=404, detail="e-sign envelope not found")
+    try:
+        replacement = replace_esign_envelope(
+            db,
+            assignment=assignment,
+            envelope=envelope,
+            provider_envelope_id=payload.provider_envelope_id,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except OnboardingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return EsignEnvelopeResponse.model_validate(replacement, from_attributes=True)
+
+
+@router.post(
+    "/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh",
+    response_model=EsignEnvelopeResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Assignment or envelope not found"},
+        409: {"description": "Envelope cannot be refreshed"},
+        503: {"description": "Documenso unavailable or returned invalid evidence"},
+    },
+)
+def refresh_envelope(
+    assignment_id: uuid.UUID,
+    envelope_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> EsignEnvelopeResponse:
+    response.headers.update(NO_STORE)
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    envelope = db.get(CandidateEsignEnvelope, envelope_id)
+    if assignment is None or envelope is None or envelope.assignment_id != assignment.id:
+        raise HTTPException(status_code=404, detail="e-sign envelope not found")
+    try:
+        refreshed = refresh_esign_envelope(
+            db,
+            assignment=assignment,
+            envelope=envelope,
+            settings=settings,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except DocumensoError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except OnboardingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return EsignEnvelopeResponse.model_validate(refreshed, from_attributes=True)
 
 
 @router.get(

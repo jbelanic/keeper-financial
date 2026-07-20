@@ -151,13 +151,16 @@ The current assignment contract carries both `application_id` and
 `assignment_id`; task and acknowledgement evidence is evaluated within that
 assignment generation.
 
-- Authorized admin can create/list onboarding plans and inspect their task templates.
+- Authorized admin can create/list onboarding plans, author and reorder initial tasks, and edit an unused plan's name, description, ordered tasks, and availability.
+- The first assignment reference permanently locks the plan. Content, task order, and availability changes then fail with conflict and the administrator UI shows the locked state without mutation controls.
 - Candidate portal navigation exposes the onboarding destination when the candidate has an eligible assignment, and admin portal navigation exposes onboarding administration to authorized administrators; direct routes retain server-side authorization.
 - Plan can be assigned only to the intended `conditionally_selected` application and only when the plan is active.
 - Candidate can see only their assigned dashboard, submit bounded task evidence, and acknowledge an assigned exact document version.
-- Authorized admin can review submitted task evidence and link/update an external e-signature envelope without implementing custom signing.
-- Mandatory tasks and configured gates contribute to activation-readiness calculation.
-- Only configured activation-gate codes may be satisfied, and gate changes create audit evidence.
+- Authorized admin can review submitted task evidence and link a self-hosted Documenso document to the exact assignment without implementing custom signing.
+- Documenso refresh is provider-authoritative, uses only the configured HTTPS origin without redirect following, and fails closed on malformed, unavailable, redirected, or unrecognized provider responses.
+- A rejected or voided current envelope can be replaced without deleting its predecessor. Only a verified current `completed` envelope satisfies executed-agreement readiness.
+- Mandatory tasks and the five configured assignment-bound gates contribute to activation-readiness calculation.
+- Only `background_check`, `fsra_authorization`, and `system_provisioning` accept concise manual evidence. Reopening one requires a correction reason and append-only evidence; `policy_acknowledgement` and `executed_agreements` are derived-only and reject manual assertion or reopening.
 - FSRA verification is recorded as administrative evidence, not asserted automatically.
 - System provisioning task can be completed manually.
 - Satisfying every configured gate may set `activation_ready=true`; it does not change the candidate/application to `active`, create an agent relationship, or represent final activation.
@@ -167,6 +170,8 @@ assignment generation.
 
 - Draft is private.
 - Candidate or agent cannot self-publish.
+- Profile creation selects only a server-projected eligible active agent relationship; ordinary operator UI does not require raw user/profile UUID entry.
+- Slug availability is server-checked. The first successful publication permanently locks and reserves the slug, including after unpublishing; subsequent slug mutation fails server-side and the UI disables it.
 - Approval is required.
 - Editing published content returns the profile to pending approval.
 - Suspension requires an authorized admin reason.

@@ -53,16 +53,13 @@ export default async function Page({
         </h1>
         {posting ? (
           <p>
-            Supabase verifies your identity. When you continue from this
-            opportunity, Keeper Financial will create or reuse your candidate
-            access and application. Subsequent portal access depends on your
-            active account, candidate role, ownership, and application status.
+            Sign in with the account associated with this email address. This
+            route will continue only to the selected published opportunity.
           </p>
         ) : (
           <p>
-            Supabase verifies your identity. Portal access also requires an
-            existing active Keeper Financial account, an authorized local role,
-            and an allowed lifecycle state.
+            Sign in to an existing Keeper Financial portal account. Generic
+            sign-in does not create a new candidate application.
           </p>
         )}
       </header>

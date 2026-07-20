@@ -15,7 +15,13 @@ Report contradictions. Do not silently select code, memory, a generated artifact
 
 ## Current Implementation Checkpoint
 
-The current approved implementation checkpoint is merged to `main` at merge commit `b906027`.
+The owner-accepted Phase 1 publication candidate consists of administrator/operator commit `17e1b43` integrated without history rewriting with local `main` content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027`. Verify Git before stating whether the publication candidate has merged to remote `main`.
+
+The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement on `feat/admin-workflow-operator-ux`. The accepted refinement is committed at `17e1b43`; do not describe the combined publication candidate as merged unless Git proves that state.
+
+This is source acceptance only. It does not authorize commit, push, pull request, merge, history rewriting, production or controlled-pilot operation, deployment, shared-database migration, final candidate activation, candidate-to-agent transition, agent-role grant, legal/privacy/regulatory/claims/accessibility approval, credential or external-service changes, destructive operations, or Phase 1F implementation.
+
+On 2026-07-19, the owner separately authorized the accepted branch to be committed, integrated with the current local `main`, fully validated, pushed, reviewed through a GitHub pull request and CI, and merged if the checks pass. That publication authorization does not extend to deployment, shared-database migration, production or controlled-pilot operation, final activation, lifecycle/role grant, credential or external-service changes, destructive operations, or Phase 1F implementation.
 
 Completed checkpoints include:
 
@@ -25,6 +31,7 @@ Completed checkpoints include:
 - Candidate authentication and onboarding completion, including posting-bound provisioning, candidate application workflows, administrator review controls, candidate and administrator TOTP/AAL2 paths, and controlled private-document workflows.
 - Genuine local PDF and DOCX upload validation through strict file checks, ClamAV scanning, private MinIO persistence, and metadata refresh.
 - SQLAlchemy/Alembic model-schema drift resolution through forward migration `20260718_0007`; the migration chain has one head and `make migrate-check` is clean.
+- The owner-accepted administrator/operator refinement, with candidate Alembic head `20260719_0008`, exact-assignment evidence, provider-authoritative Documenso refresh, operator-facing selectors, permanent first-publication slug reservation, and removal of the nonfunctional `/admin/content` placeholder.
 
 The next development gate is **Phase 1F production and controlled-pilot readiness planning**. Phase 1F begins with planning and evidence definition, not implementation.
 
@@ -98,7 +105,7 @@ Before Phase 1F implementation, prepare and obtain approval for a production and
 - database migration, backup, rollback, and restore boundaries;
 - pilot roster, support ownership, eligibility, go/no-go criteria, and evidence documents.
 
-Do not invoke Codex for Phase 1F implementation until the plan, scope, owner decisions, and acceptance criteria are approved.
+Do not invoke Codex for Phase 1F implementation until the plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
 
 ## Implementation discipline
 

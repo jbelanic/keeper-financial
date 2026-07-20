@@ -9,21 +9,26 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from conftest import create_user
+from keeper_api.api.routes import onboarding as onboarding_routes
 from keeper_api.models.domain import (
     AuditEvent,
     Candidate,
     CandidateApplication,
+    CandidateEsignEnvelope,
     CandidateOnboardingAssignment,
     CandidateOnboardingTask,
     CandidateStatusHistory,
     ControlledDocument,
     DocumentVersion,
+    GateEvidenceEvent,
     OnboardingPlan,
     OnboardingTask,
     PolicyAcknowledgement,
+    ProgrammaticGate,
     RecruitmentPosting,
 )
 from keeper_api.models.statuses import CandidateStatus
+from keeper_api.services.documenso import DocumensoError
 
 ADMIN_HEADERS = {"X-Dev-Auth-Sub": "review-admin", "X-Dev-Auth-AAL": "aal2"}
 
@@ -353,6 +358,72 @@ def test_information_request_rejects_candidate_application_mismatch(
     assert response.status_code == 404
 
 
+def test_unused_plan_is_editable_and_first_assignment_locks_it(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    plan = make_plan(db)
+    update = client.patch(
+        f"/api/v1/admin/onboarding/plans/{plan.id}",
+        json={
+            "name": "SYNTHETIC revised plan",
+            "description": "Revised before first use.",
+            "tasks": [
+                {
+                    "title": "Second task first",
+                    "instructions": "Synthetic instructions.",
+                    "is_required": True,
+                },
+                {
+                    "title": "Optional follow-up",
+                    "instructions": "Synthetic optional instructions.",
+                    "is_required": False,
+                },
+            ],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert update.status_code == 200
+    assert update.json()["name"] == "SYNTHETIC revised plan"
+    assert update.json()["is_locked"] is False
+    assert [task["title"] for task in update.json()["tasks"]] == [
+        "Second task first",
+        "Optional follow-up",
+    ]
+
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assert assign(client, candidate, application, plan).status_code == 201
+    detail = client.get(f"/api/v1/admin/onboarding/plans/{plan.id}", headers=ADMIN_HEADERS)
+    assert detail.status_code == 200
+    assert detail.json()["is_locked"] is True
+    listed = client.get("/api/v1/admin/onboarding/plans", headers=ADMIN_HEADERS)
+    assert listed.status_code == 200
+    assert next(item for item in listed.json() if item["id"] == str(plan.id))["is_locked"] is True
+    locked = client.patch(
+        f"/api/v1/admin/onboarding/plans/{plan.id}",
+        json={
+            "name": "Forbidden mutation",
+            "description": "Must not persist.",
+            "tasks": [],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert locked.status_code == 409
+    locked_availability = client.patch(
+        f"/api/v1/admin/onboarding/plans/{plan.id}/availability",
+        json={"is_active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert locked_availability.status_code == 409
+    db.refresh(plan)
+    assert plan.name == "SYNTHETIC revised plan"
+    assert plan.is_active is True
+    assert [task.title for task in sorted(plan.tasks, key=lambda item: item.sequence)] == [
+        "Second task first",
+        "Optional follow-up",
+    ]
+
+
 def test_assignment_requires_selected_application_and_active_plan(
     client: TestClient, db: Session
 ) -> None:
@@ -365,6 +436,47 @@ def test_assignment_requires_selected_application_and_active_plan(
     db.commit()
     assert assign(client, candidate, application, inactive_plan).status_code == 409
     assert not db.scalars(select(CandidateOnboardingAssignment)).all()
+
+
+def test_admin_plan_list_includes_inactive_unused_plans_for_reactivation(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    inactive_plan = make_plan(db, active=False)
+
+    response = client.get("/api/v1/admin/onboarding/plans", headers=ADMIN_HEADERS)
+
+    assert response.status_code == 200
+    listed = {item["id"]: item for item in response.json()}
+    assert listed[str(inactive_plan.id)]["is_active"] is False
+    assert listed[str(inactive_plan.id)]["is_locked"] is False
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"name": "   ", "description": "Synthetic", "tasks": []},
+        {
+            "name": "Synthetic plan",
+            "description": "Synthetic",
+            "tasks": [
+                {
+                    "title": "<strong>Unsafe task</strong>",
+                    "instructions": "Synthetic",
+                    "is_required": True,
+                }
+            ],
+        },
+    ],
+)
+def test_admin_plan_inputs_reject_blank_or_markup_content(
+    client: TestClient, db: Session, payload: dict[str, object]
+) -> None:
+    create_admin(db)
+
+    response = client.post("/api/v1/admin/onboarding/plans", json=payload, headers=ADMIN_HEADERS)
+
+    assert response.status_code == 422
 
 
 def test_assignment_is_idempotent_and_preserves_other_application(
@@ -510,7 +622,7 @@ def test_later_assignment_generation_reuses_exact_prior_acknowledgement(
         assign(client, candidate, later_application, make_plan(db, with_task=False)).status_code
         == 201
     )
-    reused = client.post(
+    second_ack = client.post(
         "/api/v1/candidate/onboarding/acknowledgements",
         json={
             "document_version_id": str(version.id),
@@ -518,11 +630,11 @@ def test_later_assignment_generation_reuses_exact_prior_acknowledgement(
         },
         headers=headers,
     )
-    assert reused.status_code == 200
-    assert reused.json()["id"] == first_ack.json()["id"]
+    assert second_ack.status_code == 200
+    assert second_ack.json()["id"] != first_ack.json()["id"]
     dashboard = client.get("/api/v1/candidate/onboarding", headers=headers).json()
-    assert [item["id"] for item in dashboard["acknowledgements"]] == [first_ack.json()["id"]]
-    assert db.query(PolicyAcknowledgement).count() == 1
+    assert [item["id"] for item in dashboard["acknowledgements"]] == [second_ack.json()["id"]]
+    assert db.query(PolicyAcknowledgement).count() == 2
 
 
 def test_superseded_and_cross_candidate_assignment_versions_are_rejected(
@@ -541,21 +653,6 @@ def test_superseded_and_cross_candidate_assignment_versions_are_rejected(
     )
     first_version.superseded_at = datetime.now(UTC)
     db.commit()
-    for code in (
-        "background_check",
-        "fsra_authorization",
-        "system_provisioning",
-        "policy_acknowledgement",
-        "executed_agreements",
-    ):
-        assert (
-            client.post(
-                f"/api/v1/admin/onboarding/candidates/{first_candidate.id}/gates",
-                json={"code": code},
-                headers=ADMIN_HEADERS,
-            ).status_code
-            == 200
-        )
     first_dashboard = client.get(
         "/api/v1/candidate/onboarding",
         headers={"X-Dev-Auth-Sub": first_subject, "X-Dev-Auth-AAL": "aal1"},
@@ -577,12 +674,14 @@ def test_superseded_and_cross_candidate_assignment_versions_are_rejected(
 
 
 def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
 ) -> None:
     create_admin(db)
     version = make_document(db)
     candidate, application, subject = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
-    assert assign(client, candidate, application, make_plan(db)).status_code == 201
+    assigned = assign(client, candidate, application, make_plan(db))
+    assert assigned.status_code == 201
+    assignment_id = assigned.json()["assignment_id"]
     candidate_headers = {"X-Dev-Auth-Sub": subject, "X-Dev-Auth-AAL": "aal1"}
     assert (
         client.get("/api/v1/candidate/onboarding", headers=candidate_headers).json()[
@@ -607,21 +706,40 @@ def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
         headers=candidate_headers,
     )
     assert acknowledged.status_code == 200
-    for code in (
-        "background_check",
-        "fsra_authorization",
-        "system_provisioning",
-        "policy_acknowledgement",
-        "executed_agreements",
-    ):
+    for code in ("background_check", "fsra_authorization", "system_provisioning"):
         assert (
             client.post(
-                f"/api/v1/admin/onboarding/candidates/{candidate.id}/gates",
-                json={"code": code},
+                f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/{code}/satisfy",
+                json={
+                    "verified_on": "2026-07-19",
+                    "evidence_source": "Synthetic owner review",
+                    "evidence_reference": f"SYNTHETIC-{code}",
+                },
                 headers=ADMIN_HEADERS,
             ).status_code
             == 200
         )
+    settings.esign_provider = "documenso"
+    settings.documenso_api_base_url = "https://sign.keeperfinancial.ca/api/v2"
+    settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
+    settings.documenso_api_token = "synthetic-token"
+    linked = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
+        json={"provider_envelope_id": "envelope_activation_ready"},
+        headers=ADMIN_HEADERS,
+    )
+    assert linked.status_code == 201
+    monkeypatch.setattr(
+        "keeper_api.services.documenso.fetch_envelope_status",
+        lambda *_args, **_kwargs: "COMPLETED",
+    )
+    assert (
+        client.post(
+            f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{linked.json()['id']}/refresh",
+            headers=ADMIN_HEADERS,
+        ).status_code
+        == 200
+    )
     dashboard = client.get("/api/v1/candidate/onboarding", headers=candidate_headers).json()
     assert dashboard["activation_ready"] is True
     assert application.status == "onboarding_in_progress"
@@ -632,3 +750,290 @@ def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
         ).status_code
         == 404
     )
+
+
+def test_assignment_scoped_manual_gates_require_evidence_and_can_be_reopened(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    response = assign(client, candidate, application, make_plan(db, with_task=False))
+    assignment_id = response.json()["assignment_id"]
+
+    derived = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/policy_acknowledgement/satisfy",
+        json={
+            "verified_on": "2026-07-19",
+            "evidence_source": "Owner review",
+            "evidence_reference": "synthetic-reference",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert derived.status_code == 409
+
+    satisfied = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/background_check/satisfy",
+        json={
+            "verified_on": "2026-07-19",
+            "evidence_source": "Synthetic provider",
+            "evidence_reference": "SYNTHETIC-REF-1",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert satisfied.status_code == 200, satisfied.text
+    assert satisfied.json()["assignment_id"] == assignment_id
+    assert satisfied.json()["status"] == "satisfied"
+    assert satisfied.json()["evidence_kind"] == "manual"
+    gate = db.scalar(
+        select(ProgrammaticGate).where(
+            ProgrammaticGate.assignment_id == uuid.UUID(assignment_id),
+            ProgrammaticGate.code == "background_check",
+        )
+    )
+    assert gate is not None
+    assert (
+        db.scalar(select(GateEvidenceEvent).where(GateEvidenceEvent.gate_id == gate.id)) is not None
+    )
+
+    reopened = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/background_check/reopen",
+        json={"reason": "Synthetic correction required."},
+        headers=ADMIN_HEADERS,
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()["status"] == "open"
+    events = db.scalars(
+        select(GateEvidenceEvent)
+        .where(GateEvidenceEvent.gate_id == gate.id)
+        .order_by(GateEvidenceEvent.created_at)
+    ).all()
+    assert [event.event_type for event in events] == ["satisfied", "reopened"]
+
+
+def test_new_assignment_cannot_reuse_prior_assignment_gates_or_envelopes(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    candidate, first_application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    first = assign(client, candidate, first_application, make_plan(db, with_task=False)).json()
+    for code in ("background_check", "fsra_authorization", "system_provisioning"):
+        response = client.post(
+            f"/api/v1/admin/onboarding/assignments/{first['assignment_id']}/gates/{code}/satisfy",
+            json={
+                "verified_on": "2026-07-19",
+                "evidence_source": "Synthetic owner review",
+                "evidence_reference": f"SYNTHETIC-{code}",
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert response.status_code == 200
+
+    later_application = add_application(db, candidate, CandidateStatus.CONDITIONALLY_SELECTED)
+    second = assign(client, candidate, later_application, make_plan(db, with_task=False)).json()
+    assert second["assignment_id"] != first["assignment_id"]
+    current_gates = db.scalars(
+        select(ProgrammaticGate).where(
+            ProgrammaticGate.assignment_id == uuid.UUID(second["assignment_id"])
+        )
+    ).all()
+    assert len(current_gates) == 5
+    assert all(gate.status == "open" for gate in current_gates)
+
+
+def test_documenso_status_refresh_is_authoritative_and_assignment_bound(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
+) -> None:
+    create_admin(db)
+    settings.esign_provider = "documenso"
+    settings.documenso_api_base_url = "https://sign.keeperfinancial.ca/api/v2"
+    settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
+    settings.documenso_api_token = "synthetic-token"
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db, with_task=False)).json()[
+        "assignment_id"
+    ]
+
+    linked = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
+        json={"provider_envelope_id": "envelope_synthetic_1"},
+        headers=ADMIN_HEADERS,
+    )
+    assert linked.status_code == 201, linked.text
+    envelope_id = linked.json()["id"]
+    assert linked.json()["status"] == "sent"
+    assert linked.json()["envelope_url"] is None
+
+    monkeypatch.setattr(
+        "keeper_api.services.documenso.fetch_envelope_status",
+        lambda *_args, **_kwargs: "COMPLETED",
+    )
+    refreshed = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh",
+        headers=ADMIN_HEADERS,
+    )
+    assert refreshed.status_code == 200, refreshed.text
+    assert refreshed.json()["status"] == "completed"
+    assert refreshed.json()["last_synced_at"] is not None
+    gate = db.scalar(
+        select(ProgrammaticGate).where(
+            ProgrammaticGate.assignment_id == uuid.UUID(assignment_id),
+            ProgrammaticGate.code == "executed_agreements",
+        )
+    )
+    assert gate is not None and gate.status == "satisfied"
+    assert db.scalar(select(CandidateEsignEnvelope)).assignment_id == uuid.UUID(assignment_id)
+
+    def unavailable(*_args: object, **_kwargs: object) -> str:
+        raise DocumensoError("Documenso status could not be verified")
+
+    monkeypatch.setattr("keeper_api.services.documenso.fetch_envelope_status", unavailable)
+    failed_refresh = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh",
+        headers=ADMIN_HEADERS,
+    )
+    assert failed_refresh.status_code == 503
+    db.expire_all()
+    preserved_envelope = db.get(CandidateEsignEnvelope, uuid.UUID(envelope_id))
+    assert preserved_envelope is not None
+    assert preserved_envelope.status == "completed"
+    gate = db.scalar(
+        select(ProgrammaticGate).where(
+            ProgrammaticGate.assignment_id == uuid.UUID(assignment_id),
+            ProgrammaticGate.code == "executed_agreements",
+        )
+    )
+    assert gate is not None and gate.status == "open"
+    failed_audit = db.scalar(
+        select(AuditEvent).where(AuditEvent.event_type == "esign.envelope_refresh_failed")
+    )
+    assert failed_audit is not None
+
+    monkeypatch.setattr(
+        "keeper_api.services.documenso.fetch_envelope_status",
+        lambda *_args, **_kwargs: "COMPLETED",
+    )
+    assert (
+        client.post(
+            f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh",
+            headers=ADMIN_HEADERS,
+        ).status_code
+        == 200
+    )
+    monkeypatch.setattr(
+        "keeper_api.services.documenso.fetch_envelope_status",
+        lambda *_args, **_kwargs: "DRAFT",
+    )
+    draft_refresh = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh",
+        headers=ADMIN_HEADERS,
+    )
+    assert draft_refresh.status_code == 409
+    db.expire_all()
+    gate = db.scalar(
+        select(ProgrammaticGate).where(
+            ProgrammaticGate.assignment_id == uuid.UUID(assignment_id),
+            ProgrammaticGate.code == "executed_agreements",
+        )
+    )
+    assert gate is not None and gate.status == "open"
+
+
+def test_rejected_documenso_envelope_can_be_replaced_without_losing_history(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
+) -> None:
+    create_admin(db)
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db, with_task=False)).json()[
+        "assignment_id"
+    ]
+    settings.esign_provider = "documenso"
+    settings.documenso_api_base_url = "https://sign.keeperfinancial.ca/api/v2"
+    settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
+    settings.documenso_api_token = "synthetic-token"
+    linked = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
+        json={"provider_envelope_id": "envelope_rejected"},
+        headers=ADMIN_HEADERS,
+    )
+    monkeypatch.setattr(
+        "keeper_api.services.documenso.fetch_envelope_status",
+        lambda *_args, **_kwargs: "REJECTED",
+    )
+    refreshed = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{linked.json()['id']}/refresh",
+        headers=ADMIN_HEADERS,
+    )
+    assert refreshed.status_code == 200
+    assert refreshed.json()["status"] == "rejected"
+
+    replacement = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{linked.json()['id']}/replace",
+        json={"provider_envelope_id": "envelope_replacement"},
+        headers=ADMIN_HEADERS,
+    )
+    assert replacement.status_code == 201, replacement.text
+    assert replacement.json()["envelope_id"] == "envelope_replacement"
+    old = db.get(CandidateEsignEnvelope, uuid.UUID(linked.json()["id"]))
+    assert old is not None
+    assert old.superseded_at is not None
+    assert old.replacement_envelope_id == uuid.UUID(replacement.json()["id"])
+
+
+def test_admin_assignment_list_and_detail_use_human_context(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    plan = make_plan(db)
+    assignment_id = assign(client, candidate, application, plan).json()["assignment_id"]
+
+    listed = client.get("/api/v1/admin/onboarding/assignments", headers=ADMIN_HEADERS)
+    assert listed.status_code == 200
+    assert listed.json()[0]["candidate_name"] == "Synthetic Candidate"
+    assert listed.json()[0]["opportunity_title"] == application.source_posting_title
+    assert listed.json()[0]["plan_name"] == plan.name
+
+    detail = client.get(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}", headers=ADMIN_HEADERS
+    )
+    assert detail.status_code == 200
+    assert detail.json()["application_id"] == str(application.id)
+    assert len(detail.json()["gates"]) == 5
+    assert detail.json()["activation_ready"] is False
+
+
+def test_admin_assignment_summaries_project_readiness_for_the_exact_assignment(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    create_admin(db)
+    candidate, first_application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    first_assignment_id = assign(client, candidate, first_application, make_plan(db)).json()[
+        "assignment_id"
+    ]
+    second_application = add_application(
+        db, candidate, CandidateStatus.CONDITIONALLY_SELECTED, attempt=2
+    )
+    second_assignment_id = assign(client, candidate, second_application, make_plan(db)).json()[
+        "assignment_id"
+    ]
+    projected_assignment_ids: list[uuid.UUID] = []
+
+    def exact_readiness(_db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID) -> bool:
+        assert candidate_id == candidate.id
+        projected_assignment_ids.append(assignment_id)
+        return assignment_id == uuid.UUID(second_assignment_id)
+
+    monkeypatch.setattr(onboarding_routes, "activation_ready", exact_readiness)
+
+    response = client.get("/api/v1/admin/onboarding/assignments", headers=ADMIN_HEADERS)
+
+    assert response.status_code == 200
+    by_id = {item["assignment_id"]: item for item in response.json()}
+    assert by_id[first_assignment_id]["status"] == "superseded"
+    assert by_id[first_assignment_id]["activation_ready"] is False
+    assert by_id[second_assignment_id]["status"] == "active"
+    assert by_id[second_assignment_id]["activation_ready"] is True
+    assert set(projected_assignment_ids) == {
+        uuid.UUID(first_assignment_id),
+        uuid.UUID(second_assignment_id),
+    }

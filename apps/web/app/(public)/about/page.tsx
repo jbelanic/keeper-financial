@@ -17,12 +17,12 @@ export default function AboutPage() {
     <>
       <PageHero
         eyebrow="About Keeper Financial"
-        title="Mortgage guidance built around clarity and the right boundaries."
-        description="Keeper Financial gives Ontario mortgage clients a professional public resource, a direct way to speak with the team, and a secure route for a full application."
+        title="Mortgage information and a clear way to take the next step."
+        description="Keeper Financial helps people understand common mortgage processes, ask general questions and continue to a complete application through an authorized secure process."
       >
         <div className="button-row">
           <Link className="button-link" href="/contact">
-            Contact the team
+            Contact Keeper Financial
           </Link>
         </div>
       </PageHero>
@@ -37,12 +37,11 @@ export default function AboutPage() {
               The public website is designed to help people understand common
               mortgage paths before they are asked for detailed information.
               General questions stay in general contact channels; a complete
-              mortgage application belongs in the approved secure platform.
+              mortgage application belongs in an authorized secure process.
             </p>
             <p>
-              This separation supports a simpler experience and keeps the custom
-              Keeper Financial platform out of mortgage underwriting, credit,
-              document collection, and lender-submission workflows.
+              This separation supports a simpler experience and keeps detailed
+              mortgage information out of public contact routes.
             </p>
           </div>
         </div>
@@ -52,19 +51,22 @@ export default function AboutPage() {
           <article>
             <Icon name="conversation" />
             <h2>Plain language</h2>
-            <p>Understand the next step without unnecessary jargon.</p>
+            <p>We explain the next step without unnecessary jargon.</p>
           </article>
           <article>
             <Icon name="shield" />
-            <h2>Privacy-aware contact</h2>
-            <p>Share only basic contact details through the public website.</p>
+            <h2>Information minimization</h2>
+            <p>
+              Public contact routes request only basic information needed to
+              respond.
+            </p>
           </article>
           <article>
             <Icon name="arrow" />
             <h2>Secure handoff</h2>
             <p>
-              Continue to an approved external platform for a complete
-              application.
+              Detailed mortgage information and documents belong in the mortgage
+              application or another authorized secure channel.
             </p>
           </article>
         </div>
@@ -74,14 +76,14 @@ export default function AboutPage() {
           <div>
             <SectionHeading
               eyebrow="Published identity"
-              title="Keeper Financial’s public details"
+              title="Brokerage information"
             />
             <p>{siteConfig.legalName}</p>
             <p>{siteConfig.regulatoryText}</p>
             <address>{siteConfig.address}</address>
           </div>
           <aside className="paper-panel">
-            <h2>Speak with Keeper Financial</h2>
+            <h2>Contact Keeper Financial</h2>
             <p>
               <a href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
             </p>

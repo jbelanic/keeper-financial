@@ -17,8 +17,8 @@ export default function ContactPage() {
     <>
       <PageHero
         eyebrow="Contact"
-        title="Let’s start with a real conversation."
-        description="Use the published phone or email, or send a minimal contact request. Please keep sensitive financial and identity information out of general messages."
+        title="Start with a general question."
+        description="Call, email or send a basic contact request. Keep financial, identity and mortgage documents out of general messages."
       />
       <section className="section section-no-top">
         <div className="container contact-grid">
@@ -67,9 +67,9 @@ export default function ContactPage() {
             <Icon name="shield" />
             <h2>Do not send sensitive information</h2>
             <p>
-              Do not send your SIN, banking or card details, tax information,
-              detailed debts, identification, medical information, passwords, or
-              mortgage documents through these public contact routes.
+              Do not send a SIN, passwords, banking details, tax records, credit
+              information or consent, identity documents or mortgage documents
+              through general email or a public contact form.
             </p>
           </aside>
         </div>

@@ -79,6 +79,16 @@ The 2026-07-18 live synthetic run passed both enabled candidate-auth cases: Mail
 - Migration tests verify the agent-profile schema at `20260717_0005`; contract tests pin public versus protected agent operations.
 - Web tests cover public directory/detail states and admin profile create/edit/lifecycle behavior.
 
+## 2026-07-19 operator-workflow refinement additions
+
+- Plan tests cover initial task authoring/order, unused-plan content and availability edits, first-assignment lock enforcement, permanent referenced-plan immutability, inactive-plan recovery, and explicit lock projection to the administrator UI.
+- Assignment tests cover readable exact-application selection, assignment isolation across repeat attempts/generations, exact-assignment readiness projection, read-only superseded history, and rejection of cross-assignment gate, policy, task, and e-sign evidence. An opt-in isolated PostgreSQL race test proves simultaneous assignments across different applications and plans leave exactly one active assignment for the candidate.
+- Gate tests distinguish the three manual codes from the two derived-only codes, require bounded evidence for satisfaction, require a reason for correction/reopen, and preserve append-only evidence events. An opt-in isolated PostgreSQL race test proves simultaneous manual satisfaction commits exactly one transition/evidence event.
+- Documenso adapter tests cover configured HTTPS origin, quoted document identifiers, redirect refusal, malformed JSON, provider/network failures, attempted origin escape, and recognized versus fail-closed status mapping. Envelope tests cover provider-authoritative refresh, provider/DRAFT failure reopening, and replacement without predecessor deletion. An opt-in isolated PostgreSQL race test proves a delayed completed refresh cannot mutate or satisfy a concurrently replaced predecessor.
+- Agent-profile tests cover server-projected eligibility, readable selection, slug validation/availability, first-publication lock, permanent reservation after unpublishing, and server-side rejection of locked-slug changes.
+- Web tests cover unused-plan task editing/ordering and lock state, exact-application assignment without raw-ID entry, manual versus derived gate controls, provider refresh/replacement controls, eligible-agent selection, slug feedback, and first-publication slug disabling.
+- Migration verification must exercise blank upgrade to `20260719_0008`, one-head assertion, `alembic check`, downgrade to `20260718_0007`, and re-upgrade in an isolated PostgreSQL database. Populated tests must prove audit-derived historical slug locking and pre-DDL refusal of duplicate legacy provider envelope IDs on upgrade or rejected-envelope evidence on downgrade. Legacy rows whose exact assignment cannot be proved must remain non-satisfying.
+
 ## ClamAV and upload validation
 
 - Scanner unit tests cover framed `INSTREAM`, bounded chunks/responses, clean and detection results, connection/timeouts/protocol failures, and fail-closed configuration.

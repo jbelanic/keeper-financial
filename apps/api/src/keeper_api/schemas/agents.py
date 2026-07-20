@@ -219,6 +219,22 @@ class AdminAgentProfile(BaseModel):
     updated_at: datetime
     approved_at: datetime | None
     published_at: datetime | None
+    slug_locked_at: datetime | None
+
+
+class EligibleAgent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: uuid.UUID
+    display_name: str
+    email: str
+
+
+class SlugAvailability(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slug: str
+    available: bool
 
 
 class AdminAgentProfileList(BaseModel):

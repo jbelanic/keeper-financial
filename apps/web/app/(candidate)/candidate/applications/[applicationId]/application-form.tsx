@@ -1273,13 +1273,20 @@ export function CandidateApplicationForm({
         open={withdrawOpen}
         onCancel={cancelWithdrawal}
         onConfirm={withdraw}
+        confirmLabel="Withdraw application"
+        cancelLabel="Keep application"
         dialogRef={dialogRef}
         busy={busy}
       >
         <p>
-          Withdrawal ends editing and new uploads. Your retained application and
-          eligible documents remain available read-only under the approved
-          policy.
+          Withdrawing ends this application attempt. You will not be able to
+          edit it or upload new documents. You can continue to view retained
+          application information while Keeper Financial retains it under the
+          applicable retention policy.
+        </p>
+        <p>
+          This action does not reopen the application. If the opportunity
+          remains published, you may start a new application attempt.
         </p>
       </ConfirmationDialog>
     </div>

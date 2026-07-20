@@ -47,7 +47,6 @@ export const CANDIDATE_ROUTES = [
   "/candidate/application",
   "/candidate/applications/[applicationId]",
   "/candidate/onboarding",
-  "/candidate/documents",
 ] as const;
 
 export const ADMIN_ROUTES = [
@@ -57,5 +56,4 @@ export const ADMIN_ROUTES = [
   "/admin/candidates",
   "/admin/onboarding",
   "/admin/agents",
-  "/admin/content",
 ] as const;
