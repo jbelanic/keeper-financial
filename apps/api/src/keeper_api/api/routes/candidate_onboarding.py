@@ -84,10 +84,23 @@ def onboarding_availability(
     response.headers.update(NO_STORE)
     candidate = _candidate(principal, db)
     assignment_id = db.scalar(
-        select(CandidateOnboardingAssignment.id).where(
+        select(CandidateOnboardingAssignment.id)
+        .where(
             CandidateOnboardingAssignment.candidate_id == candidate.id,
-            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+            CandidateOnboardingAssignment.status.in_(
+                [
+                    OnboardingAssignmentStatus.ACTIVE.value,
+                    OnboardingAssignmentStatus.COMPLETED.value,
+                ]
+            ),
             CandidateOnboardingAssignment.application_id.is_not(None),
+        )
+        .order_by(
+            (
+                CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value
+            ).desc(),
+            CandidateOnboardingAssignment.created_at.desc(),
+            CandidateOnboardingAssignment.id.desc(),
         )
     )
     return CandidateOnboardingAvailability(available=assignment_id is not None)
@@ -106,9 +119,22 @@ def onboarding_dashboard(
     response.headers.update(NO_STORE)
     candidate = _candidate(principal, db)
     assignment = db.scalar(
-        select(CandidateOnboardingAssignment).where(
+        select(CandidateOnboardingAssignment)
+        .where(
             CandidateOnboardingAssignment.candidate_id == candidate.id,
-            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+            CandidateOnboardingAssignment.status.in_(
+                [
+                    OnboardingAssignmentStatus.ACTIVE.value,
+                    OnboardingAssignmentStatus.COMPLETED.value,
+                ]
+            ),
+        )
+        .order_by(
+            (
+                CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value
+            ).desc(),
+            CandidateOnboardingAssignment.created_at.desc(),
+            CandidateOnboardingAssignment.id.desc(),
         )
     )
     if assignment is None or assignment.application_id is None:
@@ -121,7 +147,9 @@ def onboarding_dashboard(
             esign_envelopes=[],
             activation_ready=False,
         )
-    documents = candidate_assigned_documents(db, candidate_id=candidate.id)
+    documents = candidate_assigned_documents(
+        db, candidate_id=candidate.id, assignment_id=assignment.id
+    )
     return CandidateOnboardingDashboard(
         assignment=_assignment_out(assignment),
         tasks=[
@@ -265,4 +293,7 @@ def _ack_out(a: Any) -> PolicyAcknowledgementResponse:
 
 
 def _esign_out(e: Any) -> EsignEnvelopeResponse:
-    return EsignEnvelopeResponse.model_validate(e, from_attributes=True)
+    envelope = EsignEnvelopeResponse.model_validate(e, from_attributes=True)
+    if envelope.superseded_at is not None or envelope.status != "sent":
+        return envelope.model_copy(update={"envelope_url": None})
+    return envelope

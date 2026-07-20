@@ -4172,6 +4172,92 @@
         }
       }
     },
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Issue Ica",
+        "operationId": "issue_ica_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes_issue_ica_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EsignEnvelopeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "409": {
+            "description": "Agreement cannot be issued"
+          },
+          "503": {
+            "description": "Agreement issuance unavailable or incompatible"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/replace": {
       "post": {
         "tags": [
@@ -4363,6 +4449,92 @@
           },
           "503": {
             "description": "Documenso unavailable or returned invalid evidence"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/onboarding/assignments/{assignment_id}/complete": {
+      "post": {
+        "tags": [
+          "admin onboarding"
+        ],
+        "summary": "Complete Assignment",
+        "operationId": "complete_assignment_api_v1_admin_onboarding_assignments__assignment_id__complete_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingCompletionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Assignment not found"
+          },
+          "409": {
+            "description": "Assignment is not ready or consistent"
           },
           "422": {
             "description": "Validation Error",
@@ -8315,6 +8487,56 @@
           "superseded"
         ],
         "title": "OnboardingAssignmentStatus"
+      },
+      "OnboardingCompletionResponse": {
+        "properties": {
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignment Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Candidate Id"
+          },
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status"
+          },
+          "application_status": {
+            "type": "string",
+            "const": "active",
+            "title": "Application Status"
+          },
+          "candidate_status": {
+            "type": "string",
+            "const": "active",
+            "title": "Candidate Status"
+          },
+          "agent_access_enabled": {
+            "type": "boolean",
+            "title": "Agent Access Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assignment_id",
+          "application_id",
+          "candidate_id",
+          "status",
+          "application_status",
+          "candidate_status",
+          "agent_access_enabled"
+        ],
+        "title": "OnboardingCompletionResponse"
       },
       "OnboardingTaskCreate": {
         "properties": {

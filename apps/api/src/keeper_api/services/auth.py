@@ -266,3 +266,13 @@ def require_admin(
     settings: Settings = Depends(get_settings),
 ) -> Principal:
     return authorize_portal(principal, "admin", settings)
+
+
+def require_admin_aal2(
+    principal: Principal = Depends(get_current_principal),
+    settings: Settings = Depends(get_settings),
+) -> Principal:
+    authorize_portal(principal, "admin", settings)
+    if principal.aal != "aal2":
+        raise HTTPException(status_code=403, detail="administrator MFA is required")
+    return principal

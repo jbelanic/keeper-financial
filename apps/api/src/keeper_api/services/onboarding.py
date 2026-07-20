@@ -24,6 +24,9 @@ from keeper_api.models.domain import (
     OnboardingTask,
     PolicyAcknowledgement,
     ProgrammaticGate,
+    Role,
+    User,
+    UserRole,
 )
 from keeper_api.models.statuses import (
     CandidateStatus,
@@ -54,10 +57,33 @@ ACTIVATION_GATE_LABELS: dict[str, str] = {
 
 MANUAL_GATE_CODES = frozenset({"background_check", "fsra_authorization", "system_provisioning"})
 DERIVED_GATE_CODES = frozenset({"policy_acknowledgement", "executed_agreements"})
+ACTIVATABLE_CANDIDATE_STATUSES = frozenset(
+    {
+        CandidateStatus.APPLICATION_SUBMITTED.value,
+        CandidateStatus.UNDER_REVIEW.value,
+        CandidateStatus.MORE_INFORMATION_REQUIRED.value,
+        CandidateStatus.INTERVIEW.value,
+        CandidateStatus.CONDITIONALLY_SELECTED.value,
+        CandidateStatus.ONBOARDING_IN_PROGRESS.value,
+        CandidateStatus.PENDING_FSRA_AUTHORIZATION.value,
+        CandidateStatus.PENDING_SYSTEM_PROVISIONING.value,
+    }
+)
 
 
 class OnboardingError(ValueError):
     pass
+
+
+def _require_activatable_lifecycle(
+    *, application: CandidateApplication, candidate: Candidate
+) -> None:
+    if (
+        application.state != "submitted"
+        or application.status != CandidateStatus.ONBOARDING_IN_PROGRESS.value
+        or candidate.status not in ACTIVATABLE_CANDIDATE_STATUSES
+    ):
+        raise OnboardingError("the assignment lifecycle is not eligible for activation")
 
 
 # --------------------------------------------------------------------------- #
@@ -517,15 +543,17 @@ def current_document_version(db: Session, document: ControlledDocument) -> Docum
 
 
 def candidate_assigned_documents(
-    db: Session, *, candidate_id: uuid.UUID
+    db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID | None = None
 ) -> list[tuple[ControlledDocument, DocumentVersion]]:
     """Documents a candidate may view/download once onboarding is assigned (ONB-005)."""
-    assignment = db.scalar(
-        select(CandidateOnboardingAssignment).where(
-            CandidateOnboardingAssignment.candidate_id == candidate_id,
-            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value,
+    conditions = [CandidateOnboardingAssignment.candidate_id == candidate_id]
+    if assignment_id is None:
+        conditions.append(
+            CandidateOnboardingAssignment.status == OnboardingAssignmentStatus.ACTIVE.value
         )
-    )
+    else:
+        conditions.append(CandidateOnboardingAssignment.id == assignment_id)
+    assignment = db.scalar(select(CandidateOnboardingAssignment).where(*conditions))
     if assignment is None:
         return []
     return [
@@ -824,6 +852,121 @@ def link_esign_envelope(
     return envelope
 
 
+def issue_ica_envelope_for_assignment(
+    db: Session,
+    *,
+    assignment_id: uuid.UUID,
+    settings: Settings,
+    actor_user_id: uuid.UUID,
+    request_id: str | None,
+) -> CandidateEsignEnvelope:
+    """Issue and persist the configured ICA for one locked active assignment."""
+    assignment = _lock_active_esign_assignment(db, assignment_id)
+    current_envelope = db.scalar(
+        select(CandidateEsignEnvelope)
+        .where(
+            CandidateEsignEnvelope.assignment_id == assignment.id,
+            CandidateEsignEnvelope.superseded_at.is_(None),
+        )
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if (
+        current_envelope is not None
+        and current_envelope.envelope_url is not None
+        and current_envelope.status
+        not in {EsignEnvelopeStatus.REJECTED.value, EsignEnvelopeStatus.VOIDED.value}
+    ):
+        raise OnboardingError("the assignment already has an active e-sign envelope")
+    if assignment.application_id is None:
+        raise OnboardingError("the active assignment application could not be verified")
+    application = db.scalar(
+        select(CandidateApplication)
+        .where(CandidateApplication.id == assignment.application_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    candidate = db.scalar(
+        select(Candidate)
+        .where(Candidate.id == assignment.candidate_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if application is None or candidate is None or application.candidate_id != candidate.id:
+        raise OnboardingError("the active assignment application could not be verified")
+    _require_activatable_lifecycle(application=application, candidate=candidate)
+    user = db.scalar(
+        select(User)
+        .where(User.id == candidate.user_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if user is None or not user.is_active:
+        raise OnboardingError("the active assignment user could not be verified")
+    from keeper_api.services.documenso import issue_ica_envelope
+
+    issued = issue_ica_envelope(
+        settings,
+        assignment_id=str(assignment.id),
+        candidate_email=user.email,
+        candidate_name=user.display_name,
+    )
+    status_map = {
+        "PENDING": EsignEnvelopeStatus.SENT.value,
+        "COMPLETED": EsignEnvelopeStatus.COMPLETED.value,
+        "REJECTED": EsignEnvelopeStatus.REJECTED.value,
+    }
+    if (
+        db.scalar(
+            select(CandidateEsignEnvelope.id).where(
+                CandidateEsignEnvelope.provider == "documenso",
+                CandidateEsignEnvelope.envelope_id == issued.envelope_id,
+            )
+        )
+        is not None
+    ):
+        raise OnboardingError("the Documenso envelope is already linked")
+    if current_envelope is not None:
+        current_envelope.superseded_at = datetime.now(UTC)
+        db.flush()
+    envelope = CandidateEsignEnvelope(
+        candidate_id=candidate.id,
+        assignment_id=assignment.id,
+        created_by_user_id=actor_user_id,
+        provider="documenso",
+        status=status_map[issued.status],
+        envelope_id=issued.envelope_id,
+        envelope_url=issued.signing_url,
+        last_synced_at=datetime.now(UTC),
+    )
+    db.add(envelope)
+    db.flush()
+    if current_envelope is not None:
+        current_envelope.replacement_envelope_id = envelope.id
+    _set_derived_gate(
+        db,
+        assignment=assignment,
+        code="executed_agreements",
+        satisfied=issued.status == "COMPLETED",
+        actor_user_id=actor_user_id,
+    )
+    AuditService(db).record(
+        "esign.ica_issued",
+        "candidate_onboarding_assignment",
+        assignment.id,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+        safe_metadata={
+            "provider": "documenso",
+            "status": envelope.status,
+            "reissued": current_envelope is not None,
+        },
+    )
+    db.commit()
+    db.refresh(envelope)
+    return envelope
+
+
 def refresh_esign_envelope(
     db: Session,
     *,
@@ -879,7 +1022,9 @@ def refresh_esign_envelope(
         db,
         assignment=assignment,
         code="executed_agreements",
-        satisfied=local_status == EsignEnvelopeStatus.COMPLETED,
+        satisfied=(
+            local_status == EsignEnvelopeStatus.COMPLETED and envelope.envelope_url is not None
+        ),
         actor_user_id=actor_user_id,
     )
     AuditService(db).record(
@@ -1195,6 +1340,147 @@ def activation_ready(db: Session, *, candidate_id: uuid.UUID, assignment_id: uui
     )
 
 
+def complete_onboarding_assignment(
+    db: Session,
+    *,
+    assignment_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    request_id: str | None,
+) -> CandidateOnboardingAssignment:
+    """Atomically complete one exact ready assignment and grant its existing agent role.
+
+    Lock order is assignment, application, candidate, user, role, user-role, then
+    current envelope and readiness rows. Other assignment mutations begin with the
+    assignment row, so concurrent completion serializes before terminal checks.
+    """
+    assignment = db.scalar(
+        select(CandidateOnboardingAssignment)
+        .where(CandidateOnboardingAssignment.id == assignment_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if assignment is None or assignment.application_id is None:
+        raise LookupError("onboarding assignment not found")
+    application = db.scalar(
+        select(CandidateApplication)
+        .where(CandidateApplication.id == assignment.application_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    candidate = db.scalar(
+        select(Candidate)
+        .where(Candidate.id == assignment.candidate_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if application is None or candidate is None or application.candidate_id != candidate.id:
+        raise OnboardingError("the assignment ownership could not be verified")
+    user = db.scalar(
+        select(User)
+        .where(User.id == candidate.user_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    role = db.scalar(
+        select(Role)
+        .where(Role.code == "agent")
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    if user is None or not user.is_active:
+        raise OnboardingError("the candidate user is not active")
+    if role is None:
+        raise OnboardingError("the agent role is not configured")
+    grant = db.scalar(
+        select(UserRole)
+        .where(UserRole.user_id == user.id, UserRole.role_id == role.id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    envelope = db.scalar(
+        select(CandidateEsignEnvelope)
+        .where(
+            CandidateEsignEnvelope.assignment_id == assignment.id,
+            CandidateEsignEnvelope.candidate_id == candidate.id,
+            CandidateEsignEnvelope.provider == "documenso",
+            CandidateEsignEnvelope.superseded_at.is_(None),
+        )
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
+    terminal = assignment.status == OnboardingAssignmentStatus.COMPLETED.value
+    if terminal:
+        if (
+            application.status != CandidateStatus.ACTIVE.value
+            or candidate.status != CandidateStatus.ACTIVE.value
+            or grant is None
+        ):
+            raise OnboardingError("the completed onboarding state is inconsistent")
+        return assignment
+    if assignment.status != OnboardingAssignmentStatus.ACTIVE.value:
+        raise OnboardingError("only the current active assignment can be completed")
+    _require_activatable_lifecycle(application=application, candidate=candidate)
+    if not activation_ready(db, candidate_id=candidate.id, assignment_id=assignment.id):
+        raise OnboardingError("the onboarding assignment is not activation ready")
+    executed_gate = _lock_gate(db, assignment_id=assignment.id, code="executed_agreements")
+    if (
+        envelope is None
+        or envelope.status != EsignEnvelopeStatus.COMPLETED.value
+        or envelope.envelope_url is None
+        or envelope.last_synced_at is None
+        or executed_gate is None
+        or executed_gate.status != GateStatus.SATISFIED.value
+    ):
+        raise OnboardingError("the current contractor agreement is not provider-confirmed")
+
+    previous_application = application.status
+    previous_candidate = candidate.status
+    assignment.status = OnboardingAssignmentStatus.COMPLETED.value
+    application.status = CandidateStatus.ACTIVE.value
+    candidate.status = CandidateStatus.ACTIVE.value
+    db.add_all(
+        [
+            CandidateStatusHistory(
+                candidate_id=candidate.id,
+                application_id=application.id,
+                previous_status=previous_application,
+                new_status=CandidateStatus.ACTIVE.value,
+                actor_user_id=actor_user_id,
+                reason="onboarding completed",
+            ),
+            CandidateStatusHistory(
+                candidate_id=candidate.id,
+                application_id=None,
+                previous_status=previous_candidate,
+                new_status=CandidateStatus.ACTIVE.value,
+                actor_user_id=actor_user_id,
+                reason="onboarding completed",
+            ),
+        ]
+    )
+    if grant is None:
+        db.add(UserRole(user_id=user.id, role_id=role.id, granted_by_user_id=actor_user_id))
+        AuditService(db).record(
+            "user_role.agent_granted",
+            "user",
+            user.id,
+            actor_user_id=actor_user_id,
+            request_id=request_id,
+            safe_metadata={"source": "onboarding_completion"},
+        )
+    AuditService(db).record(
+        "onboarding.completed",
+        "candidate_onboarding_assignment",
+        assignment.id,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+        safe_metadata={"application_id": str(application.id)},
+    )
+    db.commit()
+    db.refresh(assignment)
+    return assignment
+
+
 __all__ = [
     "ACTIVATION_GATE_CODES",
     "DERIVED_GATE_CODES",
@@ -1207,10 +1493,12 @@ __all__ = [
     "candidate_assigned_documents",
     "candidate_esign_envelopes",
     "candidate_gates",
+    "complete_onboarding_assignment",
     "create_onboarding_plan",
     "current_document_version",
     "get_candidate_tasks",
     "get_onboarding_plan",
+    "issue_ica_envelope_for_assignment",
     "link_esign_envelope",
     "list_controlled_documents",
     "list_onboarding_plans",

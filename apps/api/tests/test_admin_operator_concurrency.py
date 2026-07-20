@@ -29,6 +29,7 @@ from keeper_api.models.domain import (
 from keeper_api.services.onboarding import (
     OnboardingError,
     assign_onboarding_plan,
+    complete_onboarding_assignment,
     refresh_esign_envelope,
     replace_esign_envelope,
     satisfy_gate,
@@ -431,3 +432,101 @@ def test_concurrent_assignments_across_applications_leave_one_active_assignment(
             race_ids["application_a"],
             race_ids["application_b"],
         }
+
+
+def test_concurrent_completion_serializes_one_transition(
+    postgres_session_factory: sessionmaker[Session],
+) -> None:
+    identifiers = _seed_assignment(postgres_session_factory, envelope_status="completed")
+    extra = {"agent_role": uuid.uuid4(), "candidate_grant": uuid.uuid4()}
+    now = datetime.now(UTC)
+    with postgres_session_factory.begin() as session:
+        values = {**identifiers, **extra, "now": now}
+        values["candidate_role"] = session.scalar(
+            text("SELECT id FROM roles WHERE code = 'candidate'")
+        )
+        session.execute(
+            text(
+                "UPDATE candidate_esign_envelopes "
+                "SET last_synced_at = :now, "
+                "envelope_url = 'https://sign.keeperfinancial.ca/sign/concurrency-envelope' "
+                "WHERE id = :envelope"
+            ),
+            values,
+        )
+        session.execute(
+            text(
+                "INSERT INTO roles (id, code, description, created_at, updated_at) "
+                "VALUES (:agent_role, 'agent', 'Synthetic agent', :now, :now)"
+            ),
+            values,
+        )
+        session.execute(
+            text(
+                "UPDATE programmatic_gates SET status = 'satisfied', satisfied_at = :now WHERE assignment_id = :assignment"
+            ),
+            values,
+        )
+        session.execute(
+            text(
+                """
+                INSERT INTO programmatic_gates
+                    (id, candidate_id, assignment_id, code, label, status,
+                     satisfied_at, created_at, updated_at)
+                VALUES
+                    (gen_random_uuid(), :candidate, :assignment, 'fsra_authorization',
+                     'FSRA', 'satisfied', :now, :now, :now),
+                    (gen_random_uuid(), :candidate, :assignment, 'system_provisioning',
+                     'Systems', 'satisfied', :now, :now, :now),
+                    (gen_random_uuid(), :candidate, :assignment, 'policy_acknowledgement',
+                     'Policies', 'satisfied', :now, :now, :now)
+                """
+            ),
+            values,
+        )
+        session.execute(
+            text(
+                """
+                INSERT INTO user_roles
+                    (id, user_id, role_id, granted_by_user_id, created_at, updated_at)
+                VALUES
+                    (:candidate_grant, :candidate_user, :candidate_role, :admin, :now, :now)
+                """
+            ),
+            values,
+        )
+
+    start = threading.Barrier(2)
+
+    def complete(request_id: str) -> uuid.UUID:
+        with postgres_session_factory() as session:
+            start.wait(timeout=5)
+            return complete_onboarding_assignment(
+                session,
+                assignment_id=identifiers["assignment"],
+                actor_user_id=identifiers["admin"],
+                request_id=request_id,
+            ).id
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(complete, ("completion-a", "completion-b")))
+    assert results == [identifiers["assignment"], identifiers["assignment"]]
+    with postgres_session_factory() as session:
+        assert (
+            session.scalar(
+                text("SELECT count(*) FROM user_roles WHERE role_id = :agent_role"), extra
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                text("SELECT count(*) FROM audit_events WHERE event_type = 'onboarding.completed'")
+            )
+            == 1
+        )
+        assert (
+            session.scalar(
+                text("SELECT count(*) FROM candidate_status_history WHERE new_status = 'active'")
+            )
+            == 2
+        )

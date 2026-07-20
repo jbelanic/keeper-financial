@@ -1,5 +1,12 @@
 # Test Strategy
 
+## 2026-07-20 onboarding-completion additions
+
+- Unit-test exact Documenso template lookup/use requests, configured signer-role selection, deterministic assignment external ID, echoed source/template/external-ID/recipient/envelope provenance, bounded response parsing, token-derived signing links, and strict same-public-origin signing URLs. Redirect, timeout, oversize, malformed, mismatched provenance, ambiguous recipient, unsupported status, missing link data, and provider failures must remain safe and fail closed.
+- API/service tests cover unconditional completion AAL2, authoritative assignment/user recipient projection, withdrawn/stale lifecycle rejection before issuance or activation, manual/recovery-envelope ineligibility, duplicate issuance without provider calls, persistence only after provider success, readiness/provider completion requirements, idempotent role/history/audit transitions, rollback, and eligible-agent projection.
+- The opt-in isolated PostgreSQL suite covers completion serialization using real row locks; SQLite unit tests do not substitute for this concurrency evidence.
+- Web tests cover send/refresh/recovery states, explicit completion confirmation, completed read-only history, current-envelope-only signing links, safe external-link attributes, and agent-profile continuation.
+
 ## Phase 0 layers
 
 - API unit/service tests: lifecycle maps, reason rules, profile approval, redirect validation, environment fail-closed behavior.

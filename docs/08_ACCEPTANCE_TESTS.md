@@ -158,13 +158,16 @@ assignment generation.
 - Candidate can see only their assigned dashboard, submit bounded task evidence, and acknowledge an assigned exact document version.
 - Authorized admin can review submitted task evidence and link a self-hosted Documenso document to the exact assignment without implementing custom signing.
 - Documenso refresh is provider-authoritative, uses only the configured HTTPS origin without redirect following, and fails closed on malformed, unavailable, redirected, or unrecognized provider responses.
-- A rejected or voided current envelope can be replaced without deleting its predecessor. Only a verified current `completed` envelope satisfies executed-agreement readiness.
+- A rejected, voided, or recovery-only current envelope can be superseded through bounded Keeper issuance without deleting its predecessor, and only after provider success. Only a verified current `completed` Keeper-issued envelope with validated template/external-ID/recipient provenance satisfies executed-agreement readiness; manual/recovery links never do.
 - Mandatory tasks and the five configured assignment-bound gates contribute to activation-readiness calculation.
 - Only `background_check`, `fsra_authorization`, and `system_provisioning` accept concise manual evidence. Reopening one requires a correction reason and append-only evidence; `policy_acknowledgement` and `executed_agreements` are derived-only and reject manual assertion or reopening.
 - FSRA verification is recorded as administrative evidence, not asserted automatically.
 - System provisioning task can be completed manually.
 - Satisfying every configured gate may set `activation_ready=true`; it does not change the candidate/application to `active`, create an agent relationship, or represent final activation.
-- Final agent activation remains subject to a separately approved administrative or operational workflow; the current implementation does not expose a final activation operation and tests must not claim otherwise.
+- One configured ICA template can be issued only to the exact assignment-linked active user's authoritative email, with no recipient override. Before distribution, the adapter requires the configured template response to echo its numeric ID and contain only the configured `SIGNER` slot. The documented issuance response must then provide a bounded document ID, `DOCUMENT` type, `TEMPLATE` source, deterministic assignment external ID, exactly one authoritative-email `SIGNER`, and a validated same-origin signing token or URL. Missing configuration or an incompatible provider response creates no local envelope; a failed reissue leaves the predecessor current.
+- Candidate signing is exposed only from the current non-superseded Keeper-issued envelope through a validated same-origin `/sign/{token}` URL with one non-empty token segment; predecessor and non-actionable URLs are never exposed.
+- An administrator with an AAL2 principal can explicitly complete only the exact active, activation-ready assignment with an activatable submitted application, nonterminal candidate relationship, and current provider-synced Keeper-issued completed envelope. AAL2 remains mandatory even when broader admin-MFA enforcement is disabled. The transaction completes the assignment, activates the exact application and candidate relationship, retains the candidate role, grants the existing agent role once, and appends status/audit evidence exactly once.
+- Repeated and concurrent completion is idempotent; any failure rolls back status, role, history, and audit changes together. Completed assignments remain read-only candidate/admin history and make an otherwise profile-less user eligible for agent-profile administration.
 
 ## Agent profiles
 

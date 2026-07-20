@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+from email.message import Message
 from typing import Any
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
 from keeper_api.core.config import Settings
 from keeper_api.services import documenso
-from keeper_api.services.documenso import DocumensoError, fetch_envelope_status
+from keeper_api.services.documenso import DocumensoError, fetch_envelope_status, issue_ica_envelope
 
 
 class _Response:
@@ -48,7 +49,306 @@ def _settings() -> Settings:
         documenso_public_base_url="https://sign.keeperfinancial.ca",
         documenso_api_token="synthetic-token",
         documenso_timeout_seconds=5.0,
+        documenso_ica_template_id=42,
+        documenso_ica_signer_recipient_id=7,
     )
+
+
+def _issued_response(**overrides: object) -> dict[str, object]:
+    response: dict[str, object] = {
+        "id": "env-123",
+        "type": "DOCUMENT",
+        "status": "PENDING",
+        "source": "TEMPLATE",
+        "externalId": "keeper-onboarding-1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+        "recipients": [
+            {
+                "id": 700,
+                "email": "candidate@example.test",
+                "role": "SIGNER",
+                "signingUrl": "https://sign.keeperfinancial.ca/sign/recipient-token-123",
+            }
+        ],
+    }
+    response.update(overrides)
+    return response
+
+
+def test_issue_ica_uses_exact_template_recipient_and_validated_signing_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[Any] = []
+    responses = iter(
+        [
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(),
+        ]
+    )
+
+    class _RecordingOpener(_Opener):
+        def open(self, request: Any, *, timeout: float) -> _Response:
+            assert timeout == 5.0
+            requests.append(request)
+            return _Response(next(responses))
+
+    monkeypatch.setattr(documenso, "build_opener", lambda _handler: _RecordingOpener())
+
+    issued = issue_ica_envelope(
+        _settings(),
+        assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+        candidate_email="candidate@example.test",
+        candidate_name="Candidate Name",
+    )
+
+    assert issued.envelope_id == "env-123"
+    assert issued.status == "PENDING"
+    assert issued.signing_url == "https://sign.keeperfinancial.ca/sign/recipient-token-123"
+    assert [request.full_url for request in requests] == [
+        "https://sign.keeperfinancial.ca/api/v2/template/42",
+        "https://sign.keeperfinancial.ca/api/v2/template/use",
+    ]
+    assert [request.method for request in requests] == ["GET", "POST"]
+    assert all(request.get_header("Authorization") == "synthetic-token" for request in requests)
+    assert json.loads(requests[1].data) == {
+        "templateId": 42,
+        "recipients": [{"id": 7, "email": "candidate@example.test", "name": "Candidate Name"}],
+        "distributeDocument": True,
+        "externalId": "keeper-onboarding-1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+    }
+
+
+def test_issue_ica_rejects_extra_template_recipient_before_distribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requests: list[Any] = []
+
+    class _PreflightOnlyOpener(_Opener):
+        def open(self, request: Any, *, timeout: float) -> _Response:
+            assert timeout == 5.0
+            requests.append(request)
+            if request.method != "GET":
+                raise AssertionError("template/use must not be called")
+            return _Response(
+                {
+                    "id": 42,
+                    "recipients": [
+                        {"id": 7, "role": "SIGNER"},
+                        {"id": 8, "role": "CC"},
+                    ],
+                }
+            )
+
+    monkeypatch.setattr(documenso, "build_opener", lambda _handler: _PreflightOnlyOpener())
+
+    with pytest.raises(DocumensoError, match="template is incompatible"):
+        issue_ica_envelope(
+            _settings(),
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
+
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize(
+    "issued_override",
+    [
+        {"type": "TEMPLATE"},
+        {"source": "DOCUMENT"},
+        {"externalId": "keeper-onboarding-other-assignment"},
+        {
+            "recipients": [
+                {
+                    "id": 700,
+                    "email": "other@example.test",
+                    "role": "SIGNER",
+                    "signingUrl": "https://sign.keeperfinancial.ca/sign/env-123",
+                }
+            ]
+        },
+        {
+            "recipients": [
+                {
+                    "id": 700,
+                    "email": "candidate@example.test",
+                    "role": "SIGNER",
+                    "signingUrl": "https://sign.keeperfinancial.ca/sign/env-123",
+                },
+                {
+                    "id": 701,
+                    "email": "other@example.test",
+                    "role": "CC",
+                    "signingUrl": "https://sign.keeperfinancial.ca/sign/other",
+                },
+            ]
+        },
+    ],
+)
+def test_issue_ica_rejects_mismatched_issuance_provenance(
+    monkeypatch: pytest.MonkeyPatch, issued_override: dict[str, object]
+) -> None:
+    responses = iter(
+        [
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(**issued_override),
+        ]
+    )
+    monkeypatch.setattr(
+        documenso,
+        "build_opener",
+        lambda _handler: _Opener(next(responses)),
+    )
+
+    with pytest.raises(DocumensoError, match="incompatible"):
+        issue_ica_envelope(
+            _settings(),
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
+
+
+@pytest.mark.parametrize(
+    ("template_payload", "issued_payload"),
+    [
+        ({"id": 43, "recipients": [{"id": 7, "role": "SIGNER"}]}, None),
+        ({"id": 42, "recipients": [{"id": 8, "role": "SIGNER"}]}, None),
+        ({"id": 42, "recipients": [{"id": 7, "role": "VIEWER"}]}, None),
+        (
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(id=""),
+        ),
+        (
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(
+                recipients=[
+                    {
+                        "id": 700,
+                        "email": "candidate@example.test",
+                        "role": "SIGNER",
+                        "signingUrl": "https://evil.example.test/sign/env-123",
+                    }
+                ]
+            ),
+        ),
+        (
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(
+                recipients=[
+                    {
+                        "id": 700,
+                        "email": "candidate@example.test",
+                        "role": "SIGNER",
+                        "signingUrl": "https://sign.keeperfinancial.ca/sign/",
+                    }
+                ]
+            ),
+        ),
+        (
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(status="DRAFT"),
+        ),
+        (
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            _issued_response(
+                recipients=[
+                    {
+                        "id": 700,
+                        "email": "candidate@example.test",
+                        "role": "SIGNER",
+                    }
+                ]
+            ),
+        ),
+    ],
+)
+def test_issue_ica_rejects_incompatible_template_or_response(
+    monkeypatch: pytest.MonkeyPatch,
+    template_payload: object,
+    issued_payload: object | None,
+) -> None:
+    responses = iter(
+        [template_payload] if issued_payload is None else [template_payload, issued_payload]
+    )
+    monkeypatch.setattr(
+        documenso,
+        "build_opener",
+        lambda _handler: _Opener(next(responses)),
+    )
+
+    with pytest.raises(DocumensoError, match="incompatible"):
+        issue_ica_envelope(
+            _settings(),
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
+
+
+def test_issue_ica_rejects_oversized_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _OversizedResponse(_Response):
+        def read(self, _limit: int) -> bytes:
+            return b"{" + b"x" * (64 * 1024) + b"}"
+
+    class _OversizedOpener(_Opener):
+        def open(self, request: object, *, timeout: float) -> _OversizedResponse:
+            self.request = request
+            return _OversizedResponse({})
+
+    monkeypatch.setattr(documenso, "build_opener", lambda _handler: _OversizedOpener())
+    with pytest.raises(DocumensoError, match="exceeded"):
+        issue_ica_envelope(
+            _settings(),
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
+
+
+@pytest.mark.parametrize(
+    "provider_error",
+    [
+        URLError("provider body secret-response-body"),
+        HTTPError(
+            "https://sign.keeperfinancial.ca/api/v2/template/42",
+            302,
+            "redirect secret-response-body",
+            Message(),
+            None,
+        ),
+        TimeoutError("secret-response-body"),
+    ],
+)
+def test_issue_ica_provider_failures_are_safe(
+    monkeypatch: pytest.MonkeyPatch, provider_error: Exception
+) -> None:
+    monkeypatch.setattr(
+        documenso,
+        "build_opener",
+        lambda _handler: _Opener(error=provider_error),
+    )
+    with pytest.raises(DocumensoError) as raised:
+        issue_ica_envelope(
+            _settings(),
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
+    assert "synthetic-token" not in str(raised.value)
+    assert "secret-response-body" not in str(raised.value)
+
+
+def test_issue_ica_requires_configured_template_and_signer() -> None:
+    settings = _settings()
+    settings.documenso_ica_template_id = None
+    with pytest.raises(DocumensoError, match="not configured"):
+        issue_ica_envelope(
+            settings,
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
 
 
 @pytest.mark.parametrize(

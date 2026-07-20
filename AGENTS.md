@@ -19,7 +19,7 @@ The current owner-accepted Phase 1 source checkpoint is merged to `main` at `223
 
 The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement committed at `17e1b43`. GitHub CI passed and PR #4 merged the combined accepted source to `main` at `2239441`.
 
-This is source acceptance only. It does not authorize commit, push, pull request, merge, history rewriting, production or controlled-pilot operation, deployment, shared-database migration, final candidate activation, candidate-to-agent transition, agent-role grant, legal/privacy/regulatory/claims/accessibility approval, credential or external-service changes, destructive operations, or Phase 1F implementation.
+This is source acceptance only. It does not authorize commit, push, pull request, merge, history rewriting, production or controlled-pilot operation, deployment, shared-database migration, legal/privacy/regulatory/claims/accessibility approval, credential or external-service changes, destructive operations, or Phase 1F implementation. The separate 2026-07-20 owner decision below supersedes only the former prohibition on implementing the bounded final onboarding-completion and agent-role transition.
 
 On 2026-07-19, the owner separately authorized the accepted branch to be committed, integrated with the current local `main`, fully validated, pushed, reviewed through a GitHub pull request and CI, and merged if the checks pass. That publication authorization does not extend to deployment, shared-database migration, production or controlled-pilot operation, final activation, lifecycle/role grant, credential or external-service changes, destructive operations, or Phase 1F implementation.
 
@@ -33,7 +33,11 @@ Completed checkpoints include:
 - SQLAlchemy/Alembic model-schema drift resolution through forward migration `20260718_0007`; the migration chain has one head and `make migrate-check` is clean.
 - The owner-accepted administrator/operator refinement, with candidate Alembic head `20260719_0008`, exact-assignment evidence, provider-authoritative Documenso refresh, operator-facing selectors, permanent first-publication slug reservation, and removal of the nonfunctional `/admin/content` placeholder.
 
-The next development gate is **Phase 1F production and controlled-pilot readiness planning**. Phase 1F begins with planning and evidence definition, not implementation.
+On 2026-07-20, the owner authorized a narrowly bounded minimum end-to-end onboarding-completion implementation: one configured owner-maintained Documenso ICA template issued to the exact application-linked authoritative user with validated template/external-ID/recipient/envelope provenance; provider-authoritative administrator refresh; and one explicit administrator/AAL2 completion operation that revalidates an activatable submitted application and nonterminal relationship, then atomically and idempotently completes the exact assignment, activates its exact application and candidate relationship, retains the candidate role, grants the existing `agent` role once, and appends safe history/audit evidence. Manual/recovery envelope links cannot satisfy readiness or completion; failed or recovery-only current envelopes may be superseded only after a new Keeper issuance succeeds. This authority excludes webhooks, agreement authoring/storage, arbitrary templates/recipients/content, automatic agent-profile creation/publication, deployment, shared-database mutation, external-service configuration changes, and broad Phase 1F work.
+
+The owner has explicitly accepted the bounded onboarding-completion source on `feat/onboarding-completion` and authorized its controlled Git publication as one commit, a push of that dedicated branch, and a draft GitHub pull request against `main`. This authorization does not include merge, deployment, shared-database migration, production or controlled-pilot operation, real-candidate use, credential or external-service changes, destructive operations, or Phase 1F implementation.
+
+**Phase 1F production and controlled-pilot readiness remains deferred.** Phase 1F begins with planning and evidence definition, not implementation, and is not part of the bounded onboarding-completion phase.
 
 Do not describe Phase 1D, Phase 1E, candidate-authentication remediation, document-upload remediation, or general Alembic drift as the next implementation phase.
 
@@ -63,7 +67,7 @@ The local administrator-linking command is permitted only in `APP_ENV=local` for
 - use service-role credentials;
 - overwrite a genuine non-placeholder provider subject.
 
-Activation gates and `activation_ready` calculation are implemented. Do not claim that final agent activation is implemented unless a separately approved final activation operation exists.
+Activation gates and `activation_ready` calculation are implemented. The 2026-07-20 decision authorizes implementation of the separately approved explicit final onboarding-completion operation; readiness alone must never activate an agent.
 
 Phase 1F readiness work must distinguish:
 

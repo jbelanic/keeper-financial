@@ -15,7 +15,6 @@ import type {
   ActivationGateResponse,
   ControlledDocumentResponse,
   PolicyAcknowledgementResponse,
-  EsignEnvelopeResponse,
 } from "@/lib/review-onboarding-api";
 
 const TASK_TONE: Record<string, "neutral" | "success" | "warning" | "danger"> =
@@ -43,6 +42,10 @@ export function CandidateOnboardingDashboardView({
   );
   const [evidenceText, setEvidenceText] = useState("");
   const [ackWording, setAckWording] = useState("");
+  const assignmentCompleted = dashboard.assignment?.status === "completed";
+  const currentEnvelope = dashboard.esign_envelopes.find(
+    (envelope) => !envelope.superseded_at,
+  );
 
   const requiredTasks = tasks.filter((task) => task.status !== "completed");
   const completedCount = tasks.length - requiredTasks.length;
@@ -113,7 +116,13 @@ export function CandidateOnboardingDashboardView({
 
       <Card>
         <h2>Onboarding status</h2>
-        {dashboard.activation_ready ? (
+        {assignmentCompleted ? (
+          <p>
+            <StatusBadge tone="success">Onboarding completed</StatusBadge> Your
+            completed onboarding evidence remains available here as read-only
+            history.
+          </p>
+        ) : dashboard.activation_ready ? (
           <p>
             <StatusBadge tone="success">
               Onboarding requirements complete
@@ -148,9 +157,10 @@ export function CandidateOnboardingDashboardView({
                   </p>
                   {task.due_at ? <p>Due: {task.due_at}</p> : null}
                   {task.evidence ? <p>Evidence: {task.evidence}</p> : null}
-                  {task.status === "required" ||
-                  task.status === "in_progress" ||
-                  task.status === "rejected" ? (
+                  {!assignmentCompleted &&
+                  (task.status === "required" ||
+                    task.status === "in_progress" ||
+                    task.status === "rejected") ? (
                     <div>
                       <label htmlFor={`evidence-${task.id}`}>
                         Evidence / notes
@@ -204,7 +214,7 @@ export function CandidateOnboardingDashboardView({
                     <h3>{doc.title}</h3>
                     <p>{doc.description}</p>
                     {doc.requires_acknowledgement ? (
-                      acked ? (
+                      acked || assignmentCompleted ? (
                         <p>
                           <StatusBadge tone="success">Acknowledged</StatusBadge>
                         </p>
@@ -246,28 +256,42 @@ export function CandidateOnboardingDashboardView({
 
       <section aria-labelledby="esign-heading">
         <h2 id="esign-heading">External signing</h2>
-        {dashboard.esign_envelopes.length === 0 ? (
-          <p>No e-signature envelopes have been linked yet.</p>
+        {!currentEnvelope ? (
+          <p>The contractor agreement has not been sent yet.</p>
         ) : (
-          <ul>
-            {dashboard.esign_envelopes.map((env: EsignEnvelopeResponse) => (
-              <li key={env.id}>
-                <Card>
-                  <p>
-                    Envelope status:{" "}
-                    <StatusBadge tone="neutral">{env.status}</StatusBadge>
-                  </p>
-                  {env.envelope_url ? (
-                    <p>
-                      <a href={env.envelope_url}>
-                        Open your signing envelope (external)
-                      </a>
-                    </p>
-                  ) : null}
-                </Card>
-              </li>
-            ))}
-          </ul>
+          <Card>
+            <p>
+              Agreement status:{" "}
+              <StatusBadge
+                tone={
+                  currentEnvelope.status === "completed" ? "success" : "warning"
+                }
+              >
+                {currentEnvelope.status === "sent"
+                  ? "sent / waiting for signature"
+                  : currentEnvelope.status}
+              </StatusBadge>
+            </p>
+            {!assignmentCompleted &&
+            currentEnvelope.status === "sent" &&
+            currentEnvelope.envelope_url ? (
+              <p>
+                <a
+                  href={currentEnvelope.envelope_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Review and sign contractor agreement
+                </a>
+              </p>
+            ) : null}
+            {!assignmentCompleted && currentEnvelope.status === "sent" ? (
+              <p>
+                After signing, an administrator may need to refresh the provider
+                status.
+              </p>
+            ) : null}
+          </Card>
         )}
       </section>
 
