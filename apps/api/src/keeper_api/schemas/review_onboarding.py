@@ -432,6 +432,18 @@ class AdminOnboardingAssignmentDetail(AdminOnboardingAssignmentSummary):
     esign_envelopes: list[EsignEnvelopeResponse]
 
 
+class OnboardingCompletionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    assignment_id: uuid.UUID
+    application_id: uuid.UUID
+    candidate_id: uuid.UUID
+    status: Literal["completed"]
+    application_status: Literal["active"]
+    candidate_status: Literal["active"]
+    agent_access_enabled: bool
+
+
 class ActivationGateListResponse(BaseModel):
     items: list[ActivationGateResponse]
     all_satisfied: bool

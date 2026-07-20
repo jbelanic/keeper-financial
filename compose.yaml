@@ -145,6 +145,7 @@ services:
         NEXT_PUBLIC_PRINCIPAL_BROKER: ${NEXT_PUBLIC_PRINCIPAL_BROKER:-}
     environment:
       API_INTERNAL_URL: http://api:8000
+      SUPABASE_INTERNAL_URL: http://host.docker.internal:54321
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
@@ -161,6 +162,8 @@ services:
       NEXT_PUBLIC_PRINCIPAL_BROKER: ${NEXT_PUBLIC_PRINCIPAL_BROKER:-}
     ports:
       - "127.0.0.1:3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       api:
         condition: service_healthy

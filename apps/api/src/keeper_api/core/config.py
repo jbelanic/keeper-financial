@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     documenso_public_base_url: str | None = None
     documenso_api_token: SecretStr | None = None
     documenso_timeout_seconds: float = Field(default=5.0, gt=0, le=15)
+    documenso_ica_template_id: int | None = Field(default=None, gt=0)
+    documenso_ica_signer_recipient_id: int | None = Field(default=None, gt=0)
     crm_provider: str = "disabled"
 
     @field_validator("mortgage_application_agent_links", mode="before")

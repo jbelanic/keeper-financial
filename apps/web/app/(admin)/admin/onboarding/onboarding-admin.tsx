@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button, Card, ErrorSummary, FormField, StatusBadge } from "@keeper/ui";
 import { adminBrowserRequest } from "@/lib/admin-browser-api";
 import type {
@@ -57,6 +58,7 @@ export function OnboardingAdmin({
   const [reopenReason, setReopenReason] = useState("");
   const [envelopeId, setEnvelopeId] = useState("");
   const [replacementRecordId, setReplacementRecordId] = useState("");
+  const [completionSucceeded, setCompletionSucceeded] = useState(false);
 
   function fail(message: string) {
     setErrors([message]);
@@ -319,6 +321,53 @@ export function OnboardingAdmin({
     }
   }
 
+  async function issueAgreement() {
+    if (!detail || busy) return;
+    setBusy(true);
+    setErrors([]);
+    try {
+      const response = await requester(
+        `/api/v1/admin/onboarding/assignments/${detail.assignment_id}/esign-envelopes/issue-ica`,
+        { method: "POST" },
+      );
+      if (!response.ok) throw new Error("rejected");
+      await loadAssignment(detail.assignment_id);
+      setNotice("Contractor agreement sent to the selected candidate.");
+    } catch {
+      fail(
+        "The contractor agreement could not be sent. Verify the configured template and provider compatibility.",
+      );
+      setBusy(false);
+    }
+  }
+
+  async function completeAssignment() {
+    if (!detail || busy || !detail.activation_ready) return;
+    if (
+      !window.confirm(
+        "Complete onboarding and grant this candidate agent access? This final transition is auditable.",
+      )
+    )
+      return;
+    setBusy(true);
+    setErrors([]);
+    try {
+      const response = await requester(
+        `/api/v1/admin/onboarding/assignments/${detail.assignment_id}/complete`,
+        { method: "POST" },
+      );
+      if (!response.ok) throw new Error("rejected");
+      await loadAssignment(detail.assignment_id);
+      setCompletionSucceeded(true);
+      setNotice("Onboarding completed and agent access enabled.");
+    } catch {
+      fail(
+        "Onboarding could not be completed. Refresh provider evidence and readiness.",
+      );
+      setBusy(false);
+    }
+  }
+
   async function reviewTask(taskId: string, approved: boolean) {
     if (!detail || busy) return;
     setBusy(true);
@@ -342,6 +391,15 @@ export function OnboardingAdmin({
       setBusy(false);
     }
   }
+
+  const currentEnvelope = detail?.esign_envelopes.find(
+    (envelope) => !envelope.superseded_at,
+  );
+  const canIssueAgreement =
+    detail?.status === "active" &&
+    (!currentEnvelope ||
+      !currentEnvelope.envelope_url ||
+      ["rejected", "voided"].includes(currentEnvelope.status));
 
   return (
     <div className="onboarding-admin">
@@ -752,44 +810,34 @@ export function OnboardingAdmin({
           <Card>
             <h3>Documenso agreement</h3>
             <p>
-              Enter only the Documenso document ID. Keeper does not store
-              recipient signing links or signed files.
+              The agreement is sent only to {detail.candidate_name} at{" "}
+              {detail.candidate_email}. The recipient cannot be changed here.
             </p>
-            {detail.status === "active" ? (
-              <form onSubmit={linkEnvelope} aria-busy={busy}>
-                <FormField
-                  id="documenso-envelope-id"
-                  label={
-                    replacementRecordId
-                      ? "Replacement Documenso document ID (required)"
-                      : "Documenso document ID (required)"
-                  }
-                >
-                  <input
-                    id="documenso-envelope-id"
-                    value={envelopeId}
-                    maxLength={255}
-                    onChange={(event) => setEnvelopeId(event.target.value)}
-                    required
-                  />
-                </FormField>
-                <Button type="submit" disabled={busy}>
-                  {replacementRecordId
-                    ? "Link replacement envelope"
-                    : "Link Documenso envelope"}
-                </Button>
-              </form>
+            {canIssueAgreement ? (
+              <Button type="button" disabled={busy} onClick={issueAgreement}>
+                {currentEnvelope
+                  ? currentEnvelope.envelope_url
+                    ? "Resend contractor agreement"
+                    : "Send verified contractor agreement"
+                  : "Send contractor agreement"}
+              </Button>
             ) : null}
+            {detail.esign_envelopes.length === 0 ? <p>Not sent.</p> : null}
             <ul>
               {detail.esign_envelopes.map((envelope) => (
                 <li key={envelope.id}>
-                  Documenso {envelope.envelope_id ?? "legacy record"}:{" "}
                   <StatusBadge
                     tone={
-                      envelope.status === "completed" ? "success" : "warning"
+                      envelope.status === "completed"
+                        ? "success"
+                        : envelope.status === "rejected"
+                          ? "danger"
+                          : "warning"
                     }
                   >
-                    {envelope.status}
+                    {envelope.status === "sent"
+                      ? "Sent / waiting for signature"
+                      : envelope.status}
                   </StatusBadge>
                   {envelope.superseded_at ? " — superseded" : ""}
                   {!envelope.superseded_at && detail.status === "active" ? (
@@ -806,7 +854,7 @@ export function OnboardingAdmin({
                           type="button"
                           onClick={() => setReplacementRecordId(envelope.id)}
                         >
-                          Replace envelope
+                          Advanced recovery replacement
                         </Button>
                       ) : null}
                     </div>
@@ -814,6 +862,39 @@ export function OnboardingAdmin({
                 </li>
               ))}
             </ul>
+            <details>
+              <summary>Recovery / advanced controls</summary>
+              <p>
+                Manually link a provider envelope only for approved recovery.
+                Recovery links preserve status and history but cannot enable
+                completion.
+              </p>
+              {detail.status === "active" ? (
+                <form onSubmit={linkEnvelope} aria-busy={busy}>
+                  <FormField
+                    id="documenso-envelope-id"
+                    label={
+                      replacementRecordId
+                        ? "Replacement Documenso document ID (required)"
+                        : "Documenso document ID (required)"
+                    }
+                  >
+                    <input
+                      id="documenso-envelope-id"
+                      value={envelopeId}
+                      maxLength={255}
+                      onChange={(event) => setEnvelopeId(event.target.value)}
+                      required
+                    />
+                  </FormField>
+                  <Button type="submit" disabled={busy}>
+                    {replacementRecordId
+                      ? "Link replacement envelope"
+                      : "Link Documenso envelope"}
+                  </Button>
+                </form>
+              ) : null}
+            </details>
           </Card>
           <Card>
             <h3>Readiness</h3>
@@ -828,9 +909,22 @@ export function OnboardingAdmin({
             ) : (
               <p>Historical assignment readiness is not evaluated.</p>
             )}
-            <p>
-              No final activation action exists on this screen or in the API.
-            </p>
+            {detail.status === "active" ? (
+              <Button
+                type="button"
+                disabled={busy || !detail.activation_ready}
+                onClick={completeAssignment}
+              >
+                Complete onboarding and enable agent
+              </Button>
+            ) : (
+              <p>Completed evidence is read-only.</p>
+            )}
+            {completionSucceeded ? (
+              <p>
+                <Link href="/admin/agents">Continue to agent profiles</Link>
+              </p>
+            ) : null}
           </Card>
         </section>
       ) : null}

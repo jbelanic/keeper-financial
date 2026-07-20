@@ -168,3 +168,25 @@ def test_host_run_api_uses_loopback_clamav_and_minio_endpoints() -> None:
     assert 'os.environ["S3_BUCKET"] = os.environ["MINIO_BUCKET"]' in launcher
     assert "CLAMAV_HOST=clamav" not in launcher
     assert "S3_ENDPOINT_URL=http://minio:9000" not in launcher
+
+
+def test_compose_web_uses_internal_server_routes_and_public_browser_routes() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    web_service = compose.split("\n  web:\n", maxsplit=1)[1].split("\nvolumes:", maxsplit=1)[0]
+
+    assert "API_INTERNAL_URL: http://api:8000" in web_service
+    assert "NEXT_PUBLIC_API_BASE_URL: http://localhost:8000" in web_service
+    assert "SUPABASE_INTERNAL_URL: http://host.docker.internal:54321" in web_service
+    assert (
+        "NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}"
+        in web_service
+    )
+    assert 'extra_hosts:\n      - "host.docker.internal:host-gateway"' in web_service
+
+
+def test_migration_commands_build_the_current_api_image() -> None:
+    makefile = (PROJECT_ROOT / "Makefile").read_text()
+
+    assert "docker compose run --rm --build api alembic upgrade head" in makefile
+    assert "docker compose run --rm --build api alembic current --check-heads" in makefile
+    assert "docker compose run --rm --build api alembic check" in makefile

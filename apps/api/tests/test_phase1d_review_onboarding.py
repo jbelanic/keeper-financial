@@ -26,9 +26,14 @@ from keeper_api.models.domain import (
     PolicyAcknowledgement,
     ProgrammaticGate,
     RecruitmentPosting,
+    Role,
+    User,
+    UserRole,
 )
 from keeper_api.models.statuses import CandidateStatus
-from keeper_api.services.documenso import DocumensoError
+from keeper_api.services import documenso as documenso_service
+from keeper_api.services import onboarding as onboarding_service
+from keeper_api.services.documenso import DocumensoError, IssuedEnvelope
 
 ADMIN_HEADERS = {"X-Dev-Auth-Sub": "review-admin", "X-Dev-Auth-AAL": "aal2"}
 
@@ -143,6 +148,535 @@ def assign(
         f"?plan_id={plan.id}&application_id={application.id}",
         headers=ADMIN_HEADERS,
     )
+
+
+def test_admin_issues_configured_ica_to_assignment_linked_user(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    create_admin(db)
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    user = db.get(User, candidate.user_id)
+    assert user is not None
+    user.email = "authoritative@example.test"
+    user.display_name = "Authoritative Candidate"
+    db.commit()
+    assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    observed: dict[str, str] = {}
+
+    def fake_issue(_settings: object, **kwargs: str) -> IssuedEnvelope:
+        observed.update(kwargs)
+        return IssuedEnvelope(
+            envelope_id="issued-envelope",
+            status="PENDING",
+            signing_url="https://sign.keeperfinancial.ca/sign/issued-envelope",
+        )
+
+    monkeypatch.setattr(documenso_service, "issue_ica_envelope", fake_issue)
+    response = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica",
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 201
+    assert observed == {
+        "assignment_id": assignment_id,
+        "candidate_email": "authoritative@example.test",
+        "candidate_name": "Authoritative Candidate",
+    }
+    envelope = db.scalar(
+        select(CandidateEsignEnvelope).where(
+            CandidateEsignEnvelope.assignment_id == uuid.UUID(assignment_id)
+        )
+    )
+    assert envelope is not None
+    assert envelope.envelope_id == "issued-envelope"
+    assert envelope.envelope_url == "https://sign.keeperfinancial.ca/sign/issued-envelope"
+    assert envelope.status == "sent"
+    assert envelope.last_synced_at is not None
+
+
+def test_ica_issue_requires_admin_and_rejects_provider_failure_and_duplicate(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    create_admin(db)
+    candidate, application, candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+    endpoint = f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica"
+    assert client.post(endpoint).status_code == 401
+    assert client.post(endpoint, headers={"X-Dev-Auth-Sub": candidate_subject}).status_code == 403
+
+    def fail_issue(_settings: object, **_kwargs: str) -> IssuedEnvelope:
+        raise DocumensoError("safe synthetic provider failure")
+
+    monkeypatch.setattr(documenso_service, "issue_ica_envelope", fail_issue)
+    assert client.post(endpoint, headers=ADMIN_HEADERS).status_code == 503
+    assert (
+        db.scalar(
+            select(CandidateEsignEnvelope.id).where(
+                CandidateEsignEnvelope.assignment_id == assignment_id
+            )
+        )
+        is None
+    )
+
+    calls = 0
+
+    def issue_once(_settings: object, **_kwargs: str) -> IssuedEnvelope:
+        nonlocal calls
+        calls += 1
+        return IssuedEnvelope(
+            envelope_id="issued-once",
+            status="PENDING",
+            signing_url="https://sign.keeperfinancial.ca/sign/issued-once",
+        )
+
+    monkeypatch.setattr(documenso_service, "issue_ica_envelope", issue_once)
+    assert client.post(endpoint, headers=ADMIN_HEADERS).status_code == 201
+    assert client.post(endpoint, headers=ADMIN_HEADERS).status_code == 409
+    assert calls == 1
+    assert (
+        len(
+            db.scalars(
+                select(CandidateEsignEnvelope).where(
+                    CandidateEsignEnvelope.assignment_id == assignment_id
+                )
+            ).all()
+        )
+        == 1
+    )
+
+
+def test_ica_issue_rejects_withdrawn_application_before_provider_call(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    create_admin(db)
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    application.state = "withdrawn"
+    application.status = "withdrawn"
+    db.commit()
+
+    def unexpected_issue(*_args: object, **_kwargs: object) -> IssuedEnvelope:
+        raise AssertionError("withdrawn application reached the Documenso adapter")
+
+    monkeypatch.setattr(documenso_service, "issue_ica_envelope", unexpected_issue)
+    response = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica",
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 409
+    assert (
+        db.scalar(
+            select(CandidateEsignEnvelope.id).where(
+                CandidateEsignEnvelope.assignment_id == uuid.UUID(assignment_id)
+            )
+        )
+        is None
+    )
+
+
+def test_rejected_keeper_issued_agreement_can_be_safely_reissued(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    create_admin(db)
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    provider_results = iter(
+        [
+            IssuedEnvelope(
+                envelope_id="rejected-envelope",
+                status="REJECTED",
+                signing_url="https://sign.keeperfinancial.ca/sign/rejected-envelope",
+            ),
+            IssuedEnvelope(
+                envelope_id="replacement-envelope",
+                status="PENDING",
+                signing_url="https://sign.keeperfinancial.ca/sign/replacement-envelope",
+            ),
+        ]
+    )
+    monkeypatch.setattr(
+        documenso_service,
+        "issue_ica_envelope",
+        lambda *_args, **_kwargs: next(provider_results),
+    )
+    endpoint = f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica"
+
+    rejected = client.post(endpoint, headers=ADMIN_HEADERS)
+    replacement = client.post(endpoint, headers=ADMIN_HEADERS)
+
+    assert rejected.status_code == 201
+    assert replacement.status_code == 201
+    predecessor = db.get(CandidateEsignEnvelope, uuid.UUID(rejected.json()["id"]))
+    assert predecessor is not None
+    assert predecessor.superseded_at is not None
+    assert predecessor.replacement_envelope_id == uuid.UUID(replacement.json()["id"])
+    assert replacement.json()["status"] == "sent"
+    assert replacement.json()["superseded_at"] is None
+
+
+def test_completion_requires_aal2_even_when_global_admin_mfa_is_disabled(
+    client: TestClient, db: Session, settings
+) -> None:
+    create_admin(db)
+    settings.require_admin_mfa = False
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+
+    response = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete",
+        headers={"X-Dev-Auth-Sub": "review-admin", "X-Dev-Auth-AAL": "aal1"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "administrator MFA is required"
+
+
+def test_manual_recovery_envelope_cannot_satisfy_completion(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
+) -> None:
+    create_admin(db)
+    if db.scalar(select(Role).where(Role.code == "agent")) is None:
+        db.add(Role(code="agent", description="Synthetic existing agent role"))
+        db.commit()
+    settings.esign_provider = "documenso"
+    settings.documenso_api_base_url = "https://sign.keeperfinancial.ca/api/v2"
+    settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
+    settings.documenso_api_token = "synthetic-token"
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db, with_task=False)).json()[
+        "assignment_id"
+    ]
+    linked = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
+        json={"provider_envelope_id": "manual-recovery-envelope"},
+        headers=ADMIN_HEADERS,
+    )
+    assert linked.status_code == 201
+    monkeypatch.setattr(
+        "keeper_api.services.documenso.fetch_envelope_status",
+        lambda *_args, **_kwargs: "COMPLETED",
+    )
+    refreshed = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{linked.json()['id']}/refresh",
+        headers=ADMIN_HEADERS,
+    )
+    assert refreshed.status_code == 200
+    for gate in db.scalars(
+        select(ProgrammaticGate).where(ProgrammaticGate.assignment_id == uuid.UUID(assignment_id))
+    ):
+        gate.status = "satisfied"
+        gate.satisfied_at = datetime.now(UTC)
+    db.commit()
+
+    response = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete",
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "the current contractor agreement is not provider-confirmed"
+
+    monkeypatch.setattr(
+        documenso_service,
+        "issue_ica_envelope",
+        lambda *_args, **_kwargs: IssuedEnvelope(
+            envelope_id="verified-envelope-after-recovery",
+            status="PENDING",
+            signing_url="https://sign.keeperfinancial.ca/sign/verified-envelope-after-recovery",
+        ),
+    )
+    verified = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica",
+        headers=ADMIN_HEADERS,
+    )
+    assert verified.status_code == 201
+    recovery = db.get(CandidateEsignEnvelope, uuid.UUID(linked.json()["id"]))
+    assert recovery is not None
+    assert recovery.superseded_at is not None
+    assert recovery.replacement_envelope_id == uuid.UUID(verified.json()["id"])
+
+
+@pytest.mark.parametrize(
+    ("application_state", "application_status", "candidate_status"),
+    [
+        ("withdrawn", "withdrawn", None),
+        ("submitted", "onboarding_in_progress", "offboarding"),
+    ],
+)
+def test_completion_rejects_stale_application_or_relationship_lifecycle(
+    client: TestClient,
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    application_state: str,
+    application_status: str,
+    candidate_status: str | None,
+) -> None:
+    create_admin(db)
+    if db.scalar(select(Role).where(Role.code == "agent")) is None:
+        db.add(Role(code="agent", description="Synthetic existing agent role"))
+        db.commit()
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = assign(client, candidate, application, make_plan(db, with_task=False)).json()[
+        "assignment_id"
+    ]
+    monkeypatch.setattr(
+        documenso_service,
+        "issue_ica_envelope",
+        lambda *_args, **_kwargs: IssuedEnvelope(
+            envelope_id="lifecycle-envelope",
+            status="COMPLETED",
+            signing_url="https://sign.keeperfinancial.ca/sign/lifecycle-envelope",
+        ),
+    )
+    issued = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica",
+        headers=ADMIN_HEADERS,
+    )
+    assert issued.status_code == 201
+    for gate in db.scalars(
+        select(ProgrammaticGate).where(ProgrammaticGate.assignment_id == uuid.UUID(assignment_id))
+    ):
+        gate.status = "satisfied"
+        gate.satisfied_at = datetime.now(UTC)
+    application.state = application_state
+    application.status = application_status
+    if candidate_status is not None:
+        candidate.status = candidate_status
+    db.commit()
+
+    response = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete",
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 409
+    db.refresh(application)
+    db.refresh(candidate)
+    assert application.status == application_status
+    if candidate_status is not None:
+        assert candidate.status == candidate_status
+
+
+def test_completion_requires_readiness_provider_evidence_and_active_assignment(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    if db.scalar(select(Role).where(Role.code == "agent")) is None:
+        db.add(Role(code="agent", description="Synthetic existing agent role"))
+        db.commit()
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+    db.refresh(candidate)
+    db.refresh(application)
+    previous_candidate_status = candidate.status
+    previous_application_status = application.status
+    endpoint = f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete"
+
+    assert client.post(endpoint, headers=ADMIN_HEADERS).status_code == 409
+    task = db.scalar(
+        select(CandidateOnboardingTask).where(
+            CandidateOnboardingTask.assignment_id == assignment_id
+        )
+    )
+    assert task is not None
+    task.status = "completed"
+    for gate in db.scalars(
+        select(ProgrammaticGate).where(ProgrammaticGate.assignment_id == assignment_id)
+    ):
+        gate.status = "satisfied"
+        gate.satisfied_at = datetime.now(UTC)
+    db.commit()
+    assert client.post(endpoint, headers=ADMIN_HEADERS).status_code == 409
+
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    assert assignment is not None
+    assignment.status = "superseded"
+    db.commit()
+    assert client.post(endpoint, headers=ADMIN_HEADERS).status_code == 409
+    db.refresh(candidate)
+    db.refresh(application)
+    assert candidate.status == previous_candidate_status
+    assert application.status == previous_application_status
+    agent_role = db.scalar(select(Role).where(Role.code == "agent"))
+    assert agent_role is not None
+    assert (
+        db.scalar(
+            select(UserRole.id).where(
+                UserRole.user_id == candidate.user_id,
+                UserRole.role_id == agent_role.id,
+            )
+        )
+        is None
+    )
+
+
+def test_completion_rolls_back_all_transitions_on_failure(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    create_admin(db)
+    if db.scalar(select(Role).where(Role.code == "agent")) is None:
+        db.add(Role(code="agent", description="Synthetic existing agent role"))
+        db.commit()
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+    db.refresh(candidate)
+    db.refresh(application)
+    previous_candidate_status = candidate.status
+    previous_application_status = application.status
+    task = db.scalar(
+        select(CandidateOnboardingTask).where(
+            CandidateOnboardingTask.assignment_id == assignment_id
+        )
+    )
+    assert task is not None
+    task.status = "completed"
+    for gate in db.scalars(
+        select(ProgrammaticGate).where(ProgrammaticGate.assignment_id == assignment_id)
+    ):
+        gate.status = "satisfied"
+        gate.satisfied_at = datetime.now(UTC)
+    db.add(
+        CandidateEsignEnvelope(
+            candidate_id=candidate.id,
+            assignment_id=assignment_id,
+            provider="documenso",
+            envelope_id="rollback-envelope",
+            envelope_url="https://sign.keeperfinancial.ca/sign/rollback-envelope",
+            status="completed",
+            last_synced_at=datetime.now(UTC),
+        )
+    )
+    db.commit()
+
+    def force_failure(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("synthetic forced rollback")
+
+    monkeypatch.setattr(onboarding_service.AuditService, "record", force_failure)
+    actor_user_id = db.scalar(select(User.id).where(User.email == "review-admin@example.test"))
+    assert actor_user_id is not None
+    with pytest.raises(RuntimeError, match="forced rollback"):
+        onboarding_service.complete_onboarding_assignment(
+            db,
+            assignment_id=assignment_id,
+            actor_user_id=actor_user_id,
+            request_id="rollback-test",
+        )
+    db.rollback()
+    db.expire_all()
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    candidate = db.get(Candidate, candidate.id)
+    application = db.get(CandidateApplication, application.id)
+    assert assignment is not None and assignment.status == "active"
+    assert candidate is not None and candidate.status == previous_candidate_status
+    assert application is not None and application.status == previous_application_status
+    agent_role = db.scalar(select(Role).where(Role.code == "agent"))
+    assert agent_role is not None
+    assert (
+        db.scalar(
+            select(UserRole.id).where(
+                UserRole.user_id == candidate.user_id,
+                UserRole.role_id == agent_role.id,
+            )
+        )
+        is None
+    )
+    assert not db.scalars(
+        select(CandidateStatusHistory).where(
+            CandidateStatusHistory.candidate_id == candidate.id,
+            CandidateStatusHistory.new_status == "active",
+        )
+    ).all()
+
+
+def test_admin_completion_atomically_activates_and_grants_agent_once(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    if db.scalar(select(Role).where(Role.code == "agent")) is None:
+        db.add(Role(code="agent", description="Synthetic existing agent role"))
+        db.commit()
+    candidate, application, candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+    task = db.scalar(
+        select(CandidateOnboardingTask).where(
+            CandidateOnboardingTask.assignment_id == assignment_id
+        )
+    )
+    assert task is not None
+    task.status = "completed"
+    for gate in db.scalars(
+        select(ProgrammaticGate).where(ProgrammaticGate.assignment_id == assignment_id)
+    ):
+        gate.status = "satisfied"
+        gate.satisfied_at = datetime.now(UTC)
+    db.add(
+        CandidateEsignEnvelope(
+            candidate_id=candidate.id,
+            assignment_id=assignment_id,
+            provider="documenso",
+            envelope_id="completed-envelope",
+            envelope_url="https://sign.keeperfinancial.ca/sign/completed-envelope",
+            status="completed",
+            last_synced_at=datetime.now(UTC),
+        )
+    )
+    db.commit()
+
+    first = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete",
+        headers=ADMIN_HEADERS,
+    )
+    second = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete",
+        headers=ADMIN_HEADERS,
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json()
+    assert first.json()["status"] == "completed"
+    db.refresh(candidate)
+    db.refresh(application)
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    assert assignment is not None and assignment.status == "completed"
+    assert application.status == candidate.status == "active"
+    role_codes = set(
+        db.scalars(
+            select(Role.code)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == candidate.user_id)
+        )
+    )
+    assert role_codes == {"candidate", "agent"}
+    assert (
+        db.scalar(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "onboarding.completed",
+                AuditEvent.target_id == assignment_id,
+            )
+        )
+        is not None
+    )
+    eligible = client.get("/api/v1/admin/eligible-agents", headers=ADMIN_HEADERS)
+    assert eligible.status_code == 200
+    assert str(candidate.user_id) in {item["user_id"] for item in eligible.json()}
+    candidate_headers = {"X-Dev-Auth-Sub": candidate_subject}
+    assert client.get(
+        "/api/v1/candidate/onboarding/availability", headers=candidate_headers
+    ).json() == {"available": True}
+    dashboard = client.get("/api/v1/candidate/onboarding", headers=candidate_headers).json()
+    assert dashboard["assignment"]["status"] == "completed"
+    assert dashboard["activation_ready"] is False
+    assert dashboard["esign_envelopes"][0]["envelope_url"] is None
 
 
 def test_review_queue_is_admin_only_and_application_specific(
@@ -674,7 +1208,7 @@ def test_superseded_and_cross_candidate_assignment_versions_are_rejected(
 
 
 def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     create_admin(db)
     version = make_document(db)
@@ -719,27 +1253,20 @@ def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
             ).status_code
             == 200
         )
-    settings.esign_provider = "documenso"
-    settings.documenso_api_base_url = "https://sign.keeperfinancial.ca/api/v2"
-    settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
-    settings.documenso_api_token = "synthetic-token"
-    linked = client.post(
-        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
-        json={"provider_envelope_id": "envelope_activation_ready"},
+    monkeypatch.setattr(
+        documenso_service,
+        "issue_ica_envelope",
+        lambda *_args, **_kwargs: IssuedEnvelope(
+            envelope_id="envelope_activation_ready",
+            status="COMPLETED",
+            signing_url="https://sign.keeperfinancial.ca/sign/envelope_activation_ready",
+        ),
+    )
+    issued = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica",
         headers=ADMIN_HEADERS,
     )
-    assert linked.status_code == 201
-    monkeypatch.setattr(
-        "keeper_api.services.documenso.fetch_envelope_status",
-        lambda *_args, **_kwargs: "COMPLETED",
-    )
-    assert (
-        client.post(
-            f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{linked.json()['id']}/refresh",
-            headers=ADMIN_HEADERS,
-        ).status_code
-        == 200
-    )
+    assert issued.status_code == 201
     dashboard = client.get("/api/v1/candidate/onboarding", headers=candidate_headers).json()
     assert dashboard["activation_ready"] is True
     assert application.status == "onboarding_in_progress"
@@ -880,7 +1407,7 @@ def test_documenso_status_refresh_is_authoritative_and_assignment_bound(
             ProgrammaticGate.code == "executed_agreements",
         )
     )
-    assert gate is not None and gate.status == "satisfied"
+    assert gate is not None and gate.status == "open"
     assert db.scalar(select(CandidateEsignEnvelope)).assignment_id == uuid.UUID(assignment_id)
 
     def unavailable(*_args: object, **_kwargs: object) -> str:
@@ -986,10 +1513,16 @@ def test_admin_assignment_list_and_detail_use_human_context(
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
     plan = make_plan(db)
     assignment_id = assign(client, candidate, application, plan).json()["assignment_id"]
+    user = db.get(User, candidate.user_id)
+    assert user is not None
+    user.display_name = "Authoritative Candidate"
+    user.email = "authoritative-summary@example.test"
+    db.commit()
 
     listed = client.get("/api/v1/admin/onboarding/assignments", headers=ADMIN_HEADERS)
     assert listed.status_code == 200
-    assert listed.json()[0]["candidate_name"] == "Synthetic Candidate"
+    assert listed.json()[0]["candidate_name"] == "Authoritative Candidate"
+    assert listed.json()[0]["candidate_email"] == "authoritative-summary@example.test"
     assert listed.json()[0]["opportunity_title"] == application.source_posting_title
     assert listed.json()[0]["plan_name"] == plan.name
 
@@ -998,6 +1531,8 @@ def test_admin_assignment_list_and_detail_use_human_context(
     )
     assert detail.status_code == 200
     assert detail.json()["application_id"] == str(application.id)
+    assert detail.json()["candidate_name"] == "Authoritative Candidate"
+    assert detail.json()["candidate_email"] == "authoritative-summary@example.test"
     assert len(detail.json()["gates"]) == 5
     assert detail.json()["activation_ready"] is False
 

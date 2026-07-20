@@ -10,12 +10,14 @@ from sqlalchemy.orm import Session
 from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
 from keeper_api.models.domain import (
+    Candidate,
     CandidateApplication,
     CandidateEsignEnvelope,
     CandidateOnboardingAssignment,
     CandidateOnboardingTask,
     OnboardingPlan,
     OnboardingTask,
+    User,
 )
 from keeper_api.schemas.review_onboarding import (
     ActivationGateResponse,
@@ -28,12 +30,13 @@ from keeper_api.schemas.review_onboarding import (
     EsignEnvelopeResponse,
     GateReopenRequest,
     ManualGateEvidenceCreate,
+    OnboardingCompletionResponse,
     OnboardingPlanCreate,
     OnboardingTaskResponse,
     PlanSummary,
     PlanWithTasks,
 )
-from keeper_api.services.auth import Principal, require_admin
+from keeper_api.services.auth import Principal, require_admin, require_admin_aal2
 from keeper_api.services.documenso import DocumensoError
 from keeper_api.services.onboarding import (
     DERIVED_GATE_CODES,
@@ -41,7 +44,9 @@ from keeper_api.services.onboarding import (
     activation_ready,
     candidate_esign_envelopes,
     candidate_gates,
+    complete_onboarding_assignment,
     get_candidate_tasks,
+    issue_ica_envelope_for_assignment,
     link_esign_envelope,
     list_controlled_documents,
     refresh_esign_envelope,
@@ -156,15 +161,19 @@ def _assignment_summary(
     application: CandidateApplication,
     plan: OnboardingPlan,
 ) -> AdminOnboardingAssignmentSummary:
-    name = " ".join(
-        item for item in (application.given_name, application.family_name) if item
-    ).strip()
+    user = db.scalar(
+        select(User)
+        .join(Candidate, Candidate.user_id == User.id)
+        .where(Candidate.id == assignment.candidate_id)
+    )
+    if user is None:
+        raise LookupError("onboarding assignment user not found")
     return AdminOnboardingAssignmentSummary(
         assignment_id=assignment.id,
         candidate_id=assignment.candidate_id,
         application_id=application.id,
-        candidate_name=name or application.email,
-        candidate_email=application.email,
+        candidate_name=user.display_name or user.email,
+        candidate_email=user.email,
         opportunity_title=application.source_posting_title,
         attempt_number=application.attempt_number,
         plan_name=plan.name,
@@ -591,6 +600,43 @@ def link_envelope(
 
 
 @router.post(
+    "/assignments/{assignment_id}/esign-envelopes/issue-ica",
+    response_model=EsignEnvelopeResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        409: {"description": "Agreement cannot be issued"},
+        503: {"description": "Agreement issuance unavailable or incompatible"},
+    },
+)
+def issue_ica(
+    assignment_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> EsignEnvelopeResponse:
+    response.headers.update(NO_STORE)
+    try:
+        envelope = issue_ica_envelope_for_assignment(
+            db,
+            assignment_id=assignment_id,
+            settings=settings,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except DocumensoError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except (LookupError, OnboardingError) as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return EsignEnvelopeResponse.model_validate(envelope, from_attributes=True)
+
+
+@router.post(
     "/assignments/{assignment_id}/esign-envelopes/{envelope_id}/replace",
     response_model=EsignEnvelopeResponse,
     status_code=status.HTTP_201_CREATED,
@@ -668,6 +714,49 @@ def refresh_envelope(
     except OnboardingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return EsignEnvelopeResponse.model_validate(refreshed, from_attributes=True)
+
+
+@router.post(
+    "/assignments/{assignment_id}/complete",
+    response_model=OnboardingCompletionResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Assignment not found"},
+        409: {"description": "Assignment is not ready or consistent"},
+    },
+)
+def complete_assignment(
+    assignment_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin_aal2),
+    db: Session = Depends(get_db),
+) -> OnboardingCompletionResponse:
+    response.headers.update(NO_STORE)
+    try:
+        assignment = complete_onboarding_assignment(
+            db,
+            assignment_id=assignment_id,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except OnboardingError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    assert assignment.application_id is not None
+    return OnboardingCompletionResponse(
+        assignment_id=assignment.id,
+        application_id=assignment.application_id,
+        candidate_id=assignment.candidate_id,
+        status="completed",
+        application_status="active",
+        candidate_status="active",
+        agent_access_enabled=True,
+    )
 
 
 @router.get(

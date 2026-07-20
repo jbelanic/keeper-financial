@@ -4,6 +4,8 @@ import { EmptyState, ErrorState } from "@keeper/ui";
 import { createPageMetadata } from "@/lib/metadata";
 import { getPublishedPostings } from "@/lib/recruitment-api";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = createPageMetadata({
   title: "Join Keeper Financial",
   description:

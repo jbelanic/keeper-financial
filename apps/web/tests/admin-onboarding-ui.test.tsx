@@ -21,6 +21,146 @@ const assignment = {
 };
 
 describe("administrator onboarding workspace", () => {
+  it("issues the agreement and explicitly completes a ready assignment", async () => {
+    const detail = {
+      ...assignment,
+      activation_ready: true,
+      tasks: [],
+      gates: [],
+      esign_envelopes: [],
+    };
+    const issued = {
+      id: "00000000-0000-4000-8000-000000000990",
+      candidate_id: assignment.candidate_id,
+      assignment_id: assignment.assignment_id,
+      provider: "documenso",
+      status: "sent",
+      envelope_id: "provider-envelope",
+      envelope_url: "https://sign.keeperfinancial.ca/sign/provider-envelope",
+      last_synced_at: "2026-07-20T12:00:00Z",
+      superseded_at: null,
+      replacement_envelope_id: null,
+      created_at: "2026-07-20T12:00:00Z",
+    };
+    const requester = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => detail })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => issued,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...detail, esign_envelopes: [issued] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: "completed" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...detail, status: "completed" }),
+      });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { OnboardingAdmin } = await import(
+      "@/app/(admin)/admin/onboarding/onboarding-admin"
+    );
+    render(
+      <OnboardingAdmin
+        initialPlans={[]}
+        initialAssignments={[assignment]}
+        requester={requester}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Manage active assignment" }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Send contractor agreement" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("candidate@example.test")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Send contractor agreement" }),
+    );
+    await waitFor(() =>
+      expect(requester).toHaveBeenCalledWith(
+        `/api/v1/admin/onboarding/assignments/${assignment.assignment_id}/esign-envelopes/issue-ica`,
+        { method: "POST" },
+      ),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Complete onboarding and enable agent",
+      }),
+    );
+    await waitFor(() =>
+      expect(requester).toHaveBeenCalledWith(
+        `/api/v1/admin/onboarding/assignments/${assignment.assignment_id}/complete`,
+        { method: "POST" },
+      ),
+    );
+    expect(
+      await screen.findByRole("link", { name: /agent profiles/i }),
+    ).toHaveAttribute("href", "/admin/agents");
+  });
+
+  it("reissues a rejected Keeper agreement through the bounded issuance endpoint", async () => {
+    const rejected = {
+      id: "00000000-0000-4000-8000-000000000990",
+      candidate_id: assignment.candidate_id,
+      assignment_id: assignment.assignment_id,
+      provider: "documenso",
+      status: "rejected",
+      envelope_id: "rejected-envelope",
+      envelope_url: "https://sign.keeperfinancial.ca/sign/rejected-envelope",
+      last_synced_at: "2026-07-20T12:00:00Z",
+      superseded_at: null,
+      replacement_envelope_id: null,
+      created_at: "2026-07-20T12:00:00Z",
+    };
+    const detail = {
+      ...assignment,
+      tasks: [],
+      gates: [],
+      esign_envelopes: [rejected],
+    };
+    const requester = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => detail })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => rejected,
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => detail });
+    const { OnboardingAdmin } = await import(
+      "@/app/(admin)/admin/onboarding/onboarding-admin"
+    );
+    render(
+      <OnboardingAdmin
+        initialPlans={[]}
+        initialAssignments={[assignment]}
+        requester={requester}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Manage active assignment" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Resend contractor agreement",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(requester).toHaveBeenCalledWith(
+        `/api/v1/admin/onboarding/assignments/${assignment.assignment_id}/esign-envelopes/issue-ica`,
+        { method: "POST" },
+      ),
+    );
+  });
+
   it("authors and reorders tasks when creating an editable unused plan", async () => {
     const created = {
       id: "00000000-0000-4000-8000-000000000904",

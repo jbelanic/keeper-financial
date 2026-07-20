@@ -743,6 +743,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Issue Ica */
+    post: operations["issue_ica_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes_issue_ica_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/replace": {
     parameters: {
       query?: never;
@@ -771,6 +788,23 @@ export interface paths {
     put?: never;
     /** Refresh Envelope */
     post: operations["refresh_envelope_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes__envelope_id__refresh_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/onboarding/assignments/{assignment_id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Complete Assignment */
+    post: operations["complete_assignment_api_v1_admin_onboarding_assignments__assignment_id__complete_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2106,6 +2140,41 @@ export interface components {
      * @enum {string}
      */
     OnboardingAssignmentStatus: "active" | "completed" | "superseded";
+    /** OnboardingCompletionResponse */
+    OnboardingCompletionResponse: {
+      /**
+       * Assignment Id
+       * Format: uuid
+       */
+      assignment_id: string;
+      /**
+       * Application Id
+       * Format: uuid
+       */
+      application_id: string;
+      /**
+       * Candidate Id
+       * Format: uuid
+       */
+      candidate_id: string;
+      /**
+       * Status
+       * @constant
+       */
+      status: "completed";
+      /**
+       * Application Status
+       * @constant
+       */
+      application_status: "active";
+      /**
+       * Candidate Status
+       * @constant
+       */
+      candidate_status: "active";
+      /** Agent Access Enabled */
+      agent_access_enabled: boolean;
+    };
     /** OnboardingTaskCreate */
     OnboardingTaskCreate: {
       /** Title */
@@ -5149,6 +5218,68 @@ export interface operations {
       };
     };
   };
+  issue_ica_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes_issue_ica_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EsignEnvelopeResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Admin denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Agreement cannot be issued */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Agreement issuance unavailable or incompatible */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   replace_envelope_api_v1_admin_onboarding_assignments__assignment_id__esign_envelopes__envelope_id__replace_post: {
     parameters: {
       query?: never;
@@ -5283,6 +5414,68 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  complete_assignment_api_v1_admin_onboarding_assignments__assignment_id__complete_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        assignment_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OnboardingCompletionResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Admin denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Assignment not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Assignment is not ready or consistent */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
       };
     };
   };

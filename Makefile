@@ -42,13 +42,13 @@ build:
 	npm run build
 
 migrate:
-	docker compose run --rm api alembic upgrade head
+	docker compose run --rm --build api alembic upgrade head
 
 migrate-status:
-	docker compose run --rm api alembic current --check-heads
+	docker compose run --rm --build api alembic current --check-heads
 
 migrate-check:
-	docker compose run --rm api alembic check
+	docker compose run --rm --build api alembic check
 
 compose-config:
 	KEEPER_ENV_FILE=.env.example docker compose --env-file .env.example config --quiet

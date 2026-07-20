@@ -41,10 +41,7 @@ export type OnboardingAssignmentResponse =
 export type OnboardingTaskResponse =
   components["schemas"]["OnboardingTaskResponse"];
 
-export const apiBaseUrl = () =>
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.API_INTERNAL_URL ??
-  "http://localhost:8000";
+export { apiBaseUrl } from "./recruitment-api";
 
 // Server-side fetch helper is re-exported from the shared portal helper so we
 // keep a single bearer/session transport.
