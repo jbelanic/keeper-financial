@@ -90,7 +90,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 ## Accepted pre-Phase-1F operator-workflow refinement
 
-- **Phase 1 source implementation is owner-accepted on `feat/admin-workflow-operator-ux`; the refinement remains uncommitted and unmerged at the verified acceptance-reconciliation state.**
+- **Phase 1 source implementation is owner-accepted and committed at `17e1b43` on `feat/admin-workflow-operator-ux`; the publication candidate integrates local `main` content commit `07895c2` without history rewriting.**
 - Administrators select exact applications and active plans by human-readable context rather than normal-operation UUID entry.
 - Unused plans support ordered task authoring/editing and become immutable on first assignment.
 - Manual gate evidence, policy acknowledgements, and e-sign envelopes are exact-assignment records. Only background check, FSRA authorization, and system provisioning are manual; policy acknowledgement and executed agreements are derived.
@@ -116,6 +116,16 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Migration/rollback/restore operating boundaries that preserve the accepted source chain through `20260719_0008`; applying it to any shared or live database remains separately prohibited pending approval.
 - Pilot roster, eligibility, support ownership, evidence documents, go/no-go criteria, and owner launch approval.
 - Production deployment requires separate approval. Final activation, candidate-to-agent transition, and agent-role grant remain deferred outside Phase 1F and are not authorized readiness operations.
+
+## Phase 1G — Approved public/candidate copy (bounded content)
+
+- **The owner-approved content implementation is commit `07895c2` from `content/approved-copy-C01-C17`; it is integrated with the administrator/operator publication candidate. Verify Git for current remote-merge state.**
+- Applied the owner-approved exact public, auth, candidate, and onboarding copy register (C-01–C-17) plus the G renames/removals/internal-text strips.
+- Public site (C-01–C-11), `/apply` handoff and unavailable states (C-12), auth/register/sign-in/MFA plain-language copy (C-13), candidate status/list/application instruction/withdrawal (C-14–C-15), and onboarding renames (C-16).
+- Stale routes removed: `/admin/content` and the standalone `/candidate/documents`; `ConfirmationDialog` gained optional `confirmLabel`/`cancelLabel`.
+- Unresolved `[FW-00x]` factual placeholders omitted/hidden; regulator label left as `FSCO # 13696`; brokerage legal name/address/phone/email taken only from existing config.
+- Blocked (DRAFT, separate owner/legal/privacy/regulatory/accessibility approval required): legal/policy pages D-01–D-06, the `/terms` route/link, marketing/privacy-consent version strings, and candidate-disclosure version. External e-signature validity (C-16D) and password-recovery links hidden.
+- Remaining dependencies before any publication: FW-001–FW-030 facts (brokerage identity, regulator/licence, principal broker, contact confirmation, agent evidence, opportunity content, compensation, consent/disclosure versions, retention, providers/subprocessors, complaints regulator, accessibility process) and completed D-01–D-06 professional review.
 
 ## 30/60/90/180-day interpretation
 

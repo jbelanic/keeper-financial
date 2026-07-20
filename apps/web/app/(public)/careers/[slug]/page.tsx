@@ -49,11 +49,27 @@ export default async function CareerOpportunityPage({ params }: Props) {
           ]}
         />
         <header className="foundation-header">
-          <p className="eyebrow">Published opportunity</p>
+          <p className="eyebrow">Current opportunity</p>
           <h1>{posting.title}</h1>
           <p>{posting.summary}</p>
         </header>
         <div className="posting-body">{posting.body}</div>
+        <section className="posting-warnings" aria-label="Before you apply">
+          <h2>Before you apply</h2>
+          <p>
+            Submitting an application does not guarantee an interview,
+            selection, onboarding, engagement or employment.
+          </p>
+          <p>
+            Do not include government identification numbers, financial or
+            health information, passwords, background-check information, licence
+            numbers or documents that the application does not request.
+          </p>
+          <p>
+            If you need an accessibility accommodation to apply, contact Keeper
+            Financial before submitting your application.
+          </p>
+        </section>
         <div className="button-row">
           <Link
             className="button-link"

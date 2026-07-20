@@ -5,6 +5,22 @@ import { portalServerJson } from "@/lib/portal-server-api";
 import type { components } from "@keeper/contracts";
 
 type StatusList = components["schemas"]["CandidateStatusListResponse"];
+
+const HUMAN_STATUSES: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  more_information_requested: "More information requested",
+  under_review: "Under review",
+  interview: "Interview",
+  conditionally_selected: "Conditionally selected",
+  declined: "Declined",
+  withdrawn: "Withdrawn",
+};
+
+function humanStatus(status: string): string {
+  return HUMAN_STATUSES[status] ?? status.replaceAll("_", " ");
+}
+
 export const metadata: Metadata = { title: "Candidate portal" };
 
 export default async function CandidateOverviewPage() {
@@ -15,19 +31,16 @@ export default async function CandidateOverviewPage() {
     <>
       <header className="foundation-header">
         <p className="eyebrow">Candidate portal</p>
-        <h1>Your recruitment status</h1>
-        <p>
-          Status is communicated in text. Internal notes and reasons are never
-          shown here.
-        </p>
+        <h1>Your application status</h1>
+        <p>Review the current status and messages for each application.</p>
       </header>
       {!result ? (
-        <ErrorState title="Status unavailable">
-          Your candidate status could not be loaded.
+        <ErrorState title="Your application status is temporarily unavailable">
+          Sign in again or try later.
         </ErrorState>
       ) : result.applications.length === 0 ? (
-        <EmptyState title="No application status yet">
-          Start from a published careers opportunity.
+        <EmptyState title="You have not started an application">
+          Choose a currently published opportunity to begin.
         </EmptyState>
       ) : (
         <div className="grid-2">
@@ -35,7 +48,7 @@ export default async function CandidateOverviewPage() {
             <article className="card" key={item.application_id}>
               <h2>Application status</h2>
               <p>
-                <StatusBadge>{item.status.replaceAll("_", " ")}</StatusBadge>
+                <StatusBadge>{humanStatus(item.status)}</StatusBadge>
               </p>
               {item.messages.length ? (
                 <ul>

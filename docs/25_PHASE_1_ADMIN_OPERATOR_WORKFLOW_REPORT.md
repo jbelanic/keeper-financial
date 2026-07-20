@@ -4,7 +4,7 @@
 - **Branch:** `feat/admin-workflow-operator-ux`
 - **Starting checkpoint:** `3331519de482c2bd062b7b7e10e067f06c42f9a3`
 - **Candidate migration head:** `20260719_0008`
-  **Status:** owner-accepted Phase 1 source implementation in an uncommitted and unmerged worktree; independent pre-commit findings remediated and full deterministic re-verification complete. This report does not grant production, pilot, deployment, or activation authority.
+- **Status at report generation:** owner-accepted Phase 1 source implementation in an uncommitted and unmerged worktree; independent pre-commit findings remediated and full deterministic re-verification complete. This report does not grant production, pilot, deployment, or activation authority.
 
 ## 2026-07-19 post-verification owner decision
 
@@ -13,6 +13,10 @@ The owner explicitly accepted the Phase 1 source implementation, including this 
 This acceptance is confined to source. It does not authorize commit, push, pull request, merge, history rewriting, deployment, shared-database migration, production or controlled-pilot operation, final candidate activation, candidate-to-agent transition, agent-role grant, credential or external-service changes, destructive operations, or legal/privacy/regulatory/claims/accessibility approval.
 
 Phase 1F production and controlled-pilot readiness planning is the next gate. Phase 1F implementation remains prohibited until its plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
+
+## 2026-07-19 Git-publication update
+
+After separate owner authorization, the accepted refinement was committed at `17e1b43` and integrated into the publication candidate with local `main` content commit `07895c2` without history rewriting. Validation, pull-request, CI, and remote-merge evidence remain authoritative for subsequent publication status. This update does not revise the report's original evidence moment or grant deployment, production/pilot, shared-database, activation, lifecycle/role, external-service, credential, destructive-operation, or Phase 1F implementation authority.
 
 ## Scope
 

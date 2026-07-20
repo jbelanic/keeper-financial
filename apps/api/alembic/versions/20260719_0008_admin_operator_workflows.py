@@ -88,12 +88,8 @@ def upgrade() -> None:
         sa.Column("evidence_reference", sa.String(160), nullable=True),
         sa.Column("reason", sa.String(500), nullable=True),
         sa.Column("actor_user_id", sa.Uuid(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["gate_id"], ["programmatic_gates.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["actor_user_id"], ["users.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["gate_id"], ["programmatic_gates.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.CheckConstraint(
             "event_type IN ('satisfied', 'reopened')",
@@ -172,9 +168,7 @@ def upgrade() -> None:
         "candidate_esign_envelopes",
         ["assignment_id"],
         unique=True,
-        postgresql_where=sa.text(
-            "assignment_id IS NOT NULL AND superseded_at IS NULL"
-        ),
+        postgresql_where=sa.text("assignment_id IS NOT NULL AND superseded_at IS NULL"),
     )
 
     # New acknowledgements are exact-assignment evidence. NULL legacy assignment
@@ -228,10 +222,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     rejected_envelope = op.get_bind().scalar(
-        sa.text(
-            "SELECT 1 FROM candidate_esign_envelopes "
-            "WHERE status = 'rejected' LIMIT 1"
-        )
+        sa.text("SELECT 1 FROM candidate_esign_envelopes WHERE status = 'rejected' LIMIT 1")
     )
     if rejected_envelope is not None:
         raise RuntimeError(

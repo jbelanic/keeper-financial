@@ -3,7 +3,7 @@
 - **Status:** Draft for owner decisions and approval
 - **Date:** 2026-07-19
 - **Source branch:** `feat/admin-workflow-operator-ux`
-- **Source baseline:** `3331519de482c2bd062b7b7e10e067f06c42f9a3` plus the owner-accepted, uncommitted administrator/operator refinement
+- **Source baseline:** owner-accepted administrator/operator commit `17e1b43`, integrated for publication with local `main` content commit `07895c2`; both descend from `3331519`
 - **Candidate migration head:** `20260719_0008`
 - **Authority:** `AGENTS.md`, `docs/00_PROJECT_SOURCE_OF_TRUTH.md`, approved decisions in `docs/09_DECISIONS_ASSUMPTIONS_AND_OPEN_QUESTIONS.md`, and the current architecture, security, lifecycle, delivery, API/data, test, limitations, and implementation-evidence documents
 
@@ -11,7 +11,7 @@
 
 This document defines the evidence, decisions, procedures, stop conditions, recovery boundaries, and release gates required before a controlled pilot or production operation may be approved. It is planning and evidence definition only.
 
-This plan does **not** authorize:
+This plan does **not itself** authorize:
 
 - Phase 1F implementation;
 - commit, push, pull request, merge, or history rewriting;

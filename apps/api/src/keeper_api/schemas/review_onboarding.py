@@ -407,9 +407,7 @@ class GateReopenRequest(BaseModel):
 
     reason: str = Field(min_length=1, max_length=500)
 
-    _reason = field_validator("reason")(
-        lambda v: _plain_text(v, maximum=500, field_name="reason")
-    )
+    _reason = field_validator("reason")(lambda v: _plain_text(v, maximum=500, field_name="reason"))
 
 
 class AdminOnboardingAssignmentSummary(BaseModel):

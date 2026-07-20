@@ -168,11 +168,7 @@ def update_profile(
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise AgentProfileConflict("at least one profile field must change")
-    if (
-        profile.slug_locked_at is not None
-        and "slug" in changes
-        and changes["slug"] != profile.slug
-    ):
+    if profile.slug_locked_at is not None and "slug" in changes and changes["slug"] != profile.slug:
         raise AgentProfileConflict("published profile slugs cannot be changed")
     nonnullable = {
         "slug",

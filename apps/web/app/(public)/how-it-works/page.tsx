@@ -6,9 +6,9 @@ import { processSteps } from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "How the mortgage process works",
+  title: "From a general question to a complete application",
   description:
-    "See how Keeper Financial separates general guidance, minimal contact, and the approved secure mortgage application.",
+    "Begin with general information and basic contact details. Move to the mortgage application only when you are ready to provide detailed information.",
   path: "/how-it-works",
 });
 
@@ -17,12 +17,12 @@ export default function HowItWorksPage() {
     <>
       <PageHero
         eyebrow="How it works"
-        title="A clear path from first question to secure application."
-        description="You can begin without sending detailed financial information. Understand the steps, choose a contact route, and move into the approved secure platform only when you are ready."
+        title="From a general question to a complete application."
+        description="Begin with general information and basic contact details. Move to the mortgage application only when you are ready to provide detailed information."
       >
         <div className="button-row">
           <Link className="button-link" href="/apply">
-            See both start options
+            Get started
           </Link>
         </div>
       </PageHero>
@@ -53,11 +53,11 @@ export default function HowItWorksPage() {
           </div>
           <aside className="paper-panel boundary-panel">
             <Icon name="shield" />
-            <h2>What belongs in the secure application</h2>
+            <h2>What belongs in the application</h2>
             <p>
-              Detailed income, assets, liabilities, credit consent, identity
-              information, and supporting documents must not be sent through
-              Keeper Financial’s general contact routes.
+              Provide detailed income, assets, liabilities, credit consent,
+              identity information and mortgage documents only through an
+              authorized secure process.
             </p>
           </aside>
         </div>
@@ -66,13 +66,13 @@ export default function HowItWorksPage() {
         <div className="container reading-layout">
           <SectionHeading
             eyebrow="Keep expectations clear"
-            title="Information is not an approval."
+            title="Public information cannot determine your outcome."
           />
           <div>
             <p>
-              Public mortgage information cannot determine whether a product,
-              lender, rate, or term is available or suitable. Those outcomes
-              require a complete assessment and lender approval.
+              Public information and an initial conversation cannot determine
+              whether a particular mortgage, rate, term or approval is
+              available.
             </p>
             <Link className="text-link" href="/mortgages">
               Explore mortgage topics
@@ -84,7 +84,7 @@ export default function HowItWorksPage() {
         <div className="container">
           <CtaBand
             title="Start in the way that suits you"
-            description="Ask a general question or move directly to the approved secure application."
+            description="Ask a general question or move directly to the mortgage application."
             primaryHref="/apply"
             primaryLabel="Get started"
             secondaryHref="/contact"

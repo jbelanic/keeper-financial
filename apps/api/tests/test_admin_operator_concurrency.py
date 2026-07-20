@@ -232,9 +232,7 @@ def test_delayed_completed_refresh_cannot_satisfy_replaced_predecessor(
             raise AssertionError("replacement did not release delayed provider response")
         return "COMPLETED"
 
-    monkeypatch.setattr(
-        "keeper_api.services.documenso.fetch_envelope_status", delayed_completed
-    )
+    monkeypatch.setattr("keeper_api.services.documenso.fetch_envelope_status", delayed_completed)
     settings = Settings(
         esign_provider="documenso",
         documenso_api_base_url="https://sign.keeperfinancial.ca/api/v2",
@@ -321,7 +319,9 @@ def test_concurrent_manual_satisfy_records_one_evidence_transition(
     assert sum(isinstance(result, OnboardingError) for result in results) == 1
     with postgres_session_factory() as session:
         gate = session.get(ProgrammaticGate, identifiers["manual_gate"])
-        events = session.query(GateEvidenceEvent).filter_by(gate_id=identifiers["manual_gate"]).all()
+        events = (
+            session.query(GateEvidenceEvent).filter_by(gate_id=identifiers["manual_gate"]).all()
+        )
         assert gate is not None and gate.status == "satisfied"
         assert [event.event_type for event in events] == ["satisfied"]
 

@@ -391,20 +391,14 @@ def test_unused_plan_is_editable_and_first_assignment_locks_it(
         "Optional follow-up",
     ]
 
-    candidate, application, _ = make_candidate(
-        db, CandidateStatus.CONDITIONALLY_SELECTED
-    )
+    candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
     assert assign(client, candidate, application, plan).status_code == 201
-    detail = client.get(
-        f"/api/v1/admin/onboarding/plans/{plan.id}", headers=ADMIN_HEADERS
-    )
+    detail = client.get(f"/api/v1/admin/onboarding/plans/{plan.id}", headers=ADMIN_HEADERS)
     assert detail.status_code == 200
     assert detail.json()["is_locked"] is True
     listed = client.get("/api/v1/admin/onboarding/plans", headers=ADMIN_HEADERS)
     assert listed.status_code == 200
-    assert next(item for item in listed.json() if item["id"] == str(plan.id))[
-        "is_locked"
-    ] is True
+    assert next(item for item in listed.json() if item["id"] == str(plan.id))["is_locked"] is True
     locked = client.patch(
         f"/api/v1/admin/onboarding/plans/{plan.id}",
         json={
@@ -480,9 +474,7 @@ def test_admin_plan_inputs_reject_blank_or_markup_content(
 ) -> None:
     create_admin(db)
 
-    response = client.post(
-        "/api/v1/admin/onboarding/plans", json=payload, headers=ADMIN_HEADERS
-    )
+    response = client.post("/api/v1/admin/onboarding/plans", json=payload, headers=ADMIN_HEADERS)
 
     assert response.status_code == 422
 
@@ -799,9 +791,9 @@ def test_assignment_scoped_manual_gates_require_evidence_and_can_be_reopened(
         )
     )
     assert gate is not None
-    assert db.scalar(
-        select(GateEvidenceEvent).where(GateEvidenceEvent.gate_id == gate.id)
-    ) is not None
+    assert (
+        db.scalar(select(GateEvidenceEvent).where(GateEvidenceEvent.gate_id == gate.id)) is not None
+    )
 
     reopened = client.post(
         f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/background_check/reopen",
@@ -857,9 +849,9 @@ def test_documenso_status_refresh_is_authoritative_and_assignment_bound(
     settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
     settings.documenso_api_token = "synthetic-token"
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
-    assignment_id = assign(
-        client, candidate, application, make_plan(db, with_task=False)
-    ).json()["assignment_id"]
+    assignment_id = assign(client, candidate, application, make_plan(db, with_task=False)).json()[
+        "assignment_id"
+    ]
 
     linked = client.post(
         f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
@@ -894,9 +886,7 @@ def test_documenso_status_refresh_is_authoritative_and_assignment_bound(
     def unavailable(*_args: object, **_kwargs: object) -> str:
         raise DocumensoError("Documenso status could not be verified")
 
-    monkeypatch.setattr(
-        "keeper_api.services.documenso.fetch_envelope_status", unavailable
-    )
+    monkeypatch.setattr("keeper_api.services.documenso.fetch_envelope_status", unavailable)
     failed_refresh = client.post(
         f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/{envelope_id}/refresh",
         headers=ADMIN_HEADERS,
@@ -953,9 +943,9 @@ def test_rejected_documenso_envelope_can_be_replaced_without_losing_history(
 ) -> None:
     create_admin(db)
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
-    assignment_id = assign(
-        client, candidate, application, make_plan(db, with_task=False)
-    ).json()["assignment_id"]
+    assignment_id = assign(client, candidate, application, make_plan(db, with_task=False)).json()[
+        "assignment_id"
+    ]
     settings.esign_provider = "documenso"
     settings.documenso_api_base_url = "https://sign.keeperfinancial.ca/api/v2"
     settings.documenso_public_base_url = "https://sign.keeperfinancial.ca"
@@ -989,7 +979,9 @@ def test_rejected_documenso_envelope_can_be_replaced_without_losing_history(
     assert old.replacement_envelope_id == uuid.UUID(replacement.json()["id"])
 
 
-def test_admin_assignment_list_and_detail_use_human_context(client: TestClient, db: Session) -> None:
+def test_admin_assignment_list_and_detail_use_human_context(
+    client: TestClient, db: Session
+) -> None:
     create_admin(db)
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
     plan = make_plan(db)
@@ -1014,23 +1006,19 @@ def test_admin_assignment_summaries_project_readiness_for_the_exact_assignment(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     create_admin(db)
-    candidate, first_application, _ = make_candidate(
-        db, CandidateStatus.CONDITIONALLY_SELECTED
-    )
-    first_assignment_id = assign(
-        client, candidate, first_application, make_plan(db)
-    ).json()["assignment_id"]
+    candidate, first_application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    first_assignment_id = assign(client, candidate, first_application, make_plan(db)).json()[
+        "assignment_id"
+    ]
     second_application = add_application(
         db, candidate, CandidateStatus.CONDITIONALLY_SELECTED, attempt=2
     )
-    second_assignment_id = assign(
-        client, candidate, second_application, make_plan(db)
-    ).json()["assignment_id"]
+    second_assignment_id = assign(client, candidate, second_application, make_plan(db)).json()[
+        "assignment_id"
+    ]
     projected_assignment_ids: list[uuid.UUID] = []
 
-    def exact_readiness(
-        _db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID
-    ) -> bool:
+    def exact_readiness(_db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID) -> bool:
         assert candidate_id == candidate.id
         projected_assignment_ids.append(assignment_id)
         return assignment_id == uuid.UUID(second_assignment_id)

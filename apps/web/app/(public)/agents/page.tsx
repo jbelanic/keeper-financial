@@ -7,9 +7,8 @@ import { createPageMetadata } from "@/lib/metadata";
 import { PageHero } from "@/lib/public-components";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Our agents",
-  description:
-    "Browse brokerage-approved, published Keeper Financial agent profiles.",
+  title: "Find an Agent",
+  description: "Browse currently published Keeper Financial agent profiles.",
   path: "/agents",
 });
 
@@ -23,25 +22,23 @@ export default async function AgentsPage() {
   return (
     <>
       <PageHero
-        eyebrow="Our agents"
-        title="Brokerage-approved profiles, published with care."
-        description="Find an approved Keeper Financial mortgage agent. Draft, pending, suspended, archived, and placeholder profiles never appear here."
+        eyebrow="Find an Agent"
+        title="Find a Keeper Financial agent"
+        description="Browse currently published profiles and select an agent to contact."
       />
       <section
         className="section section-no-top"
         aria-labelledby="agent-directory-heading"
       >
         <div className="container reading-layout">
-          <h2 id="agent-directory-heading">Published agent directory</h2>
+          <h2 id="agent-directory-heading">Agent directory</h2>
           {result === null ? (
             <ErrorState title="Agent profiles are temporarily unavailable">
-              Please try again later. No profile is shown when publication
-              cannot be verified.
+              Please try again later or contact Keeper Financial.
             </ErrorState>
           ) : result.items.length === 0 ? (
-            <EmptyState title="No approved public profiles">
-              Contact Keeper Financial directly for help. Profiles appear only
-              after brokerage approval and explicit publication.
+            <EmptyState title="No agent profiles are available right now">
+              Contact Keeper Financial for general assistance.
             </EmptyState>
           ) : (
             <div className="grid-2 agent-directory-grid">

@@ -28,7 +28,7 @@ describe("route inventory", () => {
     expect(CANDIDATE_ROUTES).toContain(
       "/candidate/applications/[applicationId]",
     );
-    expect(CANDIDATE_ROUTES).toHaveLength(5);
+    expect(CANDIDATE_ROUTES).toHaveLength(4);
     expect(
       CANDIDATE_ROUTES.every((route) => route.startsWith("/candidate")),
     ).toBe(true);

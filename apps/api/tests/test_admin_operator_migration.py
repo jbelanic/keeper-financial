@@ -123,12 +123,15 @@ def test_upgrade_refuses_duplicate_legacy_provider_ids_before_schema_change(
             assert connection.scalar(text("SELECT version_num FROM alembic_version")) == (
                 "20260718_0007"
             )
-            assert connection.scalar(
-                text(
-                    "SELECT count(*) FROM information_schema.columns "
-                    "WHERE table_name = 'candidate_esign_envelopes' AND column_name = 'provider'"
+            assert (
+                connection.scalar(
+                    text(
+                        "SELECT count(*) FROM information_schema.columns "
+                        "WHERE table_name = 'candidate_esign_envelopes' AND column_name = 'provider'"
+                    )
                 )
-            ) == 0
+                == 0
+            )
     finally:
         engine.dispose()
 
@@ -175,10 +178,13 @@ def test_upgrade_locks_slug_from_publication_audit_history(
         _upgrade(temporary_postgres_url, "20260719_0008")
 
         with engine.connect() as connection:
-            assert connection.scalar(
-                text("SELECT slug_locked_at FROM agent_profiles WHERE id = :profile_id"),
-                {"profile_id": profile_id},
-            ) is not None
+            assert (
+                connection.scalar(
+                    text("SELECT slug_locked_at FROM agent_profiles WHERE id = :profile_id"),
+                    {"profile_id": profile_id},
+                )
+                is not None
+            )
     finally:
         engine.dispose()
 
@@ -211,11 +217,14 @@ def test_downgrade_refuses_unrepresentable_rejected_envelope_before_schema_chang
             assert connection.scalar(text("SELECT version_num FROM alembic_version")) == (
                 "20260719_0008"
             )
-            assert connection.scalar(
-                text(
-                    "SELECT count(*) FROM information_schema.columns "
-                    "WHERE table_name = 'agent_profiles' AND column_name = 'slug_locked_at'"
+            assert (
+                connection.scalar(
+                    text(
+                        "SELECT count(*) FROM information_schema.columns "
+                        "WHERE table_name = 'agent_profiles' AND column_name = 'slug_locked_at'"
+                    )
                 )
-            ) == 1
+                == 1
+            )
     finally:
         engine.dispose()

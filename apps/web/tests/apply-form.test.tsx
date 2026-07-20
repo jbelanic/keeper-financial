@@ -64,7 +64,7 @@ describe("minimal contact form", () => {
 
   it("shows warnings, a required service control, and unchecked optional marketing", () => {
     render(<ApplyForm />);
-    expect(screen.getByText(/Do not include your SIN/i)).toBeInTheDocument();
+    expect(screen.getByText(/Do not include a SIN/i)).toBeInTheDocument();
     expect(
       screen.getByLabelText(/I agree that Keeper Financial may contact me/i),
     ).toBeRequired();
@@ -125,8 +125,8 @@ describe("minimal contact form", () => {
   it.each([
     [422, undefined, /Check the required fields/i],
     [429, "37", /wait 37 seconds/i],
-    [503, undefined, /published phone or email/i],
-    [500, undefined, /could not be submitted right now/i],
+    [503, undefined, /mortgage application is temporarily unavailable/i],
+    [500, undefined, /could not send your request/i],
   ])(
     "maps HTTP %s to a useful non-internal focused error",
     async (status, retryAfter, message) => {

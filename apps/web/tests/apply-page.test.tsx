@@ -15,11 +15,13 @@ describe("apply paths and attribution", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Choose the path that works for you",
+        name: "Choose how you’d like to begin",
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /Continue to the secure application/i }),
+      screen.getByRole("link", {
+        name: /Continue to the mortgage application/i,
+      }),
     ).not.toHaveAttribute("href", expect.stringContaining("agent="));
   });
 
@@ -46,13 +48,15 @@ describe("apply paths and attribution", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "Speak with someone first" }),
+      screen.getByRole("heading", { name: "Ask a general question" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Start a secure full application" }),
+      screen.getByRole("heading", {
+        name: "Continue to the mortgage application",
+      }),
     ).toBeInTheDocument();
     const mortgageLink = screen.getByRole("link", {
-      name: /Continue to the secure application/i,
+      name: /Continue to the mortgage application/i,
     });
     expect(mortgageLink).toHaveAttribute(
       "href",

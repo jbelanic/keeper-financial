@@ -15,9 +15,9 @@ Report contradictions. Do not silently select code, memory, a generated artifact
 
 ## Current Implementation Checkpoint
 
-The current merged baseline is `main` at `3331519de482c2bd062b7b7e10e067f06c42f9a3`; it includes the implementation merge at `b906027`.
+The owner-accepted Phase 1 publication candidate consists of administrator/operator commit `17e1b43` integrated without history rewriting with local `main` content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027`. Verify Git before stating whether the publication candidate has merged to remote `main`.
 
-The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement on `feat/admin-workflow-operator-ux`. At the verified acceptance-reconciliation state, that refinement is substantial uncommitted work on the dedicated branch/worktree and is not merged. Do not describe it as committed or merged unless Git later proves that state changed.
+The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement on `feat/admin-workflow-operator-ux`. The accepted refinement is committed at `17e1b43`; do not describe the combined publication candidate as merged unless Git proves that state.
 
 This is source acceptance only. It does not authorize commit, push, pull request, merge, history rewriting, production or controlled-pilot operation, deployment, shared-database migration, final candidate activation, candidate-to-agent transition, agent-role grant, legal/privacy/regulatory/claims/accessibility approval, credential or external-service changes, destructive operations, or Phase 1F implementation.
 

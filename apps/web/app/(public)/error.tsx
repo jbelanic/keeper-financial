@@ -6,7 +6,8 @@ export default function PublicError({ reset }: { reset: () => void }) {
   return (
     <section className="container section state-page">
       <ErrorState>
-        We could not load this public page. No sensitive details were exposed.
+        We could not load this public page. Try again or return to the home
+        page.
       </ErrorState>
       <Button type="button" onClick={reset}>
         Try again

@@ -130,9 +130,7 @@ def onboarding_dashboard(
         ],
         gates=[
             _gate_out(g)
-            for g in candidate_gates(
-                db, candidate_id=candidate.id, assignment_id=assignment.id
-            )
+            for g in candidate_gates(db, candidate_id=candidate.id, assignment_id=assignment.id)
         ],
         documents=[_doc_out(document, version) for document, version in documents],
         acknowledgements=[

@@ -504,7 +504,9 @@ def test_agent_attribution_uses_only_approved_mapping_and_fails_closed(
     assert approved.headers["location"] == "https://apply.keeper.example/synthetic-agent"
 
 
-def test_eligible_agent_selector_excludes_existing_profiles(client: TestClient, db: Session) -> None:
+def test_eligible_agent_selector_excludes_existing_profiles(
+    client: TestClient, db: Session
+) -> None:
     create_user(db, subject="phase1e-admin", role_code="brokerage_admin")
     first, _ = _agent_account(db, subject="eligible-agent")
     second, _ = _agent_account(db, subject="profiled-agent")

@@ -52,9 +52,7 @@ ACTIVATION_GATE_LABELS: dict[str, str] = {
     "executed_agreements": "Executed agreements received",
 }
 
-MANUAL_GATE_CODES = frozenset(
-    {"background_check", "fsra_authorization", "system_provisioning"}
-)
+MANUAL_GATE_CODES = frozenset({"background_check", "fsra_authorization", "system_provisioning"})
 DERIVED_GATE_CODES = frozenset({"policy_acknowledgement", "executed_agreements"})
 
 
@@ -700,9 +698,7 @@ def candidate_acknowledgements(
 # --------------------------------------------------------------------------- #
 
 
-def _lock_active_assignment(
-    db: Session, assignment_id: uuid.UUID
-) -> CandidateOnboardingAssignment:
+def _lock_active_assignment(db: Session, assignment_id: uuid.UUID) -> CandidateOnboardingAssignment:
     assignment = db.scalar(
         select(CandidateOnboardingAssignment)
         .where(CandidateOnboardingAssignment.id == assignment_id)
@@ -876,9 +872,7 @@ def refresh_esign_envelope(
     }
     local_status = status_map[provider_status]
     assignment = _lock_active_esign_assignment(db, assignment.id)
-    envelope = _lock_active_esign_envelope(
-        db, assignment=assignment, envelope=envelope
-    )
+    envelope = _lock_active_esign_envelope(db, assignment=assignment, envelope=envelope)
     envelope.status = local_status.value
     envelope.last_synced_at = datetime.now(UTC)
     _set_derived_gate(
@@ -914,20 +908,21 @@ def replace_esign_envelope(
     if not normalized_id or len(normalized_id) > 255:
         raise OnboardingError("Documenso envelope identifier is invalid")
     assignment = _lock_active_esign_assignment(db, assignment.id)
-    envelope = _lock_active_esign_envelope(
-        db, assignment=assignment, envelope=envelope
-    )
+    envelope = _lock_active_esign_envelope(db, assignment=assignment, envelope=envelope)
     if envelope.status not in {
         EsignEnvelopeStatus.REJECTED.value,
         EsignEnvelopeStatus.VOIDED.value,
     }:
         raise OnboardingError("only a rejected or voided envelope can be replaced")
-    if db.scalar(
-        select(CandidateEsignEnvelope.id).where(
-            CandidateEsignEnvelope.provider == "documenso",
-            CandidateEsignEnvelope.envelope_id == normalized_id,
+    if (
+        db.scalar(
+            select(CandidateEsignEnvelope.id).where(
+                CandidateEsignEnvelope.provider == "documenso",
+                CandidateEsignEnvelope.envelope_id == normalized_id,
+            )
         )
-    ) is not None:
+        is not None
+    ):
         raise OnboardingError("the Documenso envelope is already linked")
 
     envelope.superseded_at = datetime.now(UTC)
@@ -1010,9 +1005,7 @@ def ensure_gates_exist(
     db.flush()
 
 
-def _lock_gate(
-    db: Session, *, assignment_id: uuid.UUID, code: str
-) -> ProgrammaticGate | None:
+def _lock_gate(db: Session, *, assignment_id: uuid.UUID, code: str) -> ProgrammaticGate | None:
     return db.scalar(
         select(ProgrammaticGate)
         .where(
@@ -1165,9 +1158,7 @@ def candidate_gates(
     )
 
 
-def activation_ready(
-    db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID
-) -> bool:
+def activation_ready(db: Session, *, candidate_id: uuid.UUID, assignment_id: uuid.UUID) -> bool:
     assignment = db.scalar(
         select(CandidateOnboardingAssignment).where(
             CandidateOnboardingAssignment.id == assignment_id,
@@ -1197,9 +1188,7 @@ def activation_ready(
         return False
     if not _all_required_policies_acknowledged(db, assignment_id=assignment.id):
         return False
-    gates = candidate_gates(
-        db, candidate_id=candidate_id, assignment_id=assignment.id
-    )
+    gates = candidate_gates(db, candidate_id=candidate_id, assignment_id=assignment.id)
     gate_status = {gate.code: gate.status for gate in gates}
     return all(
         gate_status.get(code) == GateStatus.SATISFIED.value for code in ACTIVATION_GATE_CODES

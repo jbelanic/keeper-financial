@@ -9,9 +9,9 @@ import HomePage from "@/app/(public)/page";
 import PrivacyPage from "@/app/(public)/privacy/page";
 
 const pages: Array<[string, () => React.ReactNode]> = [
-  ["Ontario mortgage guidance", HomePage],
-  ["Mortgage services", MortgagesPage],
-  ["How it works", HowItWorksPage],
+  ["Start with your mortgage goal", HomePage],
+  ["Information for the mortgage decision in front of you", MortgagesPage],
+  ["From a general question to a complete application", HowItWorksPage],
   ["About", AboutPage],
   ["Contact", ContactPage],
   ["Privacy", PrivacyPage],
@@ -60,7 +60,7 @@ describe("anonymous public pages", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: /brokerage-approved profiles/i,
+        name: /find a keeper financial agent/i,
       }),
     ).toBeInTheDocument();
     vi.unstubAllGlobals();

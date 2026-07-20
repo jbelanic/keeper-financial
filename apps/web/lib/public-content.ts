@@ -1,7 +1,7 @@
 export const publicNavigation = [
   { label: "Mortgages", href: "/mortgages" },
   { label: "How it works", href: "/how-it-works" },
-  { label: "Our agents", href: "/agents" },
+  { label: "Find an Agent", href: "/agents" },
   { label: "Join Keeper Financial", href: "/careers" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
@@ -10,96 +10,96 @@ export const publicNavigation = [
 export const mortgageServices = [
   {
     slug: "purchase",
-    title: "Purchase mortgages",
-    shortTitle: "Buy a home",
+    title: "Planning a home purchase",
+    eyebrow: "Purchase mortgages",
+    lead: "Understand the mortgage steps that may form part of a planned home purchase and prepare questions before beginning a complete application.",
+    shortTitle: "Purchase",
     summary:
-      "Understand the mortgage steps that can support a planned home purchase.",
-    introduction:
-      "A purchase mortgage is one part of a larger home-buying decision. Keeper Financial can help you organize questions, understand the process, and decide when to continue to a secure application.",
+      "Understand the mortgage steps that may form part of a planned home purchase.",
     considerations: [
-      "Your intended timing and the type of property you are considering",
-      "The difference between an early conversation and a full application",
-      "The documents a secure mortgage provider may request later",
+      "your general timeline and the type of property you are considering",
+      "the difference between an early conversation, a pre-approval and a final lending decision",
+      "when detailed financial information and documents may be required through the mortgage application",
     ],
   },
   {
     slug: "refinancing",
-    title: "Refinancing",
+    title: "Considering a refinance",
+    eyebrow: "Refinancing",
+    lead: "A refinance may change the amount, term or structure of an existing mortgage. A complete review is needed to assess available options, costs and suitability.",
     shortTitle: "Refinance",
     summary:
-      "Explore what it means to replace or change an existing mortgage before maturity.",
-    introduction:
-      "Refinancing can change the amount, term, or structure of an existing mortgage. Costs and suitability vary, so the first useful step is a clear conversation about your general objective—not sharing financial documents on this website.",
+      "A refinance may change the amount, term or structure of an existing mortgage.",
     considerations: [
-      "Why you are considering a change and when you hope to make it",
-      "Potential costs or trade-offs that should be discussed before proceeding",
-      "When a secure application is appropriate for a complete review",
+      "why you are considering a change and your preferred timing",
+      "potential charges, fees and other trade-offs to discuss before proceeding",
+      "when to continue to a complete mortgage application",
     ],
   },
   {
     slug: "renewals",
-    title: "Mortgage renewals",
-    shortTitle: "Plan a renewal",
+    title: "Preparing for a mortgage renewal",
+    eyebrow: "Mortgage renewals",
+    lead: "Review your current mortgage, renewal information and priorities before deciding on your next term.",
+    shortTitle: "Renewals",
     summary:
-      "Prepare for an upcoming maturity with time to understand your options.",
-    introduction:
-      "A renewal is an opportunity to review your current mortgage and your priorities before accepting new terms. Starting early can create space for questions and an informed comparison process.",
+      "Review your current mortgage, renewal information and priorities before deciding on your next term.",
     considerations: [
-      "Your maturity date and the renewal information already provided to you",
-      "Whether your needs or plans have changed since your last term",
-      "Questions to raise before choosing a new term or lender",
+      "your maturity date and any renewal offer you have received",
+      "whether your needs or plans have changed",
+      "questions about terms and options that require a complete review",
     ],
   },
   {
     slug: "first-time-buyers",
-    title: "First-time home buyers",
+    title: "Buying your first home",
+    eyebrow: "First-time home buyers",
+    lead: "Learn the main stages of a first purchase and prepare for the information a complete mortgage application may require.",
     shortTitle: "First-time buyers",
     summary:
-      "Learn the stages of a first purchase in clear, manageable language.",
-    introduction:
-      "Buying a first home can introduce unfamiliar terms and timelines. Keeper Financial offers a conversation-first path so you can understand the sequence before deciding whether to begin a secure application.",
+      "Learn the main stages of a first purchase and prepare for the information a complete mortgage application may require.",
     considerations: [
-      "The difference between planning, pre-approval, and a final lending decision",
-      "Questions about purchase costs beyond the mortgage itself",
-      "How to keep sensitive financial information inside an approved secure platform",
+      "the difference between early planning, a pre-approval and final lender approval",
+      "purchase costs and responsibilities beyond the mortgage itself",
+      "how to provide detailed financial and identity information securely",
     ],
   },
   {
     slug: "investment-properties",
-    title: "Investment properties",
+    title: "Financing an investment property",
+    eyebrow: "Investment properties",
+    lead: "Mortgage requirements for an investment property may differ from those for a principal residence. A complete review is required to assess a specific application.",
     shortTitle: "Investment properties",
     summary:
-      "Discuss the mortgage process for a property intended as an investment.",
-    introduction:
-      "Investment-property financing can involve different considerations from a principal residence. An initial conversation can help clarify the process while any detailed financial assessment remains in the approved secure application platform.",
+      "Mortgage requirements for an investment property may differ from those for a principal residence.",
     considerations: [
-      "The intended use of the property and your general timeline",
-      "Questions to prepare for a complete lender review",
-      "Why eligibility and lending decisions can only follow a full assessment",
+      "the intended use of the property and your general timeline",
+      "questions to prepare for the mortgage application",
+      "whether separate tax, accounting or legal advice may be appropriate",
     ],
   },
 ] as const;
 
 export const processSteps = [
   {
-    title: "Start with your goal",
+    title: "Choose your topic",
     description:
-      "Choose a general mortgage topic and decide whether you want a conversation first or are ready for a secure application.",
+      "Review information about purchases, refinancing, renewals, first homes or investment properties.",
   },
   {
-    title: "Talk through the process",
+    title: "Contact Keeper Financial",
     description:
-      "Use the published phone, email, or minimal contact form. Do not send sensitive financial or identity information.",
+      "Share your name, contact details, general mortgage goal and non-sensitive context.",
   },
   {
     title: "Continue securely",
     description:
-      "When appropriate, move to Keeper Financial’s approved external application platform for detailed information and documents.",
+      "Use the configured mortgage application service for detailed financial, credit, identity and document information.",
   },
   {
-    title: "Review next steps",
+    title: "Review the next step",
     description:
-      "A mortgage professional can explain what happens next. Approval, rates, and eligibility always depend on a complete assessment.",
+      "A mortgage professional can explain the process after the required information is available.",
   },
 ] as const;
 

@@ -235,16 +235,12 @@ def list_plans(
     response.headers.update(NO_STORE)
     from keeper_api.services.onboarding import list_onboarding_plans
 
-    plans, _ = list_onboarding_plans(
-        db, active_only=False, limit=limit, offset=offset
-    )
+    plans, _ = list_onboarding_plans(db, active_only=False, limit=limit, offset=offset)
     locked_plan_ids = set(
         db.scalars(
             select(CandidateOnboardingAssignment.onboarding_plan_id)
             .where(
-                CandidateOnboardingAssignment.onboarding_plan_id.in_(
-                    [plan.id for plan in plans]
-                )
+                CandidateOnboardingAssignment.onboarding_plan_id.in_([plan.id for plan in plans])
             )
             .distinct()
         ).all()
@@ -405,7 +401,10 @@ def review_candidate_task(
 @router.get(
     "/assignments",
     response_model=list[AdminOnboardingAssignmentSummary],
-    responses={401: {"description": "Authentication required"}, 403: {"description": "Admin denied"}},
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+    },
 )
 def list_assignments(
     response: Response,
@@ -429,7 +428,10 @@ def list_assignments(
         )
         .limit(100)
     ).all()
-    return [_assignment_summary(db, assignment, application, plan) for assignment, application, plan in rows]
+    return [
+        _assignment_summary(db, assignment, application, plan)
+        for assignment, application, plan in rows
+    ]
 
 
 @router.get(
