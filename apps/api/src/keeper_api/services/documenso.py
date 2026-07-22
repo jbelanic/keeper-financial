@@ -263,8 +263,7 @@ def fetch_envelope_status(settings: Settings, envelope_id: str) -> str:
         raise DocumensoError("Documenso returned an invalid response")
     if document.get("id") != normalized_id:
         _log.warning(
-            "Documenso status check returned a different envelope id: "
-            "expected=%r actual=%r",
+            "Documenso status check returned a different envelope id: expected=%r actual=%r",
             normalized_id,
             document.get("id"),
         )
