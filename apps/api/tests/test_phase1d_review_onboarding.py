@@ -1279,6 +1279,29 @@ def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
     )
 
 
+def test_assignment_without_required_policies_satisfies_derived_policy_gate(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    candidate, application, subject = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
+    assigned = assign(
+        client,
+        candidate,
+        application,
+        make_plan(db, with_task=False),
+    )
+    assert assigned.status_code == 201
+
+    dashboard = client.get(
+        "/api/v1/candidate/onboarding",
+        headers={"X-Dev-Auth-Sub": subject, "X-Dev-Auth-AAL": "aal1"},
+    )
+    assert dashboard.status_code == 200
+    gates = {gate["code"]: gate["status"] for gate in dashboard.json()["gates"]}
+    assert gates["policy_acknowledgement"] == "satisfied"
+    assert gates["executed_agreements"] == "open"
+
+
 def test_assignment_scoped_manual_gates_require_evidence_and_can_be_reopened(
     client: TestClient, db: Session
 ) -> None:
@@ -1364,7 +1387,14 @@ def test_new_assignment_cannot_reuse_prior_assignment_gates_or_envelopes(
         )
     ).all()
     assert len(current_gates) == 5
-    assert all(gate.status == "open" for gate in current_gates)
+    current_gate_status = {gate.code: gate.status for gate in current_gates}
+    assert current_gate_status == {
+        "background_check": "open",
+        "executed_agreements": "open",
+        "fsra_authorization": "open",
+        "policy_acknowledgement": "satisfied",
+        "system_provisioning": "open",
+    }
 
 
 def test_documenso_status_refresh_is_authoritative_and_assignment_bound(

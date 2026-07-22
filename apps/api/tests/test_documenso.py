@@ -387,9 +387,7 @@ def test_issue_ica_logs_diagnostic_on_schema_drift(
         )
 
     assert calls, "expected a diagnostic WARNING on schema drift"
-    assert any(
-        "incompatible-envelope-or-provenance" in str(args) for args, _ in calls
-    )
+    assert any("incompatible-envelope-or-provenance" in str(args) for args, _ in calls)
     assert any("summary:" in str(args) for args, _ in calls)
 
 
@@ -420,8 +418,6 @@ def test_issue_ica_accepts_envelope_id_string_or_envelopeid_field(
     )
     assert issued.envelope_id == "envelope_abc123"
     assert issued.status == "PENDING"
-
-
 
     settings = _settings()
     settings.documenso_ica_template_id = None
