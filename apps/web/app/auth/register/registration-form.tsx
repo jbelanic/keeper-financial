@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createKeeperBrowserClient } from "@/lib/supabase-browser";
 import { useState } from "react";
 import { Button, ErrorSummary, FormField } from "@keeper/ui";
 import { isSafePostingSlug } from "@/lib/candidate-provisioning";
@@ -24,10 +24,7 @@ export function CandidateRegistrationForm({ posting }: { posting: string }) {
     setStatus("");
     setBusy(true);
     const form = new FormData(event.currentTarget);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
-    );
+    const supabase = createKeeperBrowserClient();
     const callback = new URL("/auth/callback", window.location.origin);
     callback.searchParams.set("posting", posting);
     const { error } = await supabase.auth.signUp({

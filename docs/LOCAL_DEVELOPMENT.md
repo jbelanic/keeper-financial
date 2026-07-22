@@ -140,6 +140,58 @@ without exporting an access token, so the supported access check is the exact
 browser navigation above. Never paste a bearer token into shell history merely
 to call `/api/v1/auth/access?area=admin` with `curl`.
 
+### Local Documenso TLS integration
+
+Keeper keeps the approved public signing origin at
+`https://sign.keeperfinancial.ca` and does not weaken HTTPS, redirect, template,
+recipient, provenance, or provider-status validation for local development.
+The local Documenso stack must be running from `/home/john/dev/documenso` so its
+`documenso_default` Docker network exists. Its public URL settings must use the
+same exact HTTPS origin; its private internal URL may remain container-local.
+
+Generate one ignored local CA, server certificate, and combined API trust bundle
+from the repository root. The script refuses to overwrite existing material so
+an already trusted local CA is not silently replaced:
+
+```bash
+./infrastructure/documenso/generate-local-tls.sh
+```
+
+Add the exact hostname to the continuation host using an interactive
+administrator shell. Do not bind the proxy to a non-loopback interface:
+
+```bash
+printf '127.0.0.1 sign.keeperfinancial.ca\n' | sudo tee -a /etc/hosts
+```
+
+In Firefox, open **Settings → Privacy & Security → Certificates → View
+Certificates → Authorities → Import**, select
+`storage/local-documenso-tls/ca.crt`, and trust it only to identify websites.
+The CA private key and all generated TLS material remain under the ignored
+`storage/local-documenso-tls/` directory and must never be committed or shared.
+
+Start the loopback-only TLS proxy and recreate the API so it receives the exact
+provider URL and combined CA bundle:
+
+```bash
+docker compose up -d documenso-tls api
+```
+
+Verify TLS without printing the API token or provider response body:
+
+```bash
+curl --resolve sign.keeperfinancial.ca:443:127.0.0.1 \
+  --cacert storage/local-documenso-tls/ca.crt \
+  --output /dev/null --write-out '%{http_code} %{ssl_verify_result}\n' \
+  https://sign.keeperfinancial.ca/
+```
+
+An HTTP redirect with TLS verification result `0` is acceptable for the root
+page. Agreement issuance must still be performed through the authenticated
+administrator/AAL2 operation. A failed read-only template preflight or any
+incompatible issuance response remains a stop condition; do not bypass it with
+a manual envelope link.
+
 Before assigning onboarding, the selected application attempt—not merely another application for the same candidate—must have completed the approved review transitions and be `conditionally_selected`; the onboarding plan must exist and be active. Use only supported admin operations to assign the plan, then verify that candidate and admin onboarding are discoverable in their navigation, the candidate sees only assignment-bound tasks/documents, and acknowledgement rejects any version not assigned through that active assignment. Satisfying all gates may produce `activation_ready=true`; it does not perform final activation.
 
 The repository also provides opt-in local-stack checks. They use only unique

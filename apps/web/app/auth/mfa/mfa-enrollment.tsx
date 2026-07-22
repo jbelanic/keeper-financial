@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createKeeperBrowserClient } from "@/lib/supabase-browser";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -33,14 +33,7 @@ export function normalizeTotpQrSource(rawQr: unknown): string | null {
 
 export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
   const candidateFlow = returnTo.startsWith("/candidate");
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
-      ),
-    [],
-  );
+  const supabase = useMemo(() => createKeeperBrowserClient(), []);
   const [stage, setStage] = useState<Stage>("loading");
   const [factorId, setFactorId] = useState<string | null>(null);
   const [staleFactorIds, setStaleFactorIds] = useState<string[]>([]);
@@ -57,6 +50,7 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
           await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
         if (assurance.error || !assurance.data)
           throw new Error("assurance unavailable");
+        console.log("[MFA] assurance level:", assurance.data.currentLevel);
         if (assurance.data.currentLevel === "aal2") {
           if (active) setStage("verified");
           return;
@@ -64,6 +58,7 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
         const factors = await supabase.auth.mfa.listFactors();
         if (factors.error || !factors.data)
           throw new Error("factors unavailable");
+        console.log("[MFA] factors:", factors.data);
         const verified = factors.data.totp.find(
           (factor) => factor.status === "verified",
         );

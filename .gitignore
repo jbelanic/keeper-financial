@@ -26,6 +26,7 @@ __pycache__/
 /supabase/.branches/_current_branch
 /supabase/.temp/cli-latest
 /supabase/signing_keys.json
+/storage/local-documenso-tls/
 storage/dev_uploads/*
 !storage/dev_uploads/.gitkeep
 /start-hermes.sh

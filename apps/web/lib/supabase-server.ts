@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { KEEPER_AUTH_COOKIE } from "./supabase-keys";
 
 export const supabaseServerUrl = () =>
   process.env.SUPABASE_INTERNAL_URL ??
@@ -12,6 +13,7 @@ export async function getSupabaseServerClient() {
     supabaseServerUrl(),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
     {
+      cookieOptions: { name: KEEPER_AUTH_COOKIE },
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (items) => {
