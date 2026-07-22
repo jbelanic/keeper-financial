@@ -339,7 +339,90 @@ def test_issue_ica_provider_failures_are_safe(
     assert "secret-response-body" not in str(raised.value)
 
 
-def test_issue_ica_requires_configured_template_and_signer() -> None:
+def test_issue_ica_logs_diagnostic_on_schema_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Regression guard: a future Documenso schema drift (e.g. integer id
+    # with no string envelopeId, or omitted type) must still fail closed AND
+    # emit a diagnosable WARNING naming the rejected shape, not just a 503.
+    drifted = {
+        "id": 999,
+        "status": "PENDING",
+        "source": "TEMPLATE",
+        "externalId": "keeper-onboarding-1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+        "recipients": [
+            {
+                "id": 700,
+                "email": "candidate@example.test",
+                "role": "SIGNER",
+                "signingUrl": "https://sign.keeperfinancial.ca/sign/tok",
+            }
+        ],
+    }
+    responses = iter(
+        [
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            drifted,
+        ]
+    )
+    monkeypatch.setattr(
+        documenso,
+        "build_opener",
+        lambda _handler: _Opener(next(responses)),
+    )
+
+    calls: list[tuple[object, object]] = []
+    monkeypatch.setattr(
+        documenso._log,
+        "warning",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    with pytest.raises(DocumensoError, match="incompatible"):
+        issue_ica_envelope(
+            _settings(),
+            assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+            candidate_email="candidate@example.test",
+            candidate_name="Candidate Name",
+        )
+
+    assert calls, "expected a diagnostic WARNING on schema drift"
+    assert any(
+        "incompatible-envelope-or-provenance" in str(args) for args, _ in calls
+    )
+    assert any("summary:" in str(args) for args, _ in calls)
+
+
+def test_issue_ica_accepts_envelope_id_string_or_envelopeid_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Documenso may return the envelope id either as `id` (str) or as
+    # `envelopeId`; both must be accepted and stored.
+    response = _issued_response()
+    response.pop("id", None)
+    response["envelopeId"] = "envelope_abc123"
+    responses = iter(
+        [
+            {"id": 42, "recipients": [{"id": 7, "role": "SIGNER"}]},
+            response,
+        ]
+    )
+    monkeypatch.setattr(
+        documenso,
+        "build_opener",
+        lambda _handler: _Opener(next(responses)),
+    )
+    issued = issue_ica_envelope(
+        _settings(),
+        assignment_id="1c9876f2-85f7-4fd2-8b13-8e18e03c82a6",
+        candidate_email="candidate@example.test",
+        candidate_name="Candidate Name",
+    )
+    assert issued.envelope_id == "envelope_abc123"
+    assert issued.status == "PENDING"
+
+
+
     settings = _settings()
     settings.documenso_ica_template_id = None
     with pytest.raises(DocumensoError, match="not configured"):

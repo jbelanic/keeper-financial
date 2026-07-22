@@ -4,13 +4,14 @@ import {
   startCandidateApplication,
   isSafePostingSlug,
 } from "@/lib/candidate-provisioning";
+import { requestUrl } from "@/lib/request-url";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const posting = request.nextUrl.searchParams.get("posting") ?? "";
   if (!code || !isSafePostingSlug(posting)) {
-    const url = new URL("/auth/sign-in", request.url);
+    const url = requestUrl(request, "/auth/sign-in");
     url.searchParams.set("error", "verification");
     if (isSafePostingSlug(posting)) url.searchParams.set("posting", posting);
     return NextResponse.redirect(url);
@@ -23,14 +24,14 @@ export async function GET(request: NextRequest) {
   try {
     authResult = await supabase.auth.exchangeCodeForSession(code);
   } catch {
-    const url = new URL("/auth/sign-in", request.url);
+    const url = requestUrl(request, "/auth/sign-in");
     url.searchParams.set("error", "verification");
     url.searchParams.set("posting", posting);
     return NextResponse.redirect(url);
   }
   const token = authResult.data.session?.access_token;
   if (authResult.error || !token) {
-    const url = new URL("/auth/sign-in", request.url);
+    const url = requestUrl(request, "/auth/sign-in");
     url.searchParams.set("error", "verification");
     url.searchParams.set("posting", posting);
     return NextResponse.redirect(url);
@@ -38,10 +39,10 @@ export async function GET(request: NextRequest) {
   try {
     const application = await startCandidateApplication(token, posting);
     return NextResponse.redirect(
-      new URL(`/candidate/applications/${application.id}`, request.url),
+      requestUrl(request, `/candidate/applications/${application.id}`),
     );
   } catch (error) {
-    const url = new URL("/auth/sign-in", request.url);
+    const url = requestUrl(request, "/auth/sign-in");
     if (error instanceof CandidateProvisioningError && error.status === 404) {
       url.searchParams.set("error", "posting-unavailable");
       return NextResponse.redirect(url);

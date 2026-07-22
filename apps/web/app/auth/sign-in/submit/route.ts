@@ -4,6 +4,7 @@ import {
   isSafePostingSlug,
   startCandidateApplication,
 } from "@/lib/candidate-provisioning";
+import { requestOrigin, requestUrl } from "@/lib/request-url";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 function safeReturnTo(
@@ -18,7 +19,7 @@ function signInUrl(
   posting?: string,
   returnTo: "/candidate" | "/admin" = "/candidate",
 ) {
-  const url = new URL("/auth/sign-in", request.url);
+  const url = requestUrl(request, "/auth/sign-in");
   url.searchParams.set("error", error);
   if (posting) url.searchParams.set("posting", posting);
   if (returnTo === "/admin") url.searchParams.set("returnTo", returnTo);
@@ -27,7 +28,7 @@ function signInUrl(
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) {
+  if (origin && origin !== requestOrigin(request)) {
     return new NextResponse("Sign-in request rejected", { status: 403 });
   }
   const form = await request.formData();
@@ -77,16 +78,16 @@ export async function POST(request: NextRequest) {
   if (!posting) {
     if (returnTo === "/admin") {
       return NextResponse.redirect(
-        new URL("/auth/mfa?returnTo=/admin", request.url),
+        requestUrl(request, "/auth/mfa?returnTo=/admin"),
         303,
       );
     }
-    return NextResponse.redirect(new URL(returnTo, request.url), 303);
+    return NextResponse.redirect(requestUrl(request, returnTo), 303);
   }
   try {
     const application = await startCandidateApplication(token, posting);
     return NextResponse.redirect(
-      new URL(`/candidate/applications/${application.id}`, request.url),
+      requestUrl(request, `/candidate/applications/${application.id}`),
       303,
     );
   } catch (error) {

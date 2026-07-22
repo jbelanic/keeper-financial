@@ -154,6 +154,25 @@ def test_compose_api_waits_for_clamav_and_uses_internal_fail_closed_scanner() ->
     assert "MALWARE_SCANNER_BACKEND: disabled" not in api_service
 
 
+def test_compose_routes_documenso_through_loopback_only_tls_with_explicit_trust() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    proxy_service = compose.split("\n  documenso-tls:\n", maxsplit=1)[1].split(
+        "\n  api:\n", maxsplit=1
+    )[0]
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
+
+    assert '"127.0.0.1:443:443"' in proxy_service
+    assert "sign.keeperfinancial.ca" in proxy_service
+    assert "documenso:\n" in proxy_service
+    assert "/etc/nginx/tls/server.crt:ro" in proxy_service
+    assert "/etc/nginx/tls/server.key:ro" in proxy_service
+    assert "SSL_CERT_FILE: /etc/ssl/certs/keeper-local-documenso-ca-bundle.crt" in api_service
+    assert "/etc/ssl/certs/keeper-local-documenso-ca-bundle.crt:ro" in api_service
+    assert "documenso-tls:\n        condition: service_healthy" in api_service
+    assert "documenso:\n    external: true" in compose
+    assert "name: documenso_default" in compose
+
+
 def test_host_run_api_uses_loopback_clamav_and_minio_endpoints() -> None:
     makefile = (PROJECT_ROOT / "Makefile").read_text()
     api_dev = makefile.split("\napi-dev:\n", maxsplit=1)[1].split("\n\nweb-dev:", maxsplit=1)[0]
@@ -175,7 +194,10 @@ def test_compose_web_uses_internal_server_routes_and_public_browser_routes() -> 
     web_service = compose.split("\n  web:\n", maxsplit=1)[1].split("\nvolumes:", maxsplit=1)[0]
 
     assert "API_INTERNAL_URL: http://api:8000" in web_service
-    assert "NEXT_PUBLIC_API_BASE_URL: http://localhost:8000" in web_service
+    # Browser reaches the API on 127.0.0.1 to match the page origin and
+    # avoid a localhost/127.0.0.1 CORS split. localhost:3000 stays
+    # allowed via CORS_ORIGINS so either host works.
+    assert "NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000" in web_service
     assert "SUPABASE_INTERNAL_URL: http://host.docker.internal:54321" in web_service
     assert (
         "NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}"

@@ -110,4 +110,18 @@ describe("Supabase SSR session refresh proxy", () => {
     );
     expect(response.headers.get("location")).not.toContain("private-session");
   });
+
+  it("redirects protected requests to the external container host", async () => {
+    getUser.mockRejectedValue(new Error("provider unavailable"));
+    const { proxy } = await import("@/proxy");
+    const response = await proxy(
+      new NextRequest("http://0.0.0.0:3000/candidate/onboarding", {
+        headers: { host: "127.0.0.1:3000" },
+      }),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "http://127.0.0.1:3000/auth/sign-in?error=session&returnTo=%2Fcandidate",
+    );
+  });
 });

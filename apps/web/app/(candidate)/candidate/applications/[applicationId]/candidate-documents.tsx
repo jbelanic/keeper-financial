@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createKeeperBrowserClient } from "@/lib/supabase-browser";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, ErrorState, FormField, StatusBadge } from "@keeper/ui";
@@ -71,10 +71,7 @@ function deniedMessage(status: number): string {
 }
 
 async function inspectCandidateMfa(): Promise<CandidateMfaState> {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
-  );
+  const supabase = createKeeperBrowserClient();
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (assurance.error || !assurance.data)
     throw new Error("assurance unavailable");

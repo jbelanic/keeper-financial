@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -12,6 +13,25 @@ from keeper_api.core.config import Settings
 _ALLOWED_STATUSES = {"DRAFT", "PENDING", "COMPLETED", "REJECTED"}
 _MAX_RESPONSE_BYTES = 64 * 1024
 _MAX_ENVELOPE_ID_LENGTH = 255
+
+_log = logging.getLogger(__name__)
+
+
+def _safe_response_summary(payload: dict[str, object]) -> str:
+    """Structurally describe a Documenso response without leaking PII or tokens.
+
+    Only non-sensitive shape facts are included so a future schema drift is
+    diagnosable from logs without exposing candidate emails, signing tokens,
+    or response bodies.
+    """
+    recipients = payload.get("recipients")
+    return (
+        f"type={payload.get('type')!r} source={payload.get('source')!r} "
+        f"status={payload.get('status')!r} "
+        f"id_type={type(payload.get('id')).__name__} "
+        f"has_envelope_id={isinstance(payload.get('envelopeId'), str)} "
+        f"recipient_count={len(recipients) if isinstance(recipients, list) else type(recipients).__name__}"
+    )
 
 
 @dataclass(frozen=True)
@@ -45,6 +65,7 @@ def _request_json(settings: Settings, request: Request, failure: str) -> dict[st
         ) as response:
             body = response.read(_MAX_RESPONSE_BYTES + 1)
     except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        _log.warning("Documenso upstream request failed: %s | %s", type(exc).__name__, failure)
         raise DocumensoError(failure) from exc
     if len(body) > _MAX_RESPONSE_BYTES:
         raise DocumensoError("Documenso response exceeded the allowed size")
@@ -123,19 +144,36 @@ def issue_ica_envelope(
         ),
         "Documenso contractor agreement could not be sent",
     )
-    envelope_id = issued.get("id")
+    # This Documenso version returns the envelope identifier as `envelopeId`
+    # (str) at the top level, while `id` is the integer document id.
+    # Accept either field so the envelope id is captured regardless of which
+    # the instance populates. Stratified provenance is still enforced by the
+    # TEMPLATE source, externalId, recipient, and status guards below.
+    envelope_id = issued.get("envelopeId")
+    if not isinstance(envelope_id, str) or not envelope_id.strip():
+        fallback_id = issued.get("id")
+        if isinstance(fallback_id, str) and fallback_id.strip():
+            envelope_id = fallback_id
     status = issued.get("status")
     response_recipients = issued.get("recipients")
     if (
         not isinstance(envelope_id, str)
         or not envelope_id.strip()
         or len(envelope_id) > _MAX_ENVELOPE_ID_LENGTH
-        or issued.get("type") != "DOCUMENT"
+        # `template/use` may omit `type` in this Documenso version; the
+        # TEMPLATE source + externalId + recipient guards already pin
+        # provenance, so accept a missing type alongside "DOCUMENT".
+        or issued.get("type") not in {None, "DOCUMENT"}
         or status not in {"PENDING", "COMPLETED", "REJECTED"}
         or issued.get("source") != "TEMPLATE"
         or issued.get("externalId") != external_id
         or not isinstance(response_recipients, list)
     ):
+        _log.warning(
+            "Documenso contractor agreement response rejected: %s | summary: %s",
+            "incompatible-envelope-or-provenance",
+            _safe_response_summary(issued),
+        )
         raise DocumensoError("Documenso contractor agreement response is incompatible")
     normalized_envelope_id = envelope_id.strip()
     exact = [
@@ -209,6 +247,11 @@ def fetch_envelope_status(settings: Settings, envelope_id: str) -> str:
         ) as response:
             body = response.read(_MAX_RESPONSE_BYTES + 1)
     except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        _log.warning(
+            "Documenso status request failed: %s | envelope_id=%s",
+            type(exc).__name__,
+            normalized_id,
+        )
         raise DocumensoError("Documenso status could not be verified") from exc
     if len(body) > _MAX_RESPONSE_BYTES:
         raise DocumensoError("Documenso response exceeded the allowed size")
@@ -219,9 +262,20 @@ def fetch_envelope_status(settings: Settings, envelope_id: str) -> str:
     if not isinstance(document, dict):
         raise DocumensoError("Documenso returned an invalid response")
     if document.get("id") != normalized_id:
+        _log.warning(
+            "Documenso status check returned a different envelope id: "
+            "expected=%r actual=%r",
+            normalized_id,
+            document.get("id"),
+        )
         raise DocumensoError("Documenso returned a different envelope")
     status = document.get("status")
     if not isinstance(status, str) or status not in _ALLOWED_STATUSES:
+        _log.warning(
+            "Documenso returned an unsupported status: %r | envelope_id=%s",
+            status,
+            normalized_id,
+        )
         raise DocumensoError("Documenso returned an unsupported status")
     return status
 

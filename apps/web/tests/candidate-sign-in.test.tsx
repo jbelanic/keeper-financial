@@ -112,6 +112,34 @@ describe("posting-bound existing-user sign-in", () => {
     expect(startCandidateApplication).not.toHaveBeenCalled();
   });
 
+  it("redirects to the external request host behind the local container", async () => {
+    signInWithPassword.mockResolvedValue({
+      data: { session: { access_token: "signed-access-token" } },
+      error: null,
+    });
+    const { POST } = await import("@/app/auth/sign-in/submit/route");
+    const response = await POST(
+      new NextRequest("http://0.0.0.0:3000/auth/sign-in/submit", {
+        method: "POST",
+        headers: {
+          host: "127.0.0.1:3000",
+          origin: "http://127.0.0.1:3000",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          email: "admin@example.test",
+          password: "synthetic-password",
+          returnTo: "/admin",
+        }).toString(),
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "http://127.0.0.1:3000/auth/mfa?returnTo=/admin",
+    );
+  });
+
   it("routes an explicit admin return through MFA without provisioning", async () => {
     signInWithPassword.mockResolvedValue({
       data: { session: { access_token: "signed-access-token" } },
@@ -256,6 +284,25 @@ describe("posting-bound confirmation callback", () => {
     );
     expect(response.headers.get("location")).toBe(
       "http://localhost:3000/candidate/applications/application-456",
+    );
+  });
+
+  it("redirects callbacks to the external container host", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { session: { access_token: "callback-access-token" } },
+      error: null,
+    });
+    startCandidateApplication.mockResolvedValue({ id: "application-456" });
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "http://0.0.0.0:3000/auth/callback?code=bounded-code&posting=synthetic-opportunity",
+        { headers: { host: "127.0.0.1:3000" } },
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "http://127.0.0.1:3000/candidate/applications/application-456",
     );
   });
 

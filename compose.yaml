@@ -72,6 +72,31 @@ services:
       start_period: 10m
     restart: unless-stopped
 
+  documenso-tls:
+    image: nginx@sha256:30f1c0d78e0ad60901648be663a710bdadf19e4c10ac6782c235200619158284
+    ports:
+      - "127.0.0.1:443:443"
+    volumes:
+      - ./infrastructure/documenso/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./storage/local-documenso-tls/server.crt:/etc/nginx/tls/server.crt:ro
+      - ./storage/local-documenso-tls/server.key:/etc/nginx/tls/server.key:ro
+    networks:
+      default:
+        aliases:
+          - sign.keeperfinancial.ca
+      documenso:
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --quiet --spider --no-check-certificate https://127.0.0.1/",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -94,6 +119,13 @@ services:
       CLAMAV_READ_TIMEOUT_SECONDS: 15
       CLAMAV_MAX_CHUNKS: 256
       CLAMAV_MAX_RESPONSE_BYTES: 4096
+      DOCUMENSO_API_BASE_URL: https://sign.keeperfinancial.ca/api/v2
+      DOCUMENSO_PUBLIC_BASE_URL: https://sign.keeperfinancial.ca
+      SSL_CERT_FILE: /etc/ssl/certs/keeper-local-documenso-ca-bundle.crt
+      # Local CORS allow-list. Browser is reached at either localhost or
+      # 127.0.0.1; the web bundle calls the API at the matching host:port.
+      # Both stay local-host HTTP so the production validator still passes.
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000
       SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
       SUPABASE_USER_URL: http://host.docker.internal:54321/auth/v1/user
       SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
@@ -101,6 +133,8 @@ services:
       - "127.0.0.1:8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./storage/local-documenso-tls/ca-bundle.crt:/etc/ssl/certs/keeper-local-documenso-ca-bundle.crt:ro
     depends_on:
       db:
         condition: service_healthy
@@ -109,6 +143,8 @@ services:
       minio-init:
         condition: service_completed_successfully
       clamav:
+        condition: service_healthy
+      documenso-tls:
         condition: service_healthy
     healthcheck:
       test:
@@ -144,9 +180,13 @@ services:
         NEXT_PUBLIC_BOOKING_URL: ${NEXT_PUBLIC_BOOKING_URL:-}
         NEXT_PUBLIC_PRINCIPAL_BROKER: ${NEXT_PUBLIC_PRINCIPAL_BROKER:-}
     environment:
+      # Next.js standalone server.js binds to process.env.HOSTNAME. Docker sets
+      # that to the container ID by default, which is unresolvable and crashes
+      # the server. Pin it to 0.0.0.0 so the container listens on all interfaces.
+      HOSTNAME: 0.0.0.0
       API_INTERNAL_URL: http://api:8000
       SUPABASE_INTERNAL_URL: http://host.docker.internal:54321
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
@@ -173,3 +213,8 @@ volumes:
   keeper_postgres:
   keeper_minio:
   keeper_clamav:
+
+networks:
+  documenso:
+    external: true
+    name: documenso_default

@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createKeeperBrowserClient } from "./supabase-browser";
 import { apiBaseUrl } from "./recruitment-api";
 
 export type CandidateValidationIssue = {
@@ -64,10 +64,7 @@ export async function candidateBrowserRequest(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
-  );
+  const supabase = createKeeperBrowserClient();
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("candidate session unavailable");
