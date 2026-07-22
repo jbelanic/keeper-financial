@@ -9,18 +9,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 
 API_ROOT = Path(__file__).resolve().parents[1]
-MIGRATION_PATH = API_ROOT / "alembic/versions/20260717_0005_phase_1e_agent_profiles.py"
-NEW_COLUMNS = {
-    "languages",
-    "service_areas",
-    "specialties",
-    "photo_url",
-    "photo_alt_text",
-    "public_email",
-    "public_phone",
-    "social_links",
-    "version",
-}
+MIGRATION_PATH = API_ROOT / "alembic/versions/20260722_0010_agent_role_configuration.py"
 
 
 class OperationRecorder:
@@ -36,7 +25,7 @@ class OperationRecorder:
 
 def _migration_module() -> ModuleType:
     spec = importlib.util.spec_from_file_location(
-        "phase1e_agent_profiles_migration", MIGRATION_PATH
+        "agent_role_configuration_migration", MIGRATION_PATH
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -44,41 +33,27 @@ def _migration_module() -> ModuleType:
     return module
 
 
-def test_phase1e_migration_alters_foundational_agent_profiles_without_destroying_it() -> None:
+def test_agent_role_configuration_is_one_forward_data_revision() -> None:
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
     assert script.get_heads() == ["20260722_0010"]
 
     migration = _migration_module()
-    assert migration.revision == "20260717_0005"  # type: ignore[attr-defined]
-    assert migration.down_revision == "20260716_0004"  # type: ignore[attr-defined]
+    assert migration.revision == "20260722_0010"  # type: ignore[attr-defined]
+    assert migration.down_revision == "20260722_0009"  # type: ignore[attr-defined]
+
     upgrade = OperationRecorder()
     migration.op = upgrade  # type: ignore[attr-defined]
     migration.upgrade()  # type: ignore[attr-defined]
-
-    upgrade_names = [name for name, _, _ in upgrade.calls]
-    assert "create_table" not in upgrade_names
-    assert {
-        args[1].name
-        for name, args, _ in upgrade.calls
-        if name == "add_column" and args[0] == "agent_profiles"
-    } == NEW_COLUMNS
-    assert [args[0] for name, args, _ in upgrade.calls if name == "create_index"] == [
-        "ix_agent_profiles_publication"
-    ]
+    assert [name for name, _, _ in upgrade.calls] == ["execute"]
+    statement = str(upgrade.calls[0][1][0])
+    assert "INSERT INTO roles" in statement
+    assert "'agent'" in statement
+    assert "ON CONFLICT (code) DO NOTHING" in statement
+    assert "user_roles" not in statement
 
     downgrade = OperationRecorder()
     migration.op = downgrade  # type: ignore[attr-defined]
     migration.downgrade()  # type: ignore[attr-defined]
-
-    downgrade_names = [name for name, _, _ in downgrade.calls]
-    assert "drop_table" not in downgrade_names
-    assert {
-        args[1]
-        for name, args, _ in downgrade.calls
-        if name == "drop_column" and args[0] == "agent_profiles"
-    } == NEW_COLUMNS
-    assert [args[0] for name, args, _ in downgrade.calls if name == "drop_index"] == [
-        "ix_agent_profiles_publication"
-    ]
+    assert downgrade.calls == []

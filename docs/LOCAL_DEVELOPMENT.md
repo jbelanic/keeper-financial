@@ -94,7 +94,7 @@ Supabase proves identity only. Ordinary portal access still needs an active veri
 
 ### Safe manual candidate and onboarding journey
 
-Seeded local `User`, `UserIdentity`, candidate, admin, posting, plan, and related application rows are fixtures only. They are not automatically real Supabase login identities, and matching a seeded email address does not safely link the records. Do not create an Auth user with a seeded email, edit Auth/application tables in Studio, or hand-link subjects merely to make a manual test pass.
+Seeded local `User`, `UserIdentity`, candidate, admin, posting, plan, and related application rows are fixtures only. The seed also idempotently configures the ungranted `agent` role definition required by explicit onboarding completion; it does not grant agent access. Seeded users are not automatically real Supabase login identities, and matching a seeded email address does not safely link the records. Do not create an Auth user with a seeded email, edit Auth/application tables in Studio, or hand-link subjects merely to make a manual test pass.
 
 Use this procedure only with synthetic local data and the loopback-only stack:
 

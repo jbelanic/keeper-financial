@@ -105,6 +105,50 @@ describe("administrator onboarding workspace", () => {
     ).toHaveAttribute("href", "/admin/agents");
   });
 
+  it("shows the recognized completion conflict instead of blaming green readiness", async () => {
+    const detail = {
+      ...assignment,
+      activation_ready: true,
+      tasks: [],
+      gates: [],
+      esign_envelopes: [],
+    };
+    const requester = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => detail })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({ detail: "the agent role is not configured" }),
+      });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { OnboardingAdmin } = await import(
+      "@/app/(admin)/admin/onboarding/onboarding-admin"
+    );
+    render(
+      <OnboardingAdmin
+        initialPlans={[]}
+        initialAssignments={[assignment]}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Manage active assignment" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Complete onboarding and enable agent",
+      }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Agent access is not configured. Apply current database migrations and retry.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("reissues a rejected Keeper agreement through the bounded issuance endpoint", async () => {
     const rejected = {
       id: "00000000-0000-4000-8000-000000000990",
@@ -233,6 +277,33 @@ describe("administrator onboarding workspace", () => {
     ]);
     expect(screen.getByRole("status")).toHaveTextContent(
       /onboarding plan created/i,
+    );
+  });
+
+  it("explains draft task removal and confirms the unsaved change", async () => {
+    const { OnboardingAdmin } = await import(
+      "@/app/(admin)/admin/onboarding/onboarding-admin"
+    );
+    render(
+      <OnboardingAdmin
+        initialPlans={[]}
+        initialAssignments={[]}
+        requester={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(/at least one task is required/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/task changes are not persisted until/i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add task" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Remove task" })[1]);
+
+    expect(screen.getAllByLabelText("Task title (required)")).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /task removed from the draft/i,
     );
   });
 

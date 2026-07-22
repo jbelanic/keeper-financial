@@ -164,6 +164,10 @@ available for unreviewed tasks.
 
 Forward migration `20260719_0008` binds gate, policy-acknowledgement, and e-sign evidence to exact onboarding assignments; adds append-only gate evidence and envelope replacement history; and adds permanent profile slug-lock evidence. Ambiguous legacy candidate-scoped rows are not guessed into satisfying assignment evidence. Upgrade refuses duplicate non-null legacy provider envelope IDs before DDL rather than choosing a row. Historical profile publication is recovered from current state/timestamps or authoritative publication audit events. Downgrade refuses rejected-envelope rows before DDL because `0007` cannot represent that evidence without a lossy relabel.
 
+Forward data migration `20260722_0009` repairs only active, ownership-consistent exact assignments whose derived `policy_acknowledgement` gate is open while no required assigned policy version lacks an exact-assignment acknowledgement. It creates no acknowledgement row and does not rewrite historical assignments. Its downgrade is intentionally a no-op because reopening repaired gates could erase valid derived state established after upgrade.
+
+Forward data migration `20260722_0010` configures the existing `agent` role required by explicit onboarding completion. It inserts only the role definition with conflict-safe semantics and creates no user-role grant. Its downgrade is intentionally a no-op because authorized completion may grant the role after upgrade and deleting it would destroy valid authorization relationships.
+
 ## Contract generation
 
 FastAPI/Pydantic owns the OpenAPI contract. `make openapi` exports it and runs `openapi-typescript` to create TypeScript declarations. Generated output should change in the same review as API schema changes.

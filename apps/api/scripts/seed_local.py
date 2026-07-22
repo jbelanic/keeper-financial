@@ -36,6 +36,7 @@ def role(db, code: str, description: str) -> Role:  # type: ignore[no-untyped-de
 with SessionLocal.begin() as db:
     candidate_role = role(db, "candidate", "Candidate portal access")
     admin_role = role(db, "brokerage_admin", "Brokerage administration access")
+    role(db, "agent", "Agent portal access")
 
     candidate_user = db.scalar(select(User).where(User.email == "candidate@example.test"))
     if candidate_user is None:

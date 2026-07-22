@@ -234,6 +234,14 @@ export function OnboardingAdmin({
     });
   }
 
+  function removeTask(index: number) {
+    if (tasks.length === 1) return;
+    setTasks((items) => items.filter((_, itemIndex) => itemIndex !== index));
+    setNotice(
+      "Task removed from the draft. Submit the plan form to persist this change.",
+    );
+  }
+
   async function submitGate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!detail || busy) return;
@@ -356,13 +364,31 @@ export function OnboardingAdmin({
         `/api/v1/admin/onboarding/assignments/${detail.assignment_id}/complete`,
         { method: "POST" },
       );
-      if (!response.ok) throw new Error("rejected");
+      if (!response.ok) {
+        let message =
+          "Onboarding could not be completed. Refresh provider evidence and readiness.";
+        if (response.status === 409) {
+          const payload: unknown = await response.json().catch(() => null);
+          if (
+            payload &&
+            typeof payload === "object" &&
+            "detail" in payload &&
+            payload.detail === "the agent role is not configured"
+          ) {
+            message =
+              "Agent access is not configured. Apply current database migrations and retry.";
+          }
+        }
+        throw new Error(message);
+      }
       await loadAssignment(detail.assignment_id);
       setCompletionSucceeded(true);
       setNotice("Onboarding completed and agent access enabled.");
-    } catch {
+    } catch (error) {
       fail(
-        "Onboarding could not be completed. Refresh provider evidence and readiness.",
+        error instanceof Error
+          ? error.message
+          : "Onboarding could not be completed. Refresh provider evidence and readiness.",
       );
       setBusy(false);
     }
@@ -437,6 +463,10 @@ export function OnboardingAdmin({
           </FormField>
           <fieldset>
             <legend>Ordered onboarding tasks</legend>
+            <p>
+              At least one task is required. Task changes are not persisted
+              until you create the plan or save plan changes.
+            </p>
             {tasks.map((task, index) => (
               <Card key={index}>
                 <h4>Task {index + 1}</h4>
@@ -495,11 +525,7 @@ export function OnboardingAdmin({
                   <Button
                     type="button"
                     disabled={tasks.length === 1 || busy}
-                    onClick={() =>
-                      setTasks((items) =>
-                        items.filter((_, itemIndex) => itemIndex !== index),
-                      )
-                    }
+                    onClick={() => removeTask(index)}
                   >
                     Remove task
                   </Button>

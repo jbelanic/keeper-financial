@@ -373,6 +373,14 @@ def assign_onboarding_plan(
         reason="onboarding plan assigned",
     )
     ensure_gates_exist(db, candidate=candidate, assignment=assignment)
+    if _all_required_policies_acknowledged(db, assignment_id=assignment.id):
+        _set_derived_gate(
+            db,
+            assignment=assignment,
+            code="policy_acknowledgement",
+            satisfied=True,
+            actor_user_id=actor_user_id,
+        )
     AuditService(db).record(
         "candidate.onboarding_assigned",
         "candidate",
