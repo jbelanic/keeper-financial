@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { InteriorPageHeader } from "@/lib/public-components";
 import { createPageMetadata } from "@/lib/metadata";
-import { siteConfig } from "@/lib/site-config";
 
 const APPROVED_CONTENT = `Privacy Notice
 Effective date: Jul 23, 2026
