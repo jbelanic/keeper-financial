@@ -3,7 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SectionHeading } from "@keeper/ui";
 import { CtaBand, InteriorPageHeader } from "@/lib/public-components";
-import { getMortgageService, mortgageServices } from "@/lib/public-content";
+import {
+  getMortgageService,
+  mortgageServices,
+  brokerInfoSections,
+  fthbRebate,
+} from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const dynamicParams = false;
@@ -68,6 +73,37 @@ export default async function MortgageServicePage({
                 </article>
               ))}
             </div>
+          ) : null}
+          <SectionHeading
+            eyebrow="Why work with a broker"
+            title="What a mortgage broker can do for you"
+          />
+          <div className="content-stack broker-info-stack">
+            {brokerInfoSections.map((section) => (
+              <article className="prose-card" key={section.heading}>
+                {section.eyebrow ? (
+                  <p className="eyebrow">{section.eyebrow}</p>
+                ) : null}
+                <h2>{section.heading}</h2>
+                {section.body?.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+                {section.points && section.points.length > 0 ? (
+                  <ul className="check-list">
+                    {section.points.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </article>
+            ))}
+          </div>
+          {slug === "first-time-buyers" ? (
+            <p className="external-link-note">
+              <Link className="text-link" href={fthbRebate.url}>
+                {fthbRebate.label} (Canada Revenue Agency)
+              </Link>
+            </p>
           ) : null}
           <div className="reading-grid detail-consider">
             <article className="prose-card">
