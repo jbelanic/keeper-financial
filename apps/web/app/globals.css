@@ -1034,6 +1034,11 @@ p {
 .broker-info-stack {
   margin-top: clamp(2.5rem, 7vw, 5rem);
 }
+.broker-summary-card .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 .external-link-note {
   margin-top: 1rem;
 }

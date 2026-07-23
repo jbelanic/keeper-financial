@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SectionHeading } from "@keeper/ui";
-import { CtaBand, InteriorPageHeader } from "@/lib/public-components";
+import { CtaBand, Icon, InteriorPageHeader } from "@/lib/public-components";
 import {
   getMortgageService,
   mortgageServices,
-  brokerInfoSections,
+  brokerSummary,
   fthbRebate,
 } from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
@@ -74,30 +74,19 @@ export default async function MortgageServicePage({
               ))}
             </div>
           ) : null}
-          <SectionHeading
-            eyebrow="Why work with a broker"
-            title="What a mortgage broker can do for you"
-          />
-          <div className="content-stack broker-info-stack">
-            {brokerInfoSections.map((section) => (
-              <article className="prose-card" key={section.heading}>
-                {section.eyebrow ? (
-                  <p className="eyebrow">{section.eyebrow}</p>
-                ) : null}
-                <h2>{section.heading}</h2>
-                {section.body?.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-                {section.points && section.points.length > 0 ? (
-                  <ul className="check-list">
-                    {section.points.map((point) => (
-                      <li key={point}>{point}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </article>
+          <article className="prose-card broker-summary-card">
+            {brokerSummary.eyebrow ? (
+              <p className="eyebrow">{brokerSummary.eyebrow}</p>
+            ) : null}
+            <h2>{brokerSummary.heading}</h2>
+            {brokerSummary.body?.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
             ))}
-          </div>
+            <Link className="text-link" href="/broker">
+              Read more about working with a broker
+              <Icon name="arrow" />
+            </Link>
+          </article>
           {slug === "first-time-buyers" ? (
             <p className="external-link-note">
               <Link className="text-link" href={fthbRebate.url}>

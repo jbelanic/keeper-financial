@@ -6,6 +6,7 @@ const approvedPublicFacts = {
   regulatoryText: "FSCO # 13696",
   address: "380 Wellington Street, Tower B, 6th Floor, London ON, N6A 5B5",
   email: "support@keeperfinancial.ca",
+  complaintsEmail: "complaints@keeperfinancial.ca",
   phoneDisplay: "+1 (709) 700-7339",
   phoneHref: "+17097007339",
   siteUrl: "https://keeperfinancial.ca",
@@ -106,6 +107,10 @@ export function getPublicSiteConfig(environment: Environment = process.env) {
     email: controlledValue(
       environment.NEXT_PUBLIC_PUBLIC_EMAIL,
       approvedPublicFacts.email,
+    ),
+    complaintsEmail: controlledValue(
+      environment.NEXT_PUBLIC_PUBLIC_COMPLAINTS_EMAIL,
+      approvedPublicFacts.complaintsEmail,
     ),
     phoneDisplay,
     phoneHref: `tel:${phoneHref}`,

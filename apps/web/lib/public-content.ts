@@ -19,6 +19,17 @@ export const fthbRebate = {
   url: "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/gst-hst-businesses/gst-hst-rebates/first-time-home-buyers-gst-hst-rebate.html",
 } as const;
 
+// Short summary card shown on each mortgage product detail page, linking to the
+// full broker page. Mirrors the approved broker copy's tone and guardrails.
+export const brokerSummary: MortgageSection = {
+  eyebrow: "Why work with a broker",
+  heading: "Mortgage guidance built around your options",
+  body: [
+    "A mortgage broker can help you review available options from multiple lenders, understand lender requirements, and compare solutions based on your goals, income, credit profile, down payment, property type, and long-term plans.",
+    "No broker can guarantee approval, a specific rate, or that every borrower will qualify. The goal is to help you understand your options before you commit.",
+  ],
+};
+
 // Shared "why work with a broker" content, approved 2026-07-23. Rendered on
 // every mortgage product detail page. General information only; it states no
 // approval, rate, or qualification guarantee.
