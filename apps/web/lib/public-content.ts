@@ -7,6 +7,13 @@ export const publicNavigation = [
   { label: "Contact", href: "/contact" },
 ] as const;
 
+export type MortgageSection = {
+  eyebrow?: string;
+  heading: string;
+  body?: string[];
+  points?: string[];
+};
+
 export const mortgageServices = [
   {
     slug: "purchase",
@@ -21,6 +28,34 @@ export const mortgageServices = [
       "the difference between an early conversation, a pre-approval and a final lending decision",
       "when detailed financial information and documents may be required through the mortgage application",
     ],
+    sections: [
+      {
+        eyebrow: "Why prepare early",
+        heading: "A conversation before you shop",
+        body: [
+          "Starting the mortgage conversation before you shop gives you a clearer picture of budget, timeline and the steps ahead. It does not commit you to a product.",
+        ],
+      },
+      {
+        heading: "What a mortgage conversation can cover",
+        points: [
+          "how a purchase amount is assessed",
+          "the difference between an early discussion, a pre-approval and final lender approval",
+          "term and rate-structure options in plain language",
+          "costs that sit outside the mortgage itself",
+        ],
+      },
+      {
+        heading: "Costs beyond the mortgage",
+        points: [
+          "down payment",
+          "legal fees",
+          "appraisal and inspection",
+          "provincial land-transfer tax where applicable",
+          "moving and ongoing carrying costs",
+        ],
+      },
+    ] as MortgageSection[],
   },
   {
     slug: "refinancing",
@@ -35,6 +70,35 @@ export const mortgageServices = [
       "potential charges, fees and other trade-offs to discuss before proceeding",
       "when to continue to a complete mortgage application",
     ],
+    sections: [
+      {
+        eyebrow: "Why borrowers review a refinance",
+        heading: "Reasons people consider it",
+        points: [
+          "consolidating higher-cost debt",
+          "funding renovations",
+          "accessing equity",
+          "changing the payment or term structure",
+        ],
+      },
+      {
+        heading: "Costs and trade-offs to weigh",
+        points: [
+          "a charge may apply to end your current term early",
+          "legal and appraisal fees can apply",
+          "a longer amortization usually means more total interest",
+          "it changes your equity position",
+        ],
+      },
+      {
+        heading: "How the review works",
+        points: [
+          "an assessment of your current mortgage",
+          "a comparison of options against your stated goal",
+          "a complete application only when you choose to proceed",
+        ],
+      },
+    ] as MortgageSection[],
   },
   {
     slug: "renewals",
@@ -49,6 +113,31 @@ export const mortgageServices = [
       "whether your needs or plans have changed",
       "questions about terms and options that require a complete review",
     ],
+    sections: [
+      {
+        eyebrow: "Your renewal letter",
+        heading: "An offer, not a requirement",
+        body: [
+          "You are not obliged to sign the renewal your lender sends. The weeks before maturity are a normal window to review other terms.",
+        ],
+      },
+      {
+        heading: "What to review before you decide",
+        points: [
+          "your maturity date and any offer received",
+          "the offered term length and how it fits your plans",
+          "prepayment and portability features",
+          "what changing lenders could involve",
+        ],
+      },
+      {
+        heading: "When to start",
+        points: [
+          "many borrowers begin 4 to 6 months before maturity",
+          "timelines vary by lender — confirm your exact date",
+        ],
+      },
+    ] as MortgageSection[],
   },
   {
     slug: "first-time-buyers",
@@ -63,6 +152,36 @@ export const mortgageServices = [
       "purchase costs and responsibilities beyond the mortgage itself",
       "how to provide detailed financial and identity information securely",
     ],
+    sections: [
+      {
+        eyebrow: "Stages of a first purchase",
+        heading: "From planning to possession",
+        points: [
+          "planning and budget",
+          "an early discussion or pre-approval",
+          "an offer with conditions",
+          "final lender approval",
+          "closing and possession",
+        ],
+      },
+      {
+        eyebrow: "Programs and incentives",
+        heading: "Confirm current details from official sources",
+        body: [
+          "Federal and provincial programs for first-time buyers exist and change over time. Confirm current details from official government sources.",
+        ],
+      },
+      {
+        heading: "What the application asks for",
+        points: [
+          "identification",
+          "income and employment",
+          "existing debts",
+          "source of down payment",
+          "housing history",
+        ],
+      },
+    ] as MortgageSection[],
   },
   {
     slug: "investment-properties",
@@ -77,6 +196,33 @@ export const mortgageServices = [
       "questions to prepare for the mortgage application",
       "whether separate tax, accounting or legal advice may be appropriate",
     ],
+    sections: [
+      {
+        eyebrow: "How investment financing can differ",
+        heading: "Generally different from a residence",
+        points: [
+          "minimum down payments are often higher",
+          "qualification may consider projected rental income within set limits",
+          "rates and fees can differ",
+          "lender guidelines vary",
+        ],
+      },
+      {
+        heading: "What to prepare",
+        points: [
+          "property type and location",
+          "expected rents",
+          "your existing property portfolio",
+          "your financing goals",
+        ],
+      },
+      {
+        heading: "Separate advice",
+        body: [
+          "Tax, accounting or legal advice is often appropriate and is separate from a mortgage review.",
+        ],
+      },
+    ] as MortgageSection[],
   },
 ] as const;
 

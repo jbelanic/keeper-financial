@@ -46,26 +46,51 @@ export default async function MortgageServicePage({
         />
       </div>
       <section className="section section-no-top">
-        <div className="container reading-grid">
-          <article className="prose-card">
-            <h2>Consider:</h2>
-            <ul className="check-list">
-              {service.considerations.map((consideration) => (
-                <li key={consideration}>{consideration}</li>
+        <div className="container">
+          {service.sections && service.sections.length > 0 ? (
+            <div className="content-stack">
+              {service.sections.map((section) => (
+                <article className="prose-card" key={section.heading}>
+                  {section.eyebrow ? (
+                    <p className="eyebrow">{section.eyebrow}</p>
+                  ) : null}
+                  <h2>{section.heading}</h2>
+                  {section.body?.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                  {section.points && section.points.length > 0 ? (
+                    <ul className="check-list">
+                      {section.points.map((point) => (
+                        <li key={point}>{point}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </article>
               ))}
-            </ul>
-          </article>
-          <aside className="paper-panel">
-            <h2>
-              General information here. Detailed information in the application.
-            </h2>
-            <p>
-              Use this website for general information and basic contact
-              details. Provide income, assets, liabilities, credit consent,
-              identity information and supporting documents only through an
-              authorized secure process.
-            </p>
-          </aside>
+            </div>
+          ) : null}
+          <div className="reading-grid detail-consider">
+            <article className="prose-card">
+              <h2>Consider:</h2>
+              <ul className="check-list">
+                {service.considerations.map((consideration) => (
+                  <li key={consideration}>{consideration}</li>
+                ))}
+              </ul>
+            </article>
+            <aside className="paper-panel">
+              <h2>
+                General information here. Detailed information in the
+                application.
+              </h2>
+              <p>
+                Use this website for general information and basic contact
+                details. Provide income, assets, liabilities, credit consent,
+                identity information and supporting documents only through an
+                authorized secure process.
+              </p>
+            </aside>
+          </div>
         </div>
       </section>
       <section className="section section-muted">

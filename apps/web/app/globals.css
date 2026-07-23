@@ -1025,6 +1025,12 @@ p {
   left: 0;
   position: absolute;
 }
+.content-stack {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 2.4rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  margin-bottom: clamp(2rem, 6vw, 4.5rem);
+}
 .recruitment-feature {
   background: var(--color-charcoal);
   color: white;
