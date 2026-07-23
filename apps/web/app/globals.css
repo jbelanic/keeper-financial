@@ -1025,6 +1025,23 @@ p {
   left: 0;
   position: absolute;
 }
+.content-stack {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 2.4rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  margin-bottom: clamp(2rem, 6vw, 4.5rem);
+}
+.broker-info-stack {
+  margin-top: clamp(2.5rem, 7vw, 5rem);
+}
+.broker-summary-card .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.external-link-note {
+  margin-top: 1rem;
+}
 .recruitment-feature {
   background: var(--color-charcoal);
   color: white;

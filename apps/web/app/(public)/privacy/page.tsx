@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { InteriorPageHeader } from "@/lib/public-components";
 import { createPageMetadata } from "@/lib/metadata";
-import { siteConfig } from "@/lib/site-config";
 
 const APPROVED_CONTENT = `Privacy Notice
 Effective date: Jul 23, 2026
@@ -59,9 +58,9 @@ Changes to this notice
 We may update this notice when our practices or requirements change. The effective date above identifies the version currently published.`;
 
 // Process the approved content to remove the first three lines (title, effective date, blank line)
-const lines = APPROVED_CONTENT.split('\n');
+const lines = APPROVED_CONTENT.split("\n");
 const articleContentLines = lines.slice(3); // Remove "Privacy Notice", "Effective date: Jul 23, 2026", and the blank line
-const articleContent = articleContentLines.join('\n');
+const articleContent = articleContentLines.join("\n");
 
 const sectionHeaders = [
   "Information we collect",
@@ -74,7 +73,7 @@ const sectionHeaders = [
   "Retention",
   "Access, correction, export, deletion and consent questions",
   "Contact",
-  "Changes to this notice"
+  "Changes to this notice",
 ];
 
 // Split the article content into blocks separated by one or more blank lines
@@ -82,7 +81,8 @@ const blocks = articleContent.trim().split(/\s*\n\s*\n/);
 
 export const metadata: Metadata = createPageMetadata({
   title: "Privacy Notice",
-  description: "This notice describes how Keeper Financial Inc., operating as Keeper Financial, collects, uses, discloses and protects personal information through keeperfinancial.ca, its candidate portal and related communications.",
+  description:
+    "This notice describes how Keeper Financial Inc., operating as Keeper Financial, collects, uses, discloses and protects personal information through keeperfinancial.ca, its candidate portal and related communications.",
   path: "/privacy",
 });
 
@@ -100,8 +100,13 @@ export default function PrivacyPage() {
             return <h2 key={index}>{trimmed}</h2>;
           } else {
             // Convert newlines within the block to <br> for line breaks
-            const contentWithBreaks = trimmed.replace(/\n/g, '<br>');
-            return <p dangerouslySetInnerHTML={{ __html: contentWithBreaks }} key={index} />;
+            const contentWithBreaks = trimmed.replace(/\n/g, "<br>");
+            return (
+              <p
+                dangerouslySetInnerHTML={{ __html: contentWithBreaks }}
+                key={index}
+              />
+            );
           }
         })}
       </article>

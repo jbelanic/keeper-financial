@@ -6,7 +6,7 @@ import { siteConfig } from "@/lib/site-config";
 export const metadata: Metadata = createPageMetadata({
   title: "Accessibility",
   description:
-    "Keeper Financial’s public website accessibility approach and published feedback contacts.",
+    "Keeper Financial’s public website accessibility approach, feedback contacts, and alternative-format requests.",
   path: "/accessibility",
 });
 
@@ -15,42 +15,106 @@ export default function AccessibilityPage() {
     <div className="container policy-page">
       <InteriorPageHeader
         title="Accessibility"
-        description="Keeper Financial’s public website is designed for practical keyboard use, visible focus, semantic structure, and responsive reflow. A formal owner-approved accessibility policy remains required before production approval."
+        description="Keeper Financial is committed to providing a website experience that is practical, usable, and accessible to as many people as possible."
       />
       <article className="policy-content">
         <section>
-          <h2>Website approach</h2>
+          <h2>Website accessibility approach</h2>
+          <p>
+            Keeper Financial’s public website is designed with accessibility in
+            mind, including:
+          </p>
           <ul>
-            <li>A skip link and semantic page landmarks</li>
-            <li>Keyboard-operable navigation and disclosures</li>
-            <li>Visible focus indicators and labelled form controls</li>
+            <li>Clear page structure and semantic headings</li>
+            <li>Keyboard-operable navigation and interactive elements</li>
+            <li>Visible focus indicators for keyboard users</li>
+            <li>Labelled form fields and descriptive buttons</li>
             <li>
-              Content that reflows at 320 CSS pixels without page-level
+              Content that reflows on smaller screens without page-level
               horizontal scrolling
             </li>
-            <li>Status and error messages that do not rely on colour alone</li>
-            <li>Reduced-motion support for non-essential animation</li>
+            <li>Error and status messages that do not rely on colour alone</li>
+            <li>
+              Sufficient colour contrast for core text and interface elements
+            </li>
+            <li>
+              Reduced-motion support for non-essential animation where supported
+              by the user’s device or browser settings
+            </li>
+            <li>Descriptive link text where practical</li>
+            <li>Alternative text for meaningful images where appropriate</li>
           </ul>
+          <p>
+            Our goal is to support a public website experience that is
+            consistent with recognized accessibility practices, including the
+            Web Content Accessibility Guidelines.
+          </p>
         </section>
         <section>
           <h2>Request help or share feedback</h2>
           <p>
-            Use the published contact channels to request help accessing public
-            content or to describe an accessibility barrier. No separate
-            accessibility office or response timeline is asserted because one
-            has not been supplied for publication.
+            If you have difficulty accessing content on this website, or if you
+            notice an accessibility barrier, please contact Keeper Financial.
           </p>
+          <p>When contacting us, please include:</p>
+          <ul>
+            <li>The page or feature where you experienced the issue</li>
+            <li>A description of the accessibility barrier</li>
+            <li>
+              The device, browser, or assistive technology you were using, if
+              relevant
+            </li>
+            <li>Your preferred contact method if you would like a response</li>
+          </ul>
           <p>
-            <a href={siteConfig.emailHref}>{siteConfig.email}</a> ·{" "}
-            <a href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
+            Please do not send your Social Insurance Number, passwords, full
+            banking credentials, complete account numbers, or unnecessary
+            identity documents by email.
           </p>
         </section>
         <section>
-          <h2>Review status</h2>
+          <h2>Contact information</h2>
+          <ul>
+            <li>
+              Email: <a href={siteConfig.emailHref}>{siteConfig.email}</a>
+            </li>
+            <li>
+              Phone:{" "}
+              <a href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
+            </li>
+            <li>Mail: {siteConfig.address}</li>
+          </ul>
+        </section>
+        <section>
+          <h2>Alternative formats</h2>
           <p>
-            Automated and behavior-focused checks support this implementation. A
-            manual WCAG 2.1 AA audit and owner review remain production
-            readiness work.
+            If you need information from this website in a different format,
+            contact us using the information above. Keeper Financial will review
+            the request and make reasonable efforts to provide the information
+            in a format that is accessible and practical in the circumstances.
+          </p>
+        </section>
+        <section>
+          <h2>Ongoing review</h2>
+          <p>
+            Keeper Financial’s website implementation includes automated checks
+            and behaviour-focused accessibility review during development.
+            Accessibility is an ongoing process, and we expect to continue
+            improving the website as content, technology, and user needs evolve.
+          </p>
+          <p>
+            A formal owner-approved accessibility policy, manual accessibility
+            review, and production readiness review should be completed before
+            final production approval.
+          </p>
+        </section>
+        <section>
+          <h2>Important note</h2>
+          <p>
+            This page describes Keeper Financial’s current website accessibility
+            approach. It does not replace any accessibility policy, legal
+            obligation, or compliance process that may apply to Keeper Financial
+            under Ontario accessibility law or other applicable requirements.
           </p>
         </section>
       </article>
