@@ -82,7 +82,7 @@ Minimal client contact-first inquiry. It is not a mortgage application.
 
 ### BorrowerApplication
 
-Authoritative metadata for one accountless borrower draft and its submitted/review lifecycle. It binds the capability digest, typed encrypted payload, one primary borrower and at most one co-borrower, schema/revision, attribution, assignment, consent, submission snapshot, retention deadline, and legal hold. It is distinct from `CandidateApplication`.
+Authoritative metadata for one accountless borrower draft and its submitted/review lifecycle. It binds the capability digest, server-owned `last_activity_at`, typed encrypted payload, one primary borrower and at most one co-borrower, schema/revision, attribution, assignment, consent, submission snapshot, retention deadline, and submitted-record legal hold. It is distinct from `CandidateApplication`.
 
 ### BorrowerApplicationPayload
 
@@ -273,10 +273,10 @@ draft → submitted → under_review → completed
   └──────────────→ expired
 ```
 
-- Draft access requires the exact capability; 30 days of inactivity expires and purges it.
+- Draft access requires the exact capability. Draft start sets server-owned `last_activity_at`; only a successful exact-capability borrower mutation that commits a new payload revision or changes the current document set updates it. Reads, no-op/failed saves, failed access, internal access, scanning, and background work do not extend retention. Thirty elapsed days expire and purge the draft.
 - Successful submission is atomic/idempotent, writes an immutable encrypted snapshot, revokes the capability, records consent, and starts a seven-year retention clock.
 - Only the assigned active agent or administrator at AAL2 may enter/review; assignment changes are administrator/AAL2, reasoned, and audited.
-- A legal hold pauses purge only. It does not change state, assignment, or authorization.
+- A legal hold applies only after submission and pauses submitted-record purge only. It cannot extend abandoned-draft retention and does not change state, assignment, or authorization.
 - Seven years after original submission, the application, documents, projections, and ordinary backup copies are purged unless held. Amendments do not reset that date.
 - Borrower post-submission editing is not part of the MVP. Any internal correction operation requires a later append-only specification.
 

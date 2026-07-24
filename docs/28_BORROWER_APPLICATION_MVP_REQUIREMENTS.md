@@ -53,6 +53,8 @@ The capability:
 - expires after 30 days of draft inactivity;
 - is revoked permanently on successful submission.
 
+Draft start sets server-owned `last_activity_at`. Thereafter, only a successful exact-capability-authorized borrower mutation that commits a new draft payload revision or changes the current document set updates it. Reads/resume, no-op or failed saves, failed capability/access attempts, internal agent/administrator access, malware scanning, and other background processing do not extend draft retention.
+
 A borrower can update only the current draft and cannot retrieve previously saved SIN values. The controlling borrower enters any co-borrower information with that person's authority; there is no separate co-borrower invitation or shared access in the MVP. No borrower self-service access exists after submission.
 
 ### 3.2 Assigned mortgage agent
@@ -205,14 +207,14 @@ Allowed application states are:
 
 Additional terminal paths are `withdrawn` and `expired`. State transitions are explicit server-side operations with row locks/revision checks and safe history/audit evidence.
 
-- Drafts expire and are purged after 30 days without activity.
+- Drafts expire and are purged when 30 days have elapsed since the server-owned `last_activity_at` defined in Section 3.1.
 - Successful submission revokes the borrower capability and creates an immutable encrypted MinIO snapshot.
 - A submitted snapshot is never overwritten.
 - No borrower post-submission editing exists in the MVP.
 - A later internal correction must be an append-only administrator/AAL2 revision with reason and preserved prior snapshot; that correction operation is deferred until separately specified.
 - `retention_due_at` is exactly seven calendar years from original successful submission and never resets because of review or amendment.
-- A legal hold prevents automated purge but does not broaden access.
-- Legal-hold placement/release is administrator/AAL2 only, requires a bounded reason and audited timestamp, and preserves prior evidence.
+- A legal hold applies only to a submitted application, prevents its automated purge, and does not broaden access. It cannot be applied to a draft or extend the mandatory 30-day abandoned-draft purge.
+- Submitted-application legal-hold placement/release is administrator/AAL2 only, requires a bounded reason and audited timestamp, and preserves prior evidence.
 - Expired submitted records are purged from PostgreSQL, MinIO, search projections, caches, and ordinary backups according to the approved retention job and backup policy. Failures alert and retry without partial silent completion.
 
 Encrypted backups use a rolling 30-day retention unless a later approved operational policy changes it. A restored system must run overdue purge before serving traffic.

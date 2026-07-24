@@ -84,7 +84,7 @@ Suspended, rejected, withdrawn, offboarding, and offboarded states must constrai
 
 ## 8. Sensitive-data boundary
 
-The platform may store the owner-approved borrower application, including primary and co-borrower identity/contact data, SIN, employment/income, property, asset/liability, consent, notes, and unrestricted business-document categories, plus the existing lead, recruitment, onboarding, profile, and audit records.
+The platform may store the owner-approved borrower application, including primary and co-borrower identity/contact data, SIN, employment/income, property, asset/liability, consent, notes, and open mortgage-supporting document categories including `Other` within the approved application purpose and technical controls, plus the existing lead, recruitment, onboarding, profile, and audit records.
 
 Borrower data is a specially protected class. SIN and application payloads require authenticated application-level encryption; supporting documents require strict type/structure checks, fail-closed ClamAV, encryption, and private MinIO. Borrower capabilities, SIN, application answers, filenames, keys, and document contents must not enter logs, URLs, analytics, notifications, or audit payloads. Internal review requires exact assignment or administrator authority and AAL2.
 
