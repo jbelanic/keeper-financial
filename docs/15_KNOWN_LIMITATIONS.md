@@ -6,11 +6,19 @@ Source supports the bounded configured-template issuance and explicit atomic com
 
 The remaining ceremony is: configure the approved ICA template and signer-recipient IDs; send one synthetic agreement; open the returned signing link; exercise failed/recovery-only safe reissuance; sign the current replacement; refresh provider state to completed; explicitly complete onboarding; verify the user appears in the eligible agent-profile selector. This is not production/pilot approval and does not add webhooks, agreement authoring/storage, automatic profiles/publication, or broad Phase 1F readiness.
 
-The current owner-accepted Phase 1 source checkpoint is merged to `main` at `2239441505cc47235ad387070bcfd7a9e2a2f4c6` through PR #4. It combines administrator/operator commit `17e1b43` with approved-content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027`, Phase 1D at `6349c16`, Phase 1E at `384246c`, fail-closed local ClamAV at `e9d9f65`, candidate authentication/onboarding completion, genuine private PDF/DOCX upload evidence, and schema reconciliation through `20260718_0007`.
+The current source baseline for the borrower Phase A documentation decision is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, including merged work through PR #9. Historical checkpoints remain documented in their original reports.
 
-The merged checkpoint includes the explicitly owner-accepted 2026-07-19 operator-workflow refinement and advances the Alembic head to `20260719_0008`. The completed Git publication does not authorize deployment, shared-database migration, production/pilot operation, final activation or lifecycle/role transition, credential/external-service changes, legal/privacy/regulatory/claims/accessibility approval, or processing of real candidate or borrower data.
+The current baseline includes the explicitly owner-accepted 2026-07-19 operator-workflow refinement and later forward migrations through `20260722_0010`. Historical `20260719_0008` migration evidence remains valid for that checkpoint. Completed Git publication does not authorize deployment, shared-database migration, production/pilot operation, credential/external-service changes, legal/privacy/regulatory/claims/accessibility approval, or processing of real candidate or borrower data.
 
-Phase 1F production and controlled-pilot readiness planning is the next gate. Phase 1F implementation remains prohibited until its plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
+The borrower requirements are approved but not implemented at Phase A. The next gate is Phase B secure foundation, not a claim of deployable borrower intake.
+
+## Borrower application limitations at Phase A
+
+- Current code still uses the former configuration-only external mortgage-application redirect. It must not be represented as the approved target after the 2026-07-24 decision.
+- No borrower database models/migration, capability session, application-level encryption/key ring, SIN handling, borrower document bucket, submission snapshot, assigned-agent review, legal-hold/purge job, or dedicated TLS ingress exists yet.
+- Exact production privacy/credit-use consent wording/version remains unresolved; real-borrower submission must stay disabled.
+- Key custody/recovery owners, legal-hold authority, public DNS/TLS ceremony, Caddy configuration, backup/restore/purge drill, monitoring/incident response, and public abuse capacity remain operational blockers.
+- No legacy MortgageApp data import is approved. The legacy repository remains unarchived until accepted implementation, deployment, and cutover.
 
 ## Recruitment and privacy boundary
 
@@ -25,7 +33,7 @@ Phase 1F production and controlled-pilot readiness planning is the next gate. Ph
 - Agent-profile administration, approval, published directory/detail projections, suspension/archive removal, eligible-agent selection, permanent first-publication slug reservation, and safe configured attribution are implemented in Phase 1E plus the operator-workflow refinement. Agent-proposed updates remain P1, and the independent microsite builder remains deferred/P2. Profile creation does not provision or reactivate agent accounts.
 - Candidate-visible messages are limited to bounded open information requests for the exact application. Candidate contracts omit internal interview notes, reasons, actors, decisions, and audit metadata.
 - No real recruitment posting is supplied. Local seed postings are conspicuously `SYNTHETIC`, `example.test`-only, and gated to `APP_ENV=local`.
-- Legal retention periods remain unresolved. The disclosure truthfully describes policy-controlled categories without a fabricated period; deletion/de-identification jobs, legal/security holds, and production retention operations are not implemented.
+- Candidate legal retention periods remain unresolved. Borrower requirements separately set 30 inactive days for drafts, seven years from original submission for submitted records, active legal-hold exclusion, and rolling 30-day encrypted backups; the jobs and production evidence are not implemented.
 - Email notification behavior/provider is unresolved and no recruitment email is sent. Candidate registration/verification email is delegated to configured Supabase Auth.
 
 ## File, identity, and production integrations
@@ -53,8 +61,8 @@ Phase 1F production and controlled-pilot readiness planning is the next gate. Ph
 
 ## Phase 1F readiness limitations
 
-- Phase 1B lead notification/assignment/CRM/export/customer-withdrawal and distributed abuse controls remain deferred. Mortgage redirect and agent-specific destinations are configuration-only and fail closed; no agent mapping is supplied by default. CRM/e-signature provider labels remain disabled.
-- Mortgage origination, borrower identity/financial/document data, underwriting, lender submission, commissions/payroll, custom signing, automated FSRA verification, and independent agent portals remain explicitly out of scope.
+- Phase 1B lead notification/assignment/CRM/export/customer-withdrawal and distributed abuse controls remain deferred. The mortgage redirect is current legacy behavior scheduled for replacement; CRM/e-signature provider labels remain disabled.
+- Borrower identity/financial/document intake is now approved under `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`. Credit-bureau connectivity, automated underwriting/approval, lender submission, deal compliance, full CRM, commissions/payroll, custom signing, automated FSRA verification, and independent agent portals remain out of scope.
 - The Documenso adapter supports explicit server-side status refresh against one configured HTTPS origin and refuses redirects. Self-hosted production deployment, backup/restore, monitoring, credentials, outbound policy, deployed-version status confirmation, webhook names/signatures, reconciliation scheduling, and failure alerting remain Phase 1F or conditional deployment work. No webhook behavior is claimed.
 - Production hosting/release configuration, Supabase Auth and transactional-email configuration, monitoring/error reporting, PostgreSQL/MinIO/identity-configuration backup and isolated restore drills, incident response, access/MFA/role/credential/secrets review, revocation/offboarding exercises, firewall/network review, privacy/security operations, host hardening, and release approval remain unresolved. The deployment host itself is no longer an open selection.
 - Migration `20260718_0007` resolves the known general Phase 1D index/foreign-key metadata drift. That completion is not launch approval: production migration, backup, rollback, restore, and return-to-service procedures still require Phase 1F evidence and owner approval.

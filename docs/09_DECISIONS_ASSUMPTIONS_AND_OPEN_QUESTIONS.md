@@ -3,14 +3,14 @@
 ## Approved decisions
 
 1. Use a hybrid model.
-2. Do not build a mortgage origination platform.
-3. Continue using Filogix for lender submission until a later approved decision.
+2. Do not build automated mortgage underwriting, approval, lender-submission, deal-compliance, commission, payroll, or full CRM behavior. Decision 33 separately approves Keeper-native borrower intake and documents.
+3. External lender-submission operations remain outside Keeper; the MVP has no Filogix redirect, handoff, export, or API integration.
 4. Put both contact-first and full-application paths on one `Get Started` page.
-5. Redirect full applications to an external secure provider.
+5. **Superseded by decision 33:** the historical Phase 1B implementation redirected full applications to an external secure provider.
 6. Build a custom recruitment and onboarding platform.
 7. Build brokerage-controlled public agent profile pages.
-8. Defer a full mortgage-client CRM.
-9. Assess current Filogix CRM capability before buying or building another CRM.
+8. Defer a full mortgage-client CRM; the bounded borrower intake approved by decision 33 is not a full CRM.
+9. Defer a full client CRM. Any later Filogix or CRM assessment is optional future discovery, not an MVP prerequisite.
 10. Do not build custom e-signature functionality. Use self-hosted Documenso as the approved e-sign provider through a server-side adapter with a fixed configured origin, redirects disabled, and provider-authoritative status refresh.
 11. Use the exact Phase 1C candidate questionnaire, posting-specific application cardinality, optional résumé/cover-letter categories, privacy disclosure version, and candidate MFA policy in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 12. Permit multiple concurrent posting-specific applications, with no more than one nonterminal application per candidate/posting and immutable new attempts for permitted reapplication.
@@ -22,7 +22,7 @@
 18. Keep private MinIO as the only approved application object store. PostgreSQL holds metadata; MinIO holds private object bytes after authorization, validation, and a clean malware scan.
 19. Permit Supabase Studio only for local operator use. It is not a public, shared, or application-facing service.
 20. Keep Supabase Storage and its S3 protocol disabled. They are not approved application storage and must not replace MinIO.
-21. Treat Phase 1F production and controlled-pilot readiness planning, evidence definition, and owner approval as the next decision gate. Phase 1D, Phase 1E, candidate authentication/onboarding completion, private-document remediation, and schema-drift reconciliation are merged implementation checkpoints, not pending Phase 1F implementation.
+21. At the 2026-07-19 checkpoint, treat Phase 1F production and controlled-pilot readiness planning, evidence definition, and owner approval as the next decision gate. Phase 1D, Phase 1E, candidate authentication/onboarding completion, private-document remediation, and schema-drift reconciliation are merged implementation checkpoints. Decision 33 later makes Phase B secure borrower foundation the next borrower implementation gate without granting deployment authority.
 22. Permit unused onboarding plans, including ordered initial tasks, to be edited. A plan becomes permanently immutable as soon as any onboarding assignment references it. Do not add clone, version, or supersession lifecycle in this refinement.
 23. Bind gate, policy-acknowledgement, and e-sign evidence to one exact onboarding assignment. Manual gates are limited to `background_check`, `fsra_authorization`, and `system_provisioning`; `policy_acknowledgement` and `executed_agreements` are derived-only.
 24. Require concise evidence and verifier attribution when satisfying a manual gate. Reopening requires a reason and append-oriented evidence; administrators cannot manually satisfy or reopen derived gates.
@@ -34,18 +34,27 @@
 30. Separately authorize the accepted `feat/admin-workflow-operator-ux` source to be committed, integrated with the current local `main` without history rewriting, fully validated, pushed, reviewed through a GitHub pull request and CI, and merged if checks pass. This authorization is limited to Git publication and does not authorize deployment, shared-database mutation, production/pilot operation, final activation, lifecycle/role grant, external-service or credential changes, destructive operations, or Phase 1F implementation.
 31. On 2026-07-20, authorize the narrowly bounded minimum onboarding-completion implementation. Keeper may instantiate and immediately distribute one configured owner-maintained Documenso ICA template to the exact active assignment's application-linked authoritative user, expose a validated same-origin signing link derived from provider response data, retain administrator-triggered provider-authoritative refresh, and provide one explicit administrator/AAL2 completion operation. Issuance must validate configured-template, deterministic external-ID, exact-recipient, and envelope provenance; manual/recovery links cannot satisfy readiness or completion. Completion must revalidate the submitted `onboarding_in_progress` application and nonterminal relationship, then atomically and idempotently mark the exact assignment completed, set its exact application and candidate relationship active, retain the candidate role, grant the existing `agent` role once, and append status/audit evidence only after exact-assignment readiness and the current Keeper-issued provider-confirmed completed envelope are reverified. Automatic profile creation/publication, webhooks, agreement authoring/storage, arbitrary templates/recipients/content, deployment, shared-database mutation, external-service configuration changes, and broad Phase 1F work remain excluded.
 32. Accept the bounded onboarding-completion source on `feat/onboarding-completion` and authorize one commit, push of that dedicated branch, and a draft GitHub pull request against `main`. Do not merge, deploy, migrate a shared database, operate with real candidates, change credentials or external services, perform destructive operations, or begin Phase 1F implementation under this authorization.
+33. On 2026-07-24, approve Keeper as the MVP system of record for borrower mortgage-application intake and supporting documents under `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`. Include one primary borrower and at most one co-borrower, SIN, financial/property data, open business-document categories, versioned privacy/credit-use consent, assigned-agent/admin review, immutable submission evidence, seven-year retention, and legal holds.
+34. Approve accountless capability-bound same-browser drafts; no borrower account, MFA, emailed/cross-device resume link, or post-submission borrower portal. Internal assigned-agent and administrator access requires existing Keeper authorization and AAL2.
+35. Approve PostgreSQL for authoritative encrypted draft/metadata/lifecycle state and dedicated private MinIO for encrypted documents and immutable encrypted submitted snapshots. Keep Supabase Storage disabled and ClamAV fail closed.
+36. Approve application-level AES-256-GCM through a maintained library with versioned external key custody, exact-host TLS ingress at `apply.keeperfinancial.ca`, secure host-only cookies, exact CORS/CSRF origins, and server-resolved agent attribution. Implementation details remain reviewable acceptance requirements, not permission to invent cryptography.
+37. Set abandoned-draft retention to 30 inactive days and submitted application/document retention to seven calendar years from original submission. Active legal hold prevents purge without broadening access; amendment does not reset the deadline. Use rolling 30-day encrypted backups unless a later approved operational policy changes it.
+38. Exclude marketing consent, electronic signatures, credit-bureau connectivity, automated underwriting/approval, lender submission, deal compliance, full CRM, commissions, payroll, and all Filogix handoff/integration from the MVP.
+39. Preserve `jbelanic/MortgageApp` only as a UX/schema reference at commit `251077177315ade4a94d12eb62df750684ed2bb7`; do not import its Kotlin service, local-storage, Discord, permissive-CORS, weak Turnstile, typed-signature, secret-shaped, or asynchronous-success behavior. Archive it only after accepted Keeper cutover.
+40. Exact production privacy/credit-use consent wording and immutable version remain required before real-borrower submission. Engineering may use conspicuous synthetic draft wording only for local tests.
+41. Authorize standard branch, commit, push, pull-request, and merge operations for the approved borrower phases. Do not infer deployment, shared-database mutation, real-data use, force-push/history rewrite, external-service/credential changes, or destructive-operation authority.
 
 ## Initial assumptions requiring confirmation
 
 - Keeper Financial’s public/legal names and currently published regulatory text were supplied for Phase 1A: `Keeper Financial` / `Keeper Financial Inc.` and `FSCO # 13696`. Legal/regulatory approval for production wording remains required.
 - Principal broker identity and approved title.
-- Exact Filogix product edition.
-- Whether Filogix provides the preferred borrower application experience.
-- The brokerage-wide secure application URL is approved as `https://apply.keeperfinancial.ca/`. Agent attribution support remains unknown and no agent-specific link is fabricated.
+- Exact production borrower privacy/credit-use consent wording and immutable version.
+- Named operational owners for encryption-key custody/recovery, legal-hold authority, incident response, backup/restore, and purge review before deployment.
+- Final public DNS/TLS and self-hosted ingress ceremony for `apply.keeperfinancial.ca`.
 - Preferred booking tool.
 - Preferred transactional email provider.
 - Exact deployed Documenso version, API compatibility, webhook names/signatures, backup/restore procedure, and production origin/certificate configuration.
-- Final retention periods.
+- Final retention periods for non-borrower record classes; borrower draft/submitted/backup periods are set by decision 37.
 - Whether active-agent resources remain in this portal after onboarding.
 - Whether agents may propose their own profile edits; administrators remain the only current approver/publisher.
 
@@ -59,11 +68,11 @@
 - Manual WCAG 2.1 AA and content/contrast approval.
 - Final legal/privacy/complaints/accessibility wording, formal contacts, escalation steps, and response timelines.
 
-## CRM decision gate
+## Future CRM/integration decision gate
 
 Revisit CRM only after measuring:
 
-- Filogix CRM edition and capabilities.
+- Whether Filogix exposes a documented export/import or API that provides a measured benefit after Keeper cutover.
 - Lead response time.
 - Lead-entry compliance.
 - next-action completion;
@@ -97,4 +106,5 @@ Record approved decisions here with date, owner, rationale, and affected documen
 - 2026-07-20 — Minimum onboarding-completion decision: supersede only the prior prohibition on implementing final onboarding completion and an agent-role grant. Authorize configured exact-candidate Documenso template issuance plus one explicit atomic administrator completion transition as defined in approved decision 31. Broad Phase 1F readiness, deployment/pilot operation, agreement content, webhooks, automatic profile publication, external-service mutation, and shared-database mutation remain deferred.
 - 2026-07-20 — Onboarding-completion acceptance and publication decision: accept the bounded source on `feat/onboarding-completion` and authorize one commit, branch push, and draft pull request against `main`. Merge and every operational authority remain excluded.
 - 2026-07-23 — Mortgage product-page claims sign-off: owner approved four previously open content/claims items for PR #9 (`content/mortgage-product-pages`). (1) First-time-buyer page may link to the federal First-time home buyers’ (FTHB) GST/HST rebate (CRA) as a concrete example of government programs, with wording that programs change and official sources are authoritative. (2) Renewal "4 to 6 months before maturity" approved as general guidance. (3) Investment "down payments are often higher" / "rental income within set limits" approved as general differences, not a product promise. (4) Approved "Working With an Ontario Mortgage Broker" copy (general information; states no approval/rate/qualification guarantee) added as a shared section on every mortgage product detail page. No rate, savings, approval, eligibility, or lender-scale claims asserted. Affected documents: `apps/web/lib/public-content.ts`, `apps/web/app/(public)/mortgages/[slug]/page.tsx`, `apps/web/app/globals.css`.
-- 2026-07-23 — Complaints and Accessibility page approvals, and broker-content condensation. Owner supplied approved Complaints page copy (incl. FSRA escalation for Ontario mortgage brokering conduct) and approved Accessibility page copy. Both implemented using `siteConfig` contact facts; a new `complaintsEmail` (`complaints@keeperfinancial.ca`) was added to `siteConfig` as the single source of truth. The approved Ontario broker copy was condensed on product detail pages to a single summary card linking to a new dedicated `/broker` page that renders the full approved copy. Affected documents: `apps/web/lib/site-config.ts`, `apps/web/lib/public-content.ts`, `apps/web/app/(public)/mortgages/[slug]/page.tsx`, `apps/web/app/(public)/broker/page.tsx` (new), `apps/web/app/(public)/complaints/page.tsx`, `apps/web/app/(public)/accessibility/page.tsx`, `apps/web/lib/routes.ts`, `apps/web/app/globals.css`.
+- 2026-07-23 — Complaints and Accessibility page approvals, and broker-content condensation. Owner supplied approved Complaints page copy (incl. FSRA escalation for Ontario mortgage brokering conduct) and approved Accessibility page copy. Both implemented using `siteConfig` contact facts; a new `complaintsEmail` (`complaints@keeperfinancial.ca`) was added to `siteConfig` as the single source of truth. The approved Ontario broker copy was condensed on product detail pages to a single summary card linking to a new dedicated `/broker` page that renders the full approved copy. Affected documents: `apps/web/lib/site-config.ts`, `apps/web/lib/public-content.ts`, `apps/web/app/(public)/mortgages/[slug]/page.tsx`, `apps/web/app/(public)/broker/page.tsx`, `apps/web/app/(public)/complaints/page.tsx`, `apps/web/app/(public)/accessibility/page.tsx`, `apps/web/lib/routes.ts`, `apps/web/app/globals.css`.
+- 2026-07-24 — Borrower-application boundary decision: decisions 33–41 approve Keeper-native borrower/application-document system-of-record scope, security/lifecycle controls, no-Filogix MVP, legacy port/reject provenance, phased delivery, and Git publication authority. This reverses the former external full-application restriction while preserving lender submission, automated underwriting, full CRM, e-signature, security, privacy, and operational exclusions.

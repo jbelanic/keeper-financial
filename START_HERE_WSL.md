@@ -110,7 +110,7 @@ Codex should stop after the requested foundation phase, summarize the result, li
 Confirm:
 
 - The source-of-truth documents were not contradicted.
-- No mortgage-application or borrower-document storage was created.
+- No borrower application/document implementation was created before the 2026-07-24 owner-approved phased requirements; later work must match `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` rather than this historical bootstrap check.
 - No custom e-signature implementation was created.
 - No fake vendor integration was created.
 - Authentication and authorization are separate.

@@ -56,6 +56,7 @@ PostgreSQL is authoritative for:
 - Lead inquiries.
 - Consent evidence.
 - Audit events.
+- Borrower application metadata, encrypted draft payloads, capabilities, attribution, assignment, lifecycle, document metadata, retention, and legal holds.
 
 Do not store raw object files in PostgreSQL.
 
@@ -88,7 +89,7 @@ Supabase Studio is optional local-operator tooling only and must not be exposed 
 
 ## Object storage
 
-The live object store is the `minio` service in `compose.yaml`. PostgreSQL stores metadata; MinIO stores bytes. The API uses the S3-compatible interface with path-style addressing, the `minio` service name for container traffic, and a loopback host endpoint only when producing short-lived browser download URLs. Local filesystem storage remains a test/development fallback only.
+The live object store is the `minio` service in `compose.yaml`. PostgreSQL stores metadata; MinIO stores bytes. Borrower documents use a dedicated private bucket or least-privilege namespace, and immutable submitted application snapshots are encrypted before MinIO persistence. The API uses the S3-compatible interface with path-style addressing, the `minio` service name for container traffic, and a loopback host endpoint only when producing short-lived browser download URLs. Local filesystem storage remains a test/development fallback only.
 
 The live malware-scanning boundary is the `clamav` Compose service. The API sends bounded in-memory bytes to `clamd` over the internal `clamav:3310` TCP endpoint using framed `INSTREAM`; port 3310 is published on loopback only for operator verification. Candidate bytes are not written to MinIO until type/structure validation and a clean scan both succeed.
 
@@ -104,17 +105,13 @@ Required:
 - No original filename as the object key.
 - No public URL.
 
-## External mortgage application
+## Keeper-native borrower application
 
-Configuration controls:
+The same repository and release process serve `https://apply.keeperfinancial.ca`. The public `/apply` page enters that exact Keeper-owned origin; no external-provider redirect, Filogix handoff, export, or API integration is required in the MVP.
 
-- Provider name.
-- Brokerage-wide application URL.
-- Allowed hostnames.
-- Optional agent-specific URL mapping.
-- Availability state.
+Borrowers use a high-entropy capability stored only in a secure host-only cookie, while PostgreSQL stores a keyed digest bound to one draft. The capability is not identity verification and grants no internal access. Exact host/origin, CSRF, rate-limit, expiry, revision, and lifecycle checks remain mandatory.
 
-The API or server-rendered route validates redirects. Never allow arbitrary query-provided destinations.
+PostgreSQL holds encrypted mutable drafts and authoritative metadata. Private MinIO holds encrypted documents and immutable encrypted submission snapshots. Because borrower objects contain application-layer ciphertext, authorized downloads are API-proxied decryptions rather than direct presigned MinIO URLs. Agent attribution is resolved from an eligible public slug on the server; internal reads require exact assignment or administrator authority and AAL2.
 
 ## E-signature
 
@@ -158,13 +155,14 @@ This is the approved deployment target and an implemented local topology, not ev
 
 There are two application modes: `local` for isolated development/tests and `production` for the live local Docker deployment. There is no remote staging or hosted production tier.
 
-The production topology is one Docker Compose project on the local Linux host:
+The approved target topology is one Docker Compose project on the self-hosted Linux host, fronted by an exact-host TLS ingress for `keeperfinancial.ca` and `apply.keeperfinancial.ca`:
 
 - `web` calls `api` at `http://api:8000` for server-side traffic; browsers use `http://localhost:8000`.
 - `api` connects to PostgreSQL at the `db` service using `postgresql+psycopg` and to MinIO at `http://minio:9000`.
 - `db` and `minio` use durable named volumes and healthchecks.
 - `minio-init` idempotently creates the configured private bucket and disables anonymous access before API startup; MinIO API CORS uses the server's `MINIO_API_CORS_ALLOW_ORIGIN` environment variable with the exact loopback web origin.
 - browsers access the existing local Supabase CLI Auth endpoint through loopback; the API fetches JWKS through `host.docker.internal`. The CLI owns its separate port bindings, which require host-firewall protection.
+- only ingress ports 80/443 are public; API, database, MinIO, MinIO Console, clamd, Studio, and other operator surfaces remain private or loopback-only.
 
 Production validation fails closed when debug/development auth is enabled, admin MFA is not required, local file storage is selected, public object URLs are enabled, required local-service settings are missing, or database/Auth/storage URLs do not match this topology. Alembic migrations are an explicit operator action and never run automatically during service startup.
 
@@ -184,6 +182,7 @@ Suggested initial modules:
 - `audit`
 - `health`
 - `integrations`
+- `borrower_applications`
 
 ## Future CRM boundary
 
@@ -195,6 +194,6 @@ Expose a future event/adapter boundary for:
 - Lead assigned.
 - Candidate activated as agent.
 - Agent profile published.
-- External mortgage application started where supported.
+- Keeper borrower application submitted and assigned.
 
-No vendor-specific implementation is required in Phase 1.
+No Filogix or credit-bureau implementation is required in the borrower MVP.

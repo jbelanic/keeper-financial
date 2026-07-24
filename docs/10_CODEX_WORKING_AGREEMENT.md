@@ -66,8 +66,8 @@ Do not:
 - use production credentials;
 - log tokens;
 - create public private-document URLs;
-- collect borrower mortgage application information;
-- implement custom cryptography;
+- collect borrower information outside the exact approved schema, phase, authorization, encryption, consent, retention, and audit requirements in `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`;
+- invent cryptographic primitives or put encryption keys in source/environment output; use the approved maintained-library and external-key-custody boundary;
 - implement custom legal e-signatures;
 - claim automated regulatory verification without a real integration.
 

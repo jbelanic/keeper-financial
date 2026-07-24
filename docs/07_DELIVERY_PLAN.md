@@ -39,6 +39,8 @@ Phase 1A is not production-approved until the outstanding content/legal, image/f
 
 Phase 1B does not add notification email, assignment/CRM workflow, export/bulk actions, marketing automation, borrower application data, or production operations. See `docs/18_PHASE_1B_IMPLEMENTATION_REPORT.md`.
 
+These bullets describe the historical Phase 1B implementation. The 2026-07-24 owner decision supersedes the external-application product boundary; the current redirect remains code-to-be-replaced, not the approved target.
+
 ## Phase 1C — Recruitment
 
 - **Engineering implemented on `feature/phase-1c`; production/provider/legal operations remain pending.**
@@ -100,10 +102,10 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Forward migration `20260719_0008`, generated contracts, focused API/web tests, and isolated PostgreSQL upgrade/check/downgrade/re-upgrade evidence accompany the accepted source state.
 - Source acceptance does not authorize commit, push, pull request, merge, history rewriting, deployment, shared-database migration, production/pilot operation, final activation, lifecycle/role transition, credential/external-service changes, or legal/privacy/regulatory/claims/accessibility approval.
 
-## Phase 1F — Production readiness
+## Historical Phase 1F readiness definition
 
-- **Next gate: production and controlled-pilot readiness planning, evidence definition, and owner approval.** The draft is `docs/26_PHASE_1F_PRODUCTION_AND_CONTROLLED_PILOT_READINESS_PLAN.md` and remains unapproved for execution.
-- Phase 1F implementation remains prohibited until its plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
+- **Historical status at the Phase 1 checkpoint:** production and controlled-pilot readiness planning, evidence definition, and owner approval were the next gate. The living plan is `docs/26_PHASE_1F_PRODUCTION_AND_CONTROLLED_PILOT_READINESS_PLAN.md`.
+- The 2026-07-24 borrower decision does not complete any readiness evidence or authorize deployment/real data; it adds the borrower controls described in the later expansion phases below.
 - Threat model closure.
 - Privacy, legal, regulatory, claims, consent, complaints, and accessibility review.
 - Production Supabase Auth and transactional-email configuration, including invitation, recovery, refresh-token revocation, and offboarding exercises.
@@ -115,7 +117,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Incident escalation, stop criteria, rollback, and return-to-service procedures.
 - Migration/rollback/restore operating boundaries that preserve the accepted source chain through `20260719_0008`; applying it to any shared or live database remains separately prohibited pending approval.
 - Pilot roster, eligibility, support ownership, evidence documents, go/no-go criteria, and owner launch approval.
-- Production deployment requires separate approval. Final activation, candidate-to-agent transition, and agent-role grant remain deferred outside Phase 1F and are not authorized readiness operations.
+- Production deployment requires separate approval. The later merged source contains one explicit bounded administrator/AAL2 onboarding-completion operation; automatic or alternate activation remains prohibited.
 
 ## Phase 1G — Approved public/candidate copy (bounded content)
 
@@ -127,13 +129,45 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Blocked (DRAFT, separate owner/legal/privacy/regulatory/accessibility approval required): legal/policy pages D-01–D-06, the `/terms` route/link, marketing/privacy-consent version strings, and candidate-disclosure version. External e-signature validity (C-16D) and password-recovery links hidden.
 - Remaining dependencies before any publication: FW-001–FW-030 facts (brokerage identity, regulator/licence, principal broker, contact confirmation, agent evidence, opportunity content, compensation, consent/disclosure versions, retention, providers/subprocessors, complaints regulator, accessibility process) and completed D-01–D-06 professional review.
 
+## Borrower application expansion
+
+### Phase A — Authority and requirements
+
+- Synchronize current product, architecture, security, privacy, lifecycle, data, test, readiness, and limitations documents.
+- Approve `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` and preserve legacy provenance in `docs/migrations/mortgage-app-import-manifest.md`.
+- No code, migration, generated-contract, deployment, or real-data change.
+
+### Phase B — Secure borrower foundation
+
+- Borrower models, forward Alembic migration, encryption/key-ID boundary, accountless capability, lifecycle, assignment authorization, AAL2, OpenAPI/contracts, and adversarial tests.
+
+### Phase C — Keeper-native form
+
+- Accessible Next.js flow for one primary and at most one co-borrower; no local storage, typed signature, marketing consent, or external-provider redirect.
+
+### Phase D — Documents and submission
+
+- Strict validation, fail-closed ClamAV, encryption, private borrower MinIO namespace, immutable snapshots, and atomic/idempotent submission.
+
+### Phase E — Agent and administrator review
+
+- Queue, assignment/reassignment, exact assigned-agent isolation, secure rendering/download, masked SIN, and explicit audited AAL2 reveal.
+
+### Phase F — Retention and self-hosted readiness
+
+- Thirty-day draft purge, seven-year submitted retention, legal holds, Caddy exact-host TLS ingress, backup/restore, incident/monitoring controls, and genuine synthetic browser evidence.
+
+### Phase G — Cutover and legacy archive
+
+- Owner-accepted self-hosted cutover followed by non-destructive archival of `jbelanic/MortgageApp`; no deletion or history rewrite.
+
 ## 30/60/90/180-day interpretation
 
 ### Day 30
 
 - Foundation complete.
 - UI mockup translated into tokens and component plan.
-- Mortgage application vendor link configured in staging.
+- Borrower application authority, threat model, schema, and secure local development boundary approved.
 - Public content inventory complete.
 
 ### Day 60
@@ -150,7 +184,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 ### Day 180
 
-- Evaluate Filogix CRM usage.
+- Evaluate whether a future Filogix export/import or API integration is technically useful; it is not an MVP dependency.
 - Measure recruiting funnel and lead conversion.
 - Decide whether to add mortgage-specific CRM, open-source CRM, or a limited custom client CRM.
 - Consider external e-signature automation.

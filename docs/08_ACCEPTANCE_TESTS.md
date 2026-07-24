@@ -40,6 +40,26 @@ Phase 1A public-site evidence remains in `docs/17_PHASE_1A_IMPLEMENTATION_REPORT
 - No sensitive information appears in redirect URL.
 - Phone remains a real `tel:` action; book-a-call renders only for a validated optional HTTPS URL.
 
+The redirect assertions above characterize the currently implemented Phase 1B boundary. Borrower implementation must remove that route/path only when the replacement tests below pass; no temporary arbitrary redirect is acceptable.
+
+## Borrower application
+
+- `apply.keeperfinancial.ca` is an exact Keeper-owned origin from the same repository; unknown hosts, reflected origins, wildcard CORS, and untrusted forwarded host/proto fail closed.
+- Starting a draft returns a high-entropy capability only in a secure host-only HTTP-only same-site cookie; only a keyed digest persists and no capability appears in response JSON, URL, logs, analytics, or audit.
+- Missing, wrong, expired, submitted, replayed, cross-application, and cross-origin capabilities are denied without revealing whether another application exists.
+- One primary borrower is required and no more than one co-borrower is accepted. Unknown fields, invalid repeat counts, negative amounts, invalid dates, and malformed contact/address data fail typed server validation.
+- Required SIN passes nine-digit and Luhn validation, encrypts before persistence, is never returned to the borrower, is masked internally, and is absent from logs, errors, audits, traces, URLs, notifications, and search indexes.
+- Assigned-agent and administrator denial matrices include anonymous, identity-only, inactive, wrong-role, unassigned agent, other assigned agent, AAL1, suspended/offboarded, stale assignment, and invalid lifecycle. Only the exact active assigned agent or administrator at AAL2 succeeds.
+- SIN reveal is a separate AAL2 operation with a bounded reason and safe one-time audit; list/detail payloads do not reveal it by default.
+- Attribution accepts only a server-resolved eligible public slug. Invalid/unpublished/suspended attribution enters the unassigned queue. Reassignment is administrator/AAL2, reasoned, and audited.
+- Borrower document categories include `Other`; technical tests cover PDF/DOC/DOCX/JPEG/PNG agreement, 25 MiB/file, 25-file, 250 MiB aggregate limits, empty/malformed/polyglot/archive/executable/macro/encrypted rejection, ClamAV detection/outage/timeout/protocol failure, encryption failure, storage failure, metadata rollback, object cleanup, private access, and cross-application denial.
+- Submission rejects an absent, stale, caller-supplied, or unapproved privacy/credit-use consent version and contains no marketing or signature field.
+- Submission is atomic and idempotent: it returns success only after immutable encrypted snapshot and database evidence are durable; retry returns the same result; object/database failure does not clear the browser or expose an orphan.
+- Successful submission revokes the borrower capability and prevents borrower post-submission reads/edits.
+- Draft inactivity expires/purges at 30 days. Submitted retention is exactly seven calendar years from original submission; amendment/review does not reset it. Active legal hold blocks purge, and release restores the original deadline.
+- Purge covers PostgreSQL, MinIO, projections, caches, and ordinary backup expiry, is idempotent, alerts on partial failure, and is proven after isolated restore before serving traffic.
+- Genuine browser evidence uses synthetic borrowers and safe generated documents only and covers keyboard, focus/error summaries, responsive reflow, cookie flags, no-store/cache behavior, duplicate submission, scanner/storage failures, assignment isolation, and console/network inspection.
+
 ## Lead administration
 
 - `GET /api/v1/leads` and marketing withdrawal deny anonymous, unmapped identity, mapped identity-only, inactive, wrong-role, candidate, and admin-without-required-MFA callers; an active verified AAL2 admin is allowed.

@@ -25,16 +25,34 @@
 
 | ID | Requirement | Priority |
 |---|---|---|
-| LEAD-001 | `/apply` must clearly offer both contact-first and full-application paths. | P0 |
+| LEAD-001 | `/apply` must clearly offer contact-first and Keeper-native full-application paths. | P0 |
 | LEAD-002 | Contact-first form collects only approved minimal fields. | P0 |
 | LEAD-003 | Form warns users not to submit sensitive financial information. | P0 |
 | LEAD-004 | Service-contact acknowledgement is required. | P0 |
 | LEAD-005 | Marketing consent is separate, optional, unchecked by default, and versioned. | P0 |
 | LEAD-006 | Capture source and optional preferred-agent attribution without sensitive URL values. | P0 |
-| LEAD-007 | Route full applications only to an allowed configured HTTPS vendor host. | P0 |
+| LEAD-007 | Route full applications only to the exact Keeper-owned `apply.keeperfinancial.ca` origin. | P0 |
 | LEAD-008 | Support phone and book-a-call actions. | P1 |
 | LEAD-009 | Provide basic administrative lead visibility or secure forwarding. | P1 |
-| LEAD-010 | Do not collect borrower underwriting or mortgage-application data. | P0 |
+| LEAD-010 | Keep minimal contact inquiries separate from the purpose-built borrower application; contact fields must still reject mortgage-application data. | P0 |
+
+## Borrower mortgage application
+
+`docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` is the detailed current specification.
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| BOR-001 | Keeper is the MVP system of record for one primary borrower and at most one co-borrower, their application data, consent evidence, documents, lifecycle, assignment, retention, and audits. | P0 |
+| BOR-002 | Borrowers use an accountless, high-entropy, exact-draft capability in a secure host-only cookie; no borrower account, MFA, cross-device resume, emailed resume link, or post-submission portal is included. | P0 |
+| BOR-003 | The typed server-owned schema collects the approved mortgage, applicant, SIN, employment/income, property, asset/liability, and note fields and rejects unknown fields. | P0 |
+| BOR-004 | SIN and application payloads use authenticated application-level encryption and never enter logs, URLs, browser persistence, analytics, email, notifications, or audit payloads. | P0 |
+| BOR-005 | Saved SIN is never returned to the borrower; internal display is masked by default and explicit reveal requires the assigned agent or administrator at AAL2 with a safe audit. | P0 |
+| BOR-006 | Borrower documents have open business categories including `Other`, but retain strict type/size/structure controls, fail-closed ClamAV, encryption, private MinIO, and authorized delivery. | P0 |
+| BOR-007 | Submission requires the exact server-owned privacy/credit-use consent version and creates durable, immutable, idempotent submission evidence before success is returned. | P0 |
+| BOR-008 | The application has no marketing consent, electronic signature, credit-bureau call, automated underwriting/approval, lender submission, deal compliance, or Filogix handoff/integration. | P0 |
+| BOR-009 | A valid public agent slug is resolved server-side; invalid attribution enters an unassigned queue; access is limited to the exact assigned active agent or administrator at AAL2. | P0 |
+| BOR-010 | Abandoned drafts purge after 30 inactive days; submitted records purge seven years after original submission unless an active legal hold excludes them. | P0 |
+| BOR-011 | Production borrower submission remains disabled until exact consent wording/version, key custody, DNS/TLS/ingress, backup/restore, monitoring, incident, privacy/security, and release gates are approved and evidenced. | P0 |
 
 ## Recruitment postings
 

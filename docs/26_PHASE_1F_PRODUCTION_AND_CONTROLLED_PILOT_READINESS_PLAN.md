@@ -1,42 +1,43 @@
 # Phase 1F Production and Controlled-Pilot Readiness Plan
 
-- **Status:** Draft for owner decisions and approval
-- **Date:** 2026-07-19
+- **Status:** Living readiness plan; borrower-application scope addendum approved, operational work/evidence still gated
+- **Original date:** 2026-07-19
+- **Borrower-boundary update:** 2026-07-24
 - **Source branch:** `main`
-- **Source baseline:** owner-accepted Phase 1 checkpoint `2239441505cc47235ad387070bcfd7a9e2a2f4c6`, merged through PR #4 and containing administrator/operator commit `17e1b43` plus approved-content commit `07895c2`
-- **Candidate migration head:** `20260719_0008`
+- **Source baseline for this update:** `5f8a41f34bb3586c59d613848fafc9435a86b50d`, merged through PR #9
+- **Current Alembic head:** `20260722_0010`; Section 4.3 preserves the historical `20260719_0008` stop boundaries
 - **Authority:** `AGENTS.md`, `docs/00_PROJECT_SOURCE_OF_TRUTH.md`, approved decisions in `docs/09_DECISIONS_ASSUMPTIONS_AND_OPEN_QUESTIONS.md`, and the current architecture, security, lifecycle, delivery, API/data, test, limitations, and implementation-evidence documents
 
 ## 1. Purpose and approval boundary
 
-This document defines the evidence, decisions, procedures, stop conditions, recovery boundaries, and release gates required before a controlled pilot or production operation may be approved. It is planning and evidence definition only.
+This document defines the evidence, decisions, procedures, stop conditions, recovery boundaries, and release gates required before a controlled pilot or production operation may be approved. It is planning and evidence definition only. The 2026-07-24 owner decision expands the future release boundary to the Keeper-native borrower application in `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`; it does not mark that application implemented or ready for real data.
 
 This plan does **not itself** authorize:
 
-- Phase 1F implementation;
-- commit, push, pull request, merge, or history rewriting;
+- implementation beyond a separately approved bounded phase;
+- history rewriting or force-push;
 - deployment or shared-database migration;
 - use of production or pilot credentials;
 - changes to firewall rules, DNS, certificates, services, vendors, or external systems;
 - processing of real candidate or borrower data;
-- final candidate activation, candidate-to-agent transition, or agent-role grant;
+- real-person or unauthorized candidate activation, candidate-to-agent transition, or agent-role grant outside the implemented explicit administrator/AAL2 completion operation;
 - legal, privacy, regulatory, claims, accessibility, controlled-pilot, or production approval;
 - destructive, rollback, restore, deletion, credential-rotation, or incident actions.
 
-No Codex or other implementation agent may execute Phase 1F work from this draft. Before implementation, the owner must approve the plan, evidence requirements, owner decisions, scope, and acceptance criteria through repository change control and separately authorize any Git publication or operational action.
+No implementation agent may infer operational authority from this plan. The owner separately authorized standard branch, commit, push, pull-request, and merge operations for the approved borrower phases on 2026-07-24. Deployment, shared-database, live-secret, external-service, real-data, destructive, and incident actions remain separately gated.
 
 ## 2. Governing boundaries
 
 The following boundaries remain mandatory throughout readiness work:
 
-1. The application remains a brokerage relationship platform, not a mortgage origination, underwriting, lender-submission, commission, payroll, or borrower-document system.
+1. The application includes brokerage relationship workflows and the approved borrower application/document system of record. It is not an automated underwriting/approval, lender-submission, deal-compliance, full CRM, commission, or payroll system.
 2. Supabase Auth proves identity only. PostgreSQL relationships, roles, lifecycle, ownership, and resource authorization remain authoritative.
 3. Generic sign-in remains non-provisioning. Only the posting-bound application-start boundary may create or reuse the approved candidate relationships.
 4. MinIO remains the only application object store. Supabase Storage and its S3 protocol remain disabled.
 5. ClamAV validation remains fail closed before private-object persistence.
 6. Self-hosted Documenso remains an external provider boundary. The application does not implement custom signing or claim legal validity from a checkbox or typed name.
-7. `activation_ready` remains a calculation only. Readiness work must not add or simulate final activation, candidate-to-agent transition, or agent-role grant.
-8. Full borrower applications and associated financial, underwriting, identity, and lender-submission data remain in approved external mortgage systems.
+7. `activation_ready` remains a calculation only. Only the separately implemented explicit administrator/AAL2 completion operation may perform the bounded candidate-to-agent transition and role grant; readiness must not invent another path.
+8. Keeper is the approved MVP system of record for borrower application data, SIN, consent, and documents. Credit-bureau connectivity, automated underwriting/approval, lender submission, and deal-compliance data remain outside Keeper.
 9. No unresolved legal, privacy, regulatory, claims, accessibility, vendor, retention, deployment, or data-boundary decision may be converted into an engineering assumption.
 10. Evidence must use synthetic or explicitly approved data, omit secrets and tokens, minimize personal information, and identify the exact environment and source revision.
 
@@ -65,7 +66,7 @@ The following source implementation is accepted. These facts define the starting
 - Posting-bound registration and sign-in use the dedicated narrow provisioning boundary; generic sign-in remains non-provisioning.
 - Candidate and administrator TOTP/AAL2 paths exist, with application-database role, lifecycle, ownership, and resource checks remaining authoritative.
 - Candidate files use strict format/structure checks, fail-closed ClamAV scanning, and private MinIO persistence.
-- Full borrower application, underwriting, lender-submission, borrower-document, commission, and payroll data remain out of scope.
+- Borrower application/document models are not present at this source baseline, although their future implementation is approved. Credit-bureau, underwriting-decision, lender-submission, deal-compliance, commission, and payroll data remain out of scope.
 
 ### 4.2 Administrator/operator workflow boundaries
 
@@ -83,7 +84,7 @@ The following source implementation is accepted. These facts define the starting
 - Agent-profile creation uses server-projected eligible active agent relationships.
 - First publication permanently locks and reserves the public slug, including after unpublishing.
 - `/admin/content` is removed; public content remains typed and repository-controlled.
-- No final activation operation, candidate-to-agent transition, or agent-role grant exists.
+- The merged source includes one explicit administrator/AAL2 onboarding-completion operation with exact-assignment/provider/lifecycle revalidation and idempotent `agent` role grant; no automatic or alternate activation path exists.
 
 ### 4.3 Migration `20260719_0008`
 
@@ -121,17 +122,20 @@ No item below is currently marked passed for pilot or production merely because 
 
 - Host, service, firewall, ingress, TLS, and exposure evidence on the intended operating host.
 - Supabase Studio local-only proof and repeated proof that Storage and its S3 protocol remain disabled.
-- MinIO durability, private policy, signed access, backup, retention, restore, and orphan-reconciliation evidence.
+- MinIO durability, private policy, authorized candidate signed access, borrower API-proxied decrypting access, backup, retention, restore, and orphan-reconciliation evidence.
 - ClamAV signature-age, update, health, alert, failure, and fail-closed exercises.
 - Named access, secrets, credential, MFA, revocation, and offboarding controls.
 - Approved production Auth and transactional-email configuration and exercises.
 - Approved self-hosted Documenso version/topology, credentials, HTTPS routing, backup/restore, monitoring, reconciliation procedure, and runbook.
 - Logging and PII-redaction review across application and infrastructure logs.
 - Approved retention, deletion, correction, export, legal-hold, and end-of-pilot procedures.
+- Borrower capability/cookie, encryption/key custody, SIN masking/reveal, assignment isolation, document/snapshot, 30-day draft purge, seven-year submitted retention, legal-hold, and restored-system overdue-purge evidence.
+- Exact `apply.keeperfinancial.ca` DNS/TLS/ingress trust, CORS/CSRF, request limit, bot/rate control, cache/no-store, and browser evidence.
+- Exact owner-approved production privacy/credit-use consent wording/version before real-borrower submission.
 - Incident response, stop, rollback, recovery, return-to-service, and escalation exercises.
 - Monitoring, synthetic checks, alert routing, alert tests, and named ownership.
 - Approved deployment architecture details and environment guardrails beyond the accepted local-container baseline.
-- Database backup, migration preflight, rollback/restore, retained-data, and revision `0008` stop-boundary procedures.
+- Database backup, migration preflight, rollback/restore, retained-data, current-head verification, and issued revision `0008` stop-boundary procedures.
 - Genuine authenticated browser ceremonies for administrator MFA, exact-application assignment, gate correction, Documenso refresh/replacement, and profile publication.
 - Privacy, legal, regulatory, claims, content/licensing, and accessibility reviews.
 - Approved pilot purpose, roster, eligibility, support, data boundary, duration, stop criteria, and evidence package.
@@ -145,13 +149,13 @@ All entries are unresolved unless an approved repository decision cites the deci
 | `OD-01` | Name the accountable Phase 1F owner, controlled-pilot decision maker, production decision maker, security reviewer, privacy/legal/regulatory reviewers, accessibility reviewer, infrastructure operator, database operator, support lead, and incident commander or approved combined roles. | Evidence cannot be accepted or escalated without named accountability and separation appropriate to risk.                                | Both                                                |
 | `OD-02` | Approve the controlled pilot's purpose, scope, duration, roster, eligibility, permitted actions, excluded actions, support hours, and success measures.                                                                                                                                      | “Controlled pilot” otherwise has no bounded operating definition.                                                                        | Controlled pilot                                    |
 | `OD-03` | Decide whether pilot evidence and operation use synthetic-only data or approved real personal data; identify the lawful/approved data basis and prohibited data classes.                                                                                                                     | Current authority does not permit real candidate or borrower data processing.                                                            | Both                                                |
-| `OD-04` | Approve exact host ingress, DNS, TLS termination, certificate custody/renewal, trusted proxy behavior, firewall policy, remote-administration path, and whether any service is reachable beyond the host.                                                                                    | The local-container baseline does not define safe production ingress or administration. No topology may be invented.                     | Both                                                |
+| `OD-04` | Approve the exact Caddy ingress implementation, DNS, TLS termination, certificate custody/renewal, trusted proxy behavior, firewall policy, remote-administration path, and whether any service beyond the two public web origins is reachable from outside the host. | Caddy and exact-host routing are approved targets, but their operational configuration and administration boundary are not yet evidenced. | Both |
 | `OD-05` | Decide whether the upstream development-oriented local Supabase CLI stack is accepted for controlled pilot and/or production, subject to documented compensating controls, or whether a separately approved architecture change is required.                                                 | The current code requires Supabase semantics, but upstream local tooling is not production-hardened and has broad port-binding concerns. | Both                                                |
 | `OD-06` | Select and approve the transactional-email provider/configuration, sender identity, domain authentication, invitation/recovery templates, delivery monitoring, bounce handling, and support process.                                                                                         | Mailpit is capture-only and cannot provide real delivery. No vendor may be invented.                                                     | Both                                                |
 | `OD-07` | Approve secrets custody, authorized custodians, generation, distribution, rotation intervals/triggers, emergency access, recovery, and evidence-redaction policy.                                                                                                                            | Current ignored local credentials are not an approved operational secrets process.                                                       | Both                                                |
 | `OD-08` | Approve the exact self-hosted Documenso version, hosting boundary, API and public HTTPS origins, certificate/outbound policy, credential custody, backup/restore target, reconciliation schedule, replacement/void semantics, and whether webhooks are excluded or separately specified.     | Runtime compatibility and webhook behavior cannot be inferred from documentation or the adapter.                                         | Both                                                |
 | `OD-09` | Approve backup scope, frequency, retention, encryption, storage location, access, recovery-point objective, recovery-time objective, and destruction policy for PostgreSQL, MinIO, Supabase Auth configuration/data, Documenso, and required host configuration.                             | Restore pass/fail criteria require approved objectives and destinations.                                                                 | Both                                                |
-| `OD-10` | Approve retention periods and triggering events for leads, candidate drafts/applications/documents, onboarding evidence, e-sign references, agent records, consents, audit events, logs, backups, security incidents, and pilot closure.                                                     | No legal retention periods may be invented or hard-coded.                                                                                | Both                                                |
+| `OD-10` | Approve retention periods and triggering events for leads, candidate drafts/applications/documents, onboarding evidence, e-sign references, agent records, consents, audit events, logs, backups, security incidents, and pilot closure; incorporate the owner-set borrower periods without treating them as legal review. | Non-borrower periods and legal conclusions may not be invented; borrower engineering periods still require operational/privacy review. | Both |
 | `OD-11` | Approve deletion, correction, access/export, legal-hold, complaint, consent-withdrawal, and end-of-pilot authorities and response targets.                                                                                                                                                   | Operational procedures can otherwise delete evidence improperly or fail data-subject obligations.                                        | Both                                                |
 | `OD-12` | Approve monitoring tools, storage destinations, data minimization, log retention, alert channels, on-call coverage, escalation path, and availability/security objectives.                                                                                                                   | No monitoring vendor, destination, threshold, or person may be invented.                                                                 | Both                                                |
 | `OD-13` | Approve incident severity definitions, stop triggers, communication authority, evidence preservation, rollback authority, return-to-service authority, and required notifications/advisors.                                                                                                  | Operators need explicit authority before stopping or restoring service.                                                                  | Both                                                |
@@ -292,7 +296,7 @@ All entries are unresolved unless an approved repository decision cites the deci
 - **Evidence artifact:** `docs/evidence/phase-1f/RF-11-data-lifecycle.md` with approved retention schedule, data inventory, trigger matrix, legal-hold procedure, correction/export/deletion tests using synthetic data, backup propagation rules, and end-of-pilot checklist.
 - **Execution procedure or future runbook:** Map each PostgreSQL, MinIO, Supabase Auth, Documenso reference, audit, log, and backup record to an approved category; define lifecycle triggers and holds; exercise identity verification for requests; export only approved fields; correct without rewriting immutable history; delete/de-identify only under authority; prove held data is excluded; reconcile metadata/objects/backups; close a synthetic pilot participant.
 - **Pass/fail criterion:** Pass when all data classes have approved periods/triggers/owners, request procedures are authenticated and auditable, immutable evidence remains accurate, holds prevent deletion, exports exclude internal/restricted fields unless approved, and pilot closure meets the approved schedule.
-- **Stop condition:** Missing retention decision, ambiguous authority, borrower data discovered, deletion would falsify evidence, hold conflict, uncontrolled backup copies, or export leaks internal notes/secrets/other-subject data.
+- **Stop condition:** Missing retention decision, ambiguous authority, borrower data outside the approved schema/purpose/environment, deletion would falsify evidence, hold conflict, uncontrolled backup copies, or export leaks internal notes/secrets/other-subject data.
 - **Rollback or recovery boundary:** Pause lifecycle action, preserve data and legal hold, restore only from an approved backup if an authorized deletion/correction failed, record the incident, and retry only after privacy/legal direction.
 - **Blocks:** Both.
 
@@ -338,15 +342,15 @@ All entries are unresolved unless an approved repository decision cites the deci
 - **Owner:** Unassigned. `OD-01` must name a database operator, application owner, data/privacy reviewer, migration reviewer, and rollback/restore approver.
 - **Prerequisite owner decisions:** `OD-01`, `OD-09`, `OD-10`, `OD-11`, `OD-13`, `OD-14`, `OD-15`.
 - **Evidence artifact:** `docs/evidence/phase-1f/RF-15-database-migration.md` with issued-revision hashes, one-head/current-revision evidence, preflight query results, sanitized retained-data inventory, backup/restore proof, isolated upgrade/check/downgrade/re-upgrade results where representable, timing/capacity observations, and approved stop/reconciliation records.
-- **Execution procedure or future runbook:** Freeze schema writes under approved authority; verify source and image revision; take and validate coordinated backups; restore a copy into isolation; preflight duplicate non-null legacy provider envelope IDs and rejected-envelope downgrade constraints before DDL; inspect historical profile/audit evidence used for slug locks; upgrade to `20260719_0008`; verify one head and model/schema agreement; validate representative evidence; exercise rollback only when representable; document forward-fix or restore strategy; never rewrite issued migration files.
-- **Pass/fail criterion:** Pass when preflight is unambiguous, backup restore is proven, upgrade reaches exactly `20260719_0008`, schema/model checks are clean, historical evidence remains accurate, slug locks derive from authoritative evidence, recovery objectives are met, and the approved recovery method succeeds in isolation.
+- **Execution procedure or future runbook:** Freeze schema writes under approved authority; verify source and image revision; take and validate coordinated backups; restore a copy into isolation; preflight duplicate non-null legacy provider envelope IDs and rejected-envelope downgrade constraints before DDL; inspect historical profile/audit evidence used for slug locks; upgrade through issued revision `20260719_0008` to the current head `20260722_0010`; verify one head and model/schema agreement; validate representative evidence; exercise rollback only through the approved non-lossy boundary; restore the verified backup when downgrade is refused or unsafe.
+- **Pass/fail criterion:** Pass when preflight is unambiguous, backup restore is proven, upgrade reaches exactly the source revision's single expected head (currently `20260722_0010`), schema/model checks are clean, historical evidence remains accurate, slug locks derive from authoritative evidence, recovery objectives are met, and the approved recovery method succeeds in isolation.
 - **Stop condition:** Duplicate legacy provider envelope IDs, unreviewable profile/audit provenance, rejected-envelope evidence during downgrade, unknown/extra head, model drift, backup/restore failure, unapproved retained data, unexpected DDL/data loss, or need to relabel/deduplicate evidence.
-- **Rollback or recovery boundary:** Migration `0008` may deliberately refuse downgrade. Do not force it. Use the owner-approved forward-fix or restore-from-verified-backup boundary, preserve rejected/predecessor evidence, and resume only after data/privacy/migration approval.
+- **Rollback or recovery boundary:** Issued migration `0008` may deliberately refuse downgrade even when later heads are present. Do not force or rewrite the chain. Use the owner-approved forward-fix or restore-from-verified-backup boundary, preserve rejected/predecessor evidence, and resume only after data/privacy/migration approval.
 - **Blocks:** Both.
 
 ### `RF-16` — Genuine authenticated administrator/operator browser ceremonies
 
-- **Objective:** Prove the accepted workflows against the approved integrated stack with genuine authentication, server-side authorization, PostgreSQL, MinIO/ClamAV where relevant, and real approved Documenso connectivity, without final activation or role grant.
+- **Objective:** Prove the accepted workflows against the approved integrated stack with genuine authentication, server-side authorization, PostgreSQL, MinIO/ClamAV where relevant, and real approved Documenso connectivity; any synthetic activation must use only the explicit bounded completion operation.
 - **Owner:** Unassigned. `OD-01` must name the ceremony operator, security observer, onboarding process owner, Documenso operator, profile/content approver, and evidence reviewer.
 - **Prerequisite owner decisions:** `OD-01`, `OD-02`, `OD-03`, `OD-05`, `OD-07`, `OD-08`, `OD-15`, `OD-18`, `OD-19`.
 - **Evidence artifact:** `docs/evidence/phase-1f/RF-16-authenticated-browser-ceremonies.md` with scenario IDs, sanitized preconditions/record identifiers, screen/log evidence free of secrets/PII, audit-event references, expected/actual outcomes, cleanup record, and independent review.
@@ -355,9 +359,10 @@ All entries are unresolved unless an approved repository decision cites the deci
   2. Prepare one candidate with at least two distinguishable application attempts and an unused plan; edit/reorder the unused plan; assign the selected exact conditionally-selected application; prove the other attempt is unchanged; prove later plan content/availability edits fail permanently; do not activate.
   3. Satisfy one of the three manual gates with bounded evidence, correct/reopen it with a reason, and verify append-oriented exact-assignment history. Prove the two derived gates expose no manual satisfy/reopen path and that superseded-assignment evidence does not affect current readiness.
   4. Link and refresh an envelope against the approved exact HTTPS Documenso origin; prove provider/network/`DRAFT` ambiguity leaves readiness unsatisfied; prove provider-confirmed completion satisfies only the exact assignment; reject and replace an envelope while preserving the non-satisfying predecessor; prove redirect refusal.
-  5. Create a profile only from a server-projected eligible active agent relationship already authorized by fixtures/approved data; approve and publish with an available slug; unpublish/suspend as permitted; prove the first slug remains reserved and immutable; prove `/admin/content` remains absent. Do not create or grant an agent role.
-- **Pass/fail criterion:** Pass only when every ceremony uses genuine Auth/session/API/database/provider boundaries, expected denial paths fail safely, audit/provenance is exact, no cross-application/assignment leakage occurs, no secret/PII enters evidence, and no final activation, candidate-to-agent transition, or role grant occurs.
-- **Stop condition:** Mocked provider or authentication substituted for required genuine evidence, wrong application/assignment changes, plan remains editable after use, derived gate can be changed manually, ambiguous provider state satisfies readiness, predecessor history changes/disappears, ineligible profile publishes, slug releases, `/admin/content` reappears, token/PII exposure, or any activation/role grant.
+  5. Create a profile only from a server-projected eligible active agent relationship already authorized by fixtures/approved data; approve and publish with an available slug; unpublish/suspend as permitted; prove the first slug remains reserved and immutable; prove `/admin/content` remains absent.
+  6. Under a separately approved synthetic ceremony, exercise the explicit completion operation once and prove exact lifecycle/provenance revalidation, retained candidate role, one idempotent `agent` grant, eligibility projection, and duplicate-request safety. Never use a real candidate merely to satisfy evidence.
+- **Pass/fail criterion:** Pass only when every ceremony uses genuine Auth/session/API/database/provider boundaries, expected denial paths fail safely, audit/provenance is exact, no cross-application/assignment leakage occurs, no secret/PII enters evidence, and any synthetic activation occurs only through the explicit authorized operation.
+- **Stop condition:** Mocked provider or authentication substituted for required genuine evidence, wrong application/assignment changes, plan remains editable after use, derived gate can be changed manually, ambiguous provider state satisfies readiness, predecessor history changes/disappears, ineligible profile publishes, slug releases, `/admin/content` reappears, token/PII exposure, automatic/alternate activation, duplicate role grant, or any real-person activation without separate authority.
 - **Rollback or recovery boundary:** Stop the ceremony, preserve audit/evidence, revoke disposable sessions, leave immutable history intact, use only supported corrective operations, clean synthetic records under an approved cleanup procedure, and investigate before rerun. Never edit tables directly to make a ceremony pass.
 - **Blocks:** Controlled pilot and production.
 
@@ -391,7 +396,7 @@ The following reviews are separate gates; one reviewer or approval must not be a
 
 | Review                         | Required scope                                                                                                                                                                                             | Minimum artifact                                                                         | Current state            |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------ |
-| Privacy                        | Data inventory/flows, purpose/minimization, consent/disclosure, processors, access, retention, correction/export/deletion, legal hold, logs, backups, pilot closure, incident handling.                    | Signed/dated review with scope/version, findings, required changes, and approval/denial. | Blocked — owner decision |
+| Privacy                        | Data inventory/flows, borrower SIN/application/documents, purpose/minimization, consent/disclosure, processors, access, retention, correction/export/deletion, legal hold, logs, backups, pilot closure, incident handling. | Signed/dated review with scope/version, findings, required changes, and approval/denial. | Blocked — owner decision |
 | Legal                          | Terms/notices, e-sign process role, complaints, consent, retention/hold, incident communications, pilot participant terms, and data-processing responsibilities.                                           | Signed/dated legal review; no engineering paraphrase as conclusion.                      | Blocked — owner decision |
 | Ontario regulatory/advertising | Brokerage/agent identity, FSRA-related wording, titles, profile publication, recruitment claims, public claims, and prohibited automation representations.                                                 | Signed/dated regulatory/advertising review.                                              | Blocked — owner decision |
 | Claims/content/licensing       | Public facts, principal-broker identity/title, testimonials/metrics/ratings/lender or approval claims, logo/font/image licences, and agent content.                                                        | Approved content inventory and licence evidence.                                         | Blocked — owner decision |
@@ -411,29 +416,30 @@ A controlled pilot may be recommended only when:
 6. The intended host/topology passes firewall, listener, ingress, TLS, secrets, access, Auth/email, logging, monitoring, alert, backup, isolated restore, incident, and migration evidence.
 7. Supabase Studio is local-only, Supabase Storage/S3 remain disabled, MinIO remains private and recoverable, and ClamAV is current, monitored, alerted, and fail closed.
 8. The approved Documenso deployment passes exact-version/API/HTTPS/redirect/failure/replacement/backup/monitoring evidence.
-9. Genuine authenticated administrator/operator browser ceremonies in `RF-16` pass without final activation or role grant.
+9. Genuine authenticated administrator/operator browser ceremonies in `RF-16` pass, including an explicitly authorized synthetic completion ceremony where applicable, with no automatic/alternate activation or duplicate role grant.
 10. The evidence package identifies the exact branch/revision/environment, contains no secrets or unnecessary PII, and is independently reviewed.
 11. No critical/high unresolved security, privacy, legal, regulatory, claims, accessibility, data-integrity, backup/restore, or incident-response risk remains.
 12. The named owner records an explicit go decision. Source acceptance, passing tests, or a successful ceremony alone is insufficient.
+13. Before any borrower pilot, the exact consent version is approved; capability, encryption/key custody, assigned-agent/AAL2 isolation, SIN reveal, document/snapshot, retention/legal-hold, ingress/browser, and restored-system purge evidence all pass.
 
 ### 9.2 Mandatory no-go or immediate-stop criteria
 
 A no-go or stop is mandatory for any of the following:
 
 - unresolved material owner decision or missing named accountable owner;
-- unapproved real personal data or prohibited borrower data;
+- real borrower data before release approval or borrower data outside the exact approved schema, consent, authorization, encryption, and retention boundary;
 - public/unapproved exposure of Studio, PostgreSQL, MinIO, clamd, Supabase internals, Documenso administration, or privileged APIs;
 - Supabase Storage/S3 enabled or application object storage moved away from MinIO;
 - stale/unhealthy/unmonitored ClamAV or any scanner bypass/false success;
 - failed backup, isolated restore, migration preflight, migration integrity, or return-to-service exercise;
 - duplicate legacy provider envelope IDs before `0008` upgrade DDL, or a proposed forced downgrade with rejected-envelope evidence;
-- identity-only access, missing administrator AAL2, failed revocation/offboarding, unknown privileged credential, or secret leakage;
+- identity-only access, missing assigned-agent/administrator AAL2, failed revocation/offboarding, unknown privileged credential, or secret/key leakage;
 - Documenso HTTP/redirect acceptance, version/API mismatch, provider ambiguity satisfying readiness, lost predecessor history, or unapproved webhook assumptions;
 - token, cookie, private URL, document content, raw sensitive payload, or unnecessary PII in logs/evidence;
 - unresolved specialist-review blocker or inaccessible critical journey;
 - unavailable support/escalation/incident authority;
 - wrong-application or cross-assignment mutation;
-- final activation, candidate-to-agent transition, or agent-role grant request or occurrence;
+- automatic, alternate, duplicate, wrong-application, or otherwise unauthorized candidate activation or agent-role grant;
 - evidence produced from an unapproved worktree/environment or lacking exact provenance.
 
 ## 10. Production approval and deferred production work
@@ -442,14 +448,14 @@ Controlled-pilot approval does not grant production approval. Production require
 
 The following remain deferred or separately gated and must not be smuggled into Phase 1F readiness execution:
 
-- final candidate activation, candidate-to-agent transition, and agent-role grant;
-- borrower application, borrower identity/financial/document data, underwriting, lender submission, commissions, and payroll;
+- automatic or alternate candidate activation outside the implemented explicit administrator/AAL2 completion operation;
+- credit-bureau connectivity, automated underwriting/approval, lender submission, deal compliance, commissions, and payroll;
 - a full CRM, lead assignment workflow, bulk export, marketing automation, or independent agent portals/microsites;
 - custom e-signature functionality or claims that the application itself establishes signature legality;
 - automated FSRA/FINTRAC or other regulatory-verification claims;
 - Documenso webhooks unless a separate approved decision/specification defines the exact deployed-version behavior and security model;
 - multi-region architecture, high availability, or disaster-recovery topology not approved in the owner-decision register;
-- new cloud vendors, hosted Supabase, Cloudflare R2, Supabase Storage, new sensitive-data classes, or new external integrations;
+- new cloud vendors, hosted Supabase, Cloudflare R2, Supabase Storage, sensitive-data classes beyond the approved borrower requirements, or new external integrations;
 - customer-facing data-rights automation, immutable audit export/tamper-evidence system, or other production enhancements not separately approved.
 
 Deprecation remediation for Starlette `TestClient` and Alembic configuration should be tracked as bounded maintenance. It is not an accepted-suite failure, and it does not supersede the operational blockers above.
@@ -458,7 +464,7 @@ Deprecation remediation for Starlette `TestClient` and Alembic configuration sho
 
 This sequence is a planning dependency order, not execution authorization:
 
-1. Resolve `OD-01` through `OD-19` or explicitly record approved exclusions. Final activation and agent-role grant remain excluded rather than open for Phase 1F decision.
+1. Resolve `OD-01` through `OD-19` or explicitly record approved exclusions. The existing explicit completion operation may be validated synthetically; no alternate activation or real-person grant is inferred.
 2. Approve the pilot charter/data boundary and the exact production/pilot topology.
 3. Approve specialist review scope and assign reviewers.
 4. Approve evidence handling, secrets, backup objectives, retention, incident, monitoring, and support policies.
@@ -476,8 +482,8 @@ This draft is ready for owner review when:
 
 - all six required categories are distinct: accepted implementation, required operational evidence, owner decisions, specialist reviews, pilot go/no-go criteria, and deferred production work;
 - every required readiness topic has an objective, unassigned/named owner state, prerequisite decision, evidence artifact, future procedure, pass/fail criterion, stop condition, recovery boundary, and pilot/production blocker classification;
-- no legal conclusion, retention period, vendor, credential, network topology, webhook behavior, data-use permission, or named owner is invented;
-- exact-application, exact-assignment, fail-closed, private-storage, MFA, lifecycle, and no-activation boundaries are preserved;
+- no legal conclusion, non-borrower retention period, vendor, credential, webhook behavior, data-use permission, or named owner is invented; borrower retention and target ingress decisions come from the 2026-07-24 owner approval;
+- exact-application, exact-assignment, fail-closed, private-storage, MFA, lifecycle, and explicit-completion-only activation boundaries are preserved;
 - migration `20260719_0008` stop behavior is explicit and cannot be interpreted as permission to force or rewrite evidence;
 - the complete API suite is described only by its recorded successful exit status, without a manufactured exact count;
 - the document contains no runtime implementation, migration, infrastructure change, secret, deployment command execution, or publication action.

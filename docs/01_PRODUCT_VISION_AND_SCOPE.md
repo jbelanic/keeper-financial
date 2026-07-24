@@ -12,8 +12,9 @@ Create a premium, trustworthy digital presence for Keeper Financial while giving
 - Standardize onboarding.
 - Reduce document chasing and version confusion.
 - Maintain consistent, approved public agent branding.
-- Preserve a clean integration boundary with Filogix or another mortgage platform.
-- Avoid taking on the unnecessary risk of building mortgage origination infrastructure.
+- Make Keeper the secure system of record for borrower application intake and supporting documents.
+- Preserve a future integration boundary without requiring Filogix or another provider in the MVP.
+- Avoid expanding intake into automated underwriting, lender submission, deal compliance, or a full client CRM.
 
 ## Phase 1 personas
 
@@ -26,6 +27,7 @@ Wants to:
 - Speak with someone before applying.
 - Start a secure full application.
 - Find or select an agent.
+- Submit supporting documents and versioned privacy/credit-use consent securely.
 
 ### Agent candidate
 
@@ -48,6 +50,7 @@ Wants to:
 - Access onboarding and policy records.
 - Receive brokerage resources later.
 - Direct clients to an attributed application path.
+- Review only borrower applications assigned to the agent through an authenticated AAL2 portal.
 
 ### Brokerage administrator
 
@@ -81,12 +84,19 @@ Wants to:
 - Mortgage information pages.
 - `Get Started` page.
 - Minimal contact-first inquiry.
-- External full-application redirect.
+- Keeper-native borrower application at `apply.keeperfinancial.ca`.
 - Public agent directory and profiles.
 - Careers and recruitment postings.
 - Privacy, complaints, accessibility, and contact pages.
 - Responsive and accessible implementation.
 - Search and social metadata.
+
+### Borrower application
+
+- Accountless capability-bound same-browser draft for one primary borrower and at most one co-borrower.
+- Mortgage request, SIN, employment/income, property, asset/liability, notes, privacy/credit-use consent, and supporting-document intake.
+- Application-level encryption, private MinIO, fail-closed ClamAV, immutable submitted snapshots, seven-year retention, and legal holds.
+- Assigned-agent and administrator review with server-side authorization and AAL2.
 
 ### Candidate portal
 
@@ -116,6 +126,9 @@ Wants to:
 ## Deferred
 
 - Client CRM replacement.
+- Filogix export/import or API integration.
+- Credit-bureau connectivity, automated underwriting, lender submission, and deal-compliance workflow.
+- Borrower accounts, cross-device resume, post-submission borrower portal, and borrower MFA.
 - Lead scoring.
 - Full email/SMS marketing automation.
 - Renewal campaigns.

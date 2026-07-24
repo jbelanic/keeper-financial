@@ -4,7 +4,7 @@
 
 **Product:** Keeper Financial public website and brokerage relationship platform  
 **Jurisdiction:** Ontario, Canada  
-**Phase:** Phase 1 baseline  
+**Phase:** owner-approved borrower-application expansion, Phase A authority checkpoint
 **Primary users:** Mortgage clients, agent candidates, active mortgage agents, brokerage administrators, compliance reviewers, principal broker
 
 ## 2. Product purpose
@@ -13,6 +13,8 @@ Keeper Financial requires a professional public web presence and a secure broker
 
 - Mortgage-client entry points.
 - Minimal-information contact inquiries.
+- Secure borrower mortgage applications and supporting documents.
+- Assigned-agent and administrator application review.
 - Agent recruitment.
 - Candidate applications.
 - Candidate review and selection.
@@ -23,18 +25,11 @@ Keeper Financial requires a professional public web presence and a secure broker
 
 ## 3. Governing product boundary
 
-Keeper Financial will build the public brand, recruitment, onboarding, agent administration, and public agent-profile experience.
+Keeper Financial will build the public brand, borrower-application intake, recruitment, onboarding, agent administration, and public agent-profile experience.
 
-Keeper Financial will buy or use an established mortgage platform for:
+Keeper is the MVP system of record for borrower application data, SIN, versioned privacy/credit-use consent evidence, supporting documents, lifecycle, attribution, assignment, retention, legal holds, and safe audits. The owner-approved contract is `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`.
 
-- Full borrower mortgage applications.
-- Borrower financial data.
-- Borrower document collection.
-- Credit consent and bureau connectivity.
-- Mortgage underwriting records.
-- Lender submissions.
-- Deal compliance.
-- Commission and payroll capabilities where applicable.
+Keeper does not perform credit-bureau connectivity, automated underwriting or approval, lender submission, deal-compliance workflow, commission, payroll, or full client-CRM behavior in this MVP. No Filogix redirect, handoff, export, or API integration is required. A future external integration is a separate decision.
 
 ## 4. Phase 1 selected approach
 
@@ -42,9 +37,9 @@ Use a hybrid architecture:
 
 - Brokerage-controlled public website.
 - Brokerage-controlled recruitment and onboarding portal.
-- External secure mortgage application.
-- Existing Filogix lender-submission workflow remains in place unless a later approved decision changes it.
-- Mortgage-client CRM expansion is deferred until the existing Filogix CRM capability is assessed in operation.
+- Keeper-native secure borrower application at `apply.keeperfinancial.ca` from the same repository and release process.
+- Existing external lender-submission operations remain outside Keeper, but the MVP has no Filogix integration or handoff requirement.
+- Mortgage-client CRM expansion remains deferred.
 - Public agent profile pages are included.
 - Independent agent microsites are not included in the MVP.
 
@@ -58,8 +53,8 @@ The public website must provide one clear `Get Started` experience with both pat
    - Phone option.
 
 2. **Start a secure mortgage application**
-   - Redirect to the configured external mortgage-application provider.
-   - No recreation or embedding of a custom mortgage application unless separately approved.
+   - Enter the Keeper-native application at `https://apply.keeperfinancial.ca`.
+   - Use an accountless, capability-bound same-browser draft and submit into the assigned-agent/administrator review workflow.
 
 ## 6. Phase 1 technology baseline
 
@@ -89,27 +84,11 @@ Suspended, rejected, withdrawn, offboarding, and offboarded states must constrai
 
 ## 8. Sensitive-data boundary
 
-The custom platform must not collect or store full mortgage application data.
+The platform may store the owner-approved borrower application, including primary and co-borrower identity/contact data, SIN, employment/income, property, asset/liability, consent, notes, and unrestricted business-document categories, plus the existing lead, recruitment, onboarding, profile, and audit records.
 
-It may store:
+Borrower data is a specially protected class. SIN and application payloads require authenticated application-level encryption; supporting documents require strict type/structure checks, fail-closed ClamAV, encryption, and private MinIO. Borrower capabilities, SIN, application answers, filenames, keys, and document contents must not enter logs, URLs, analytics, notifications, or audit payloads. Internal review requires exact assignment or administrator authority and AAL2.
 
-- Minimal client lead/contact data.
-- Agent candidate application information.
-- Recruitment and onboarding documents.
-- Policy acknowledgements.
-- Agent profile and licensing information.
-- Administrative review and audit records.
-
-It must not store borrower:
-
-- SIN.
-- Credit reports.
-- Bank statements.
-- Tax returns.
-- Detailed assets and liabilities.
-- Government identification for mortgage underwriting.
-- Lender submission packages.
-- Mortgage underwriting notes.
+The platform must not collect or generate credit reports through an integration, lender-submission packages, automated underwriting/approval decisions, deal-compliance records, or unrelated third-party personal data unless separately approved. Product openness for borrower document categories does not remove technical type, size, malware, encryption, authorization, retention, or delivery controls.
 
 ## 9. Compliance posture
 
@@ -122,31 +101,13 @@ It must not claim that:
 - E-signature validity is guaranteed by a custom checkbox.
 - Use of a vendor eliminates the brokerage’s PIPEDA accountability.
 
-## 10. Current implementation checkpoint
+## 10. Current implementation and authority checkpoint
 
-The current owner-accepted Phase 1 source checkpoint is merged to `main` at `2239441505cc47235ad387070bcfd7a9e2a2f4c6` through PR #4. It combines administrator/operator commit `17e1b43` with approved-content commit `07895c2`; both descend from `3331519`, which includes implementation merge `b906027` and:
+The source baseline for this decision is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, including merged work through PR #9. It contains the accepted public site, contact path, candidate authentication/application/review, onboarding completion, agent activation/profile publication, private candidate documents, local PostgreSQL/MinIO/ClamAV/Supabase topology, and public-content updates. Historical reports retain the exact evidence and limitations of their original checkpoints.
 
-- Phase 1D review/onboarding and Phase 1E agent-profile/local-topology baselines.
-- Posting-bound candidate provisioning while generic sign-in remains non-provisioning.
-- Candidate application, application-specific review/information-request/decision, onboarding-readiness, candidate/admin TOTP/AAL2, and controlled private-document workflows.
-- Strict PDF/DOCX validation, fail-closed ClamAV scanning, private MinIO persistence, and metadata refresh with genuine local synthetic evidence.
-- Forward schema reconciliation through `20260718_0007`, one Alembic source head, and a clean recorded `make migrate-check` result without rewriting issued migrations.
+The borrower application described in `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` is owner-approved but is **not implemented** at this Phase A documentation checkpoint. Current code still exposes the former configuration-only mortgage-application redirect and has no borrower models, capability session, SIN encryption, borrower document bucket, borrower review UI, legal-hold/purge operation, or dedicated ingress implementation. Those must be changed only in the later approved implementation phases.
 
-Supabase identity alone grants no application access. `activation_ready` remains a calculation and does not itself perform final activation.
-
-The merged owner-accepted operator-workflow refinement adds editable unused onboarding plans with ordered task authoring; permanent plan immutability after first assignment; exact-assignment manual gate, policy-acknowledgement, and e-sign evidence; Documenso-authoritative status refresh and replacement history; operator-facing exact-application and eligible-agent selectors; permanent published-slug reservation; removal of the nonfunctional `/admin/content` placeholder; and Alembic head `20260719_0008`.
-
-Source acceptance is not production, controlled-pilot, deployment, legal, privacy, regulatory, claims, or accessibility approval. It does not authorize commit, push, pull request, merge, history rewriting, shared-database migration, credential or external-service changes, or destructive operations.
-
-The owner subsequently authorized only the Git publication workflow for this accepted source: commit the dedicated branch, integrate the current local `main` without rewriting history, validate the combined source, push it, open and review a GitHub pull request, and merge after successful checks. This separate authorization does not grant deployment, shared-database mutation, production/pilot operation, final activation, lifecycle/role grant, external-service or credential changes, destructive operations, or Phase 1F implementation.
-
-On 2026-07-20, the owner separately authorized the minimum end-to-end onboarding-completion implementation. The bounded workflow may instantiate and immediately distribute one owner-maintained Documenso template to the exact application-linked candidate, retain provider-authoritative refresh, and expose one explicit administrator/AAL2 completion operation. Issuance must validate the provider's exact template, deterministic external ID, recipient, envelope, and signing-link provenance for the authoritative application-linked user; manual/recovery links remain historical/reconciliation aids and cannot satisfy the derived agreement gate or final completion. Rejected, voided, or recovery-only current envelopes may be superseded only after the same bounded Keeper issuance succeeds, so provider failure leaves the predecessor current. Completion revalidates an activatable submitted application and nonterminal candidate relationship before it may complete the exact active assignment, transition its exact application and candidate relationship to `active`, and idempotently grant the existing `agent` role in one auditable transaction. It must preserve the candidate role and historical onboarding access and must not create or publish an agent profile automatically.
-
-The owner subsequently accepted this bounded source on `feat/onboarding-completion` and authorized only its controlled Git publication as one commit, a push of the dedicated branch, and a draft GitHub pull request against `main`. Merge, deployment, shared-database mutation, production or controlled-pilot operation, real-candidate use, credential or external-service changes, destructive operations, and Phase 1F implementation remain unauthorized.
-
-Phase 1F production and controlled-pilot readiness remains deferred and outside this implementation. The draft plan is `docs/26_PHASE_1F_PRODUCTION_AND_CONTROLLED_PILOT_READINESS_PLAN.md`; production deployment, operational evidence, privacy/legal/regulatory/claims/accessibility review, and pilot go/no-go approval remain outstanding. Webhooks, agreement authoring or storage, arbitrary templates or recipients, automatic profile publication, deployment, shared-database mutation, credential/external-service changes, and real-candidate operation are not authorized by the onboarding-completion decision.
-
-A bounded approved-content branch `content/approved-copy-C01-C17` (from `3331519`) applies the exact owner-approved C-01–C-17 public/auth/candidate/onboarding copy and G renames/removals, omitting unresolved `[FW-00x]` placeholders and blocking legal/policy pages D-01–D-06, `/terms`, and consent/disclosure versions (still DRAFT). See `docs/07_DELIVERY_PLAN.md` (Phase 1G).
+On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 
 ## 11. Phase 1 release condition
 
@@ -154,6 +115,7 @@ Phase 1 is releasable only when:
 
 - Public website routes are production-ready.
 - Both client entry paths work.
+- The Keeper-native borrower application and document path passes its approved authorization, encryption, consent, lifecycle, retention, legal-hold, malware, browser, and operational gates.
 - Candidate identity and role controls are tested.
 - Candidate application and review workflow works.
 - Onboarding tasks and controlled documents work.
@@ -162,10 +124,10 @@ Phase 1 is releasable only when:
 - Audit events are generated for high-risk actions.
 - Environment validation fails closed.
 - Required privacy, complaints, accessibility, and consent pages exist.
-- No full mortgage application data is collected.
+- Real-borrower submission remains disabled until exact production consent wording/version, secure deployment evidence, and explicit release approval exist.
 
 ## 12. Change-control rule
 
 Any approved change to scope, architecture, security boundaries, lifecycle states, systems of record, or compliance assumptions must update this file and all affected supporting documents in the same branch.
 
-The deployment decision above supersedes hosted-service and undecided-hosting language in historical implementation reports and bootstrap prompts; those files remain historical evidence rather than current instructions.
+The deployment and borrower-application decisions above supersede contradictory external-application, prohibited-borrower-data, hosted-service, and undecided-hosting language in historical implementation reports and bootstrap prompts; those files remain historical evidence rather than current instructions.
