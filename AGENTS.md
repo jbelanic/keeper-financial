@@ -15,13 +15,9 @@ Report contradictions. Do not silently select code, memory, a generated artifact
 
 ## Current Implementation Checkpoint
 
-The current owner-accepted Phase 1 source checkpoint is merged to `main` at `2239441505cc47235ad387070bcfd7a9e2a2f4c6` through PR #4. It combines administrator/operator commit `17e1b43` with approved-content commit `07895c2` without rewriting history; both descend from `3331519`, which includes implementation merge `b906027`.
+The current source baseline for the owner-approved borrower-application documentation phase is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, including the merged Phase 1 implementation and later accepted onboarding, eligibility, readiness-remediation, and public-content work through PR #9. Historical checkpoint documents remain evidence of their original branches and review moments.
 
-The owner has explicitly accepted the Phase 1 source implementation, including the administrator/operator workflow refinement committed at `17e1b43`. GitHub CI passed and PR #4 merged the combined accepted source to `main` at `2239441`.
-
-This is source acceptance only. It does not authorize commit, push, pull request, merge, history rewriting, production or controlled-pilot operation, deployment, shared-database migration, legal/privacy/regulatory/claims/accessibility approval, credential or external-service changes, destructive operations, or Phase 1F implementation. The separate 2026-07-20 owner decision below supersedes only the former prohibition on implementing the bounded final onboarding-completion and agent-role transition.
-
-On 2026-07-19, the owner separately authorized the accepted branch to be committed, integrated with the current local `main`, fully validated, pushed, reviewed through a GitHub pull request and CI, and merged if the checks pass. That publication authorization does not extend to deployment, shared-database migration, production or controlled-pilot operation, final activation, lifecycle/role grant, credential or external-service changes, destructive operations, or Phase 1F implementation.
+The owner has explicitly accepted the previously delivered Phase 1 source implementation. On 2026-07-24 the owner additionally authorized repository branch management, commits, pushes, pull requests, and merges for the approved borrower-application work. That Git authority does not itself authorize deployment, live-secret or external-service changes, shared-database mutation, destructive data operations, real-borrower use, or legal/privacy/regulatory approval.
 
 Completed checkpoints include:
 
@@ -32,12 +28,11 @@ Completed checkpoints include:
 - Genuine local PDF and DOCX upload validation through strict file checks, ClamAV scanning, private MinIO persistence, and metadata refresh.
 - SQLAlchemy/Alembic model-schema drift resolution through forward migration `20260718_0007`; the migration chain has one head and `make migrate-check` is clean.
 - The owner-accepted administrator/operator refinement, with candidate Alembic head `20260719_0008`, exact-assignment evidence, provider-authoritative Documenso refresh, operator-facing selectors, permanent first-publication slug reservation, and removal of the nonfunctional `/admin/content` placeholder.
+- Later accepted onboarding-completion, agent-eligibility/profile, and public-content work advances the current single Alembic head to `20260722_0010`.
 
 On 2026-07-20, the owner authorized a narrowly bounded minimum end-to-end onboarding-completion implementation: one configured owner-maintained Documenso ICA template issued to the exact application-linked authoritative user with validated template/external-ID/recipient/envelope provenance; provider-authoritative administrator refresh; and one explicit administrator/AAL2 completion operation that revalidates an activatable submitted application and nonterminal relationship, then atomically and idempotently completes the exact assignment, activates its exact application and candidate relationship, retains the candidate role, grants the existing `agent` role once, and appends safe history/audit evidence. Manual/recovery envelope links cannot satisfy readiness or completion; failed or recovery-only current envelopes may be superseded only after a new Keeper issuance succeeds. This authority excludes webhooks, agreement authoring/storage, arbitrary templates/recipients/content, automatic agent-profile creation/publication, deployment, shared-database mutation, external-service configuration changes, and broad Phase 1F work.
 
-The owner has explicitly accepted the bounded onboarding-completion source on `feat/onboarding-completion` and authorized its controlled Git publication as one commit, a push of that dedicated branch, and a draft GitHub pull request against `main`. This authorization does not include merge, deployment, shared-database migration, production or controlled-pilot operation, real-candidate use, credential or external-service changes, destructive operations, or Phase 1F implementation.
-
-**Phase 1F production and controlled-pilot readiness remains deferred.** Phase 1F begins with planning and evidence definition, not implementation, and is not part of the bounded onboarding-completion phase.
+The bounded onboarding-completion source has since been merged. Historical branch-publication restrictions no longer describe the current repository, but deployment, shared-database mutation, real-person use, credential/external-service changes, destructive operations, and production approval still require their own current authority and evidence.
 
 Do not describe Phase 1D, Phase 1E, candidate-authentication remediation, document-upload remediation, or general Alembic drift as the next implementation phase.
 
@@ -67,7 +62,17 @@ The local administrator-linking command is permitted only in `APP_ENV=local` for
 - use service-role credentials;
 - overwrite a genuine non-placeholder provider subject.
 
-Activation gates and `activation_ready` calculation are implemented. The 2026-07-20 decision authorizes implementation of the separately approved explicit final onboarding-completion operation; readiness alone must never activate an agent.
+Activation gates, `activation_ready`, and the separately approved explicit onboarding-completion operation are implemented. Readiness alone must never activate an agent, and no alternate or automatic activation path is authorized.
+
+## Owner-approved borrower-application boundary
+
+On 2026-07-24 the owner approved Keeper becoming the MVP system of record for borrower mortgage-application intake and supporting documents. `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` is the current phase specification and `docs/migrations/mortgage-app-import-manifest.md` records legacy provenance.
+
+The approved boundary includes one primary borrower and at most one co-borrower, SIN, financial/application data, supporting documents without narrow business-category restrictions, versioned privacy/credit-use consent, assigned-agent/administrator review, seven-year submitted-record retention, legal holds, and secure self-hosted operation. It requires accountless capability-bound drafts, application-level encryption, private MinIO, fail-closed ClamAV, server-side assignment authorization, AAL2 for internal access, safe audit evidence, and exact-host/TLS/browser controls.
+
+No Filogix redirect, handoff, export, or API integration is part of the MVP. Borrower accounts/MFA, electronic signatures, marketing consent, credit-bureau connectivity, automated underwriting, lender submission, deal compliance, full CRM, commission, and payroll remain excluded. Exact production privacy/credit-consent wording remains an owner/legal-content prerequisite for real-borrower submission.
+
+This documentation authority is not evidence that the borrower application is implemented or ready for real data. Implement it only through the approved phased plan, dedicated branches/worktrees, migrations and generated contracts where applicable, adversarial authorization/security tests, genuine synthetic browser evidence, and explicit operational acceptance.
 
 Phase 1F readiness work must distinguish:
 
@@ -84,14 +89,14 @@ Preserve dated implementation, readiness, migration, and evidence reports as rec
 
 ## Product boundaries
 
-- Build and maintain the public site, lead/contact-first path, recruitment, candidate application and review, onboarding, controlled-document, administration, and approved agent-profile experience.
-- Keep full borrower applications, underwriting data, lender submission, and deal compliance in approved external mortgage systems.
-- Do not introduce a full CRM, custom legal e-signature platform, automated regulatory-verification claim, lender-network claim, approval claim, compensation claim, or new sensitive-data class without an approved decision.
-- Do not weaken server-side authorization, MFA, privacy boundaries, malware scanning, private-object storage, lifecycle controls, audit evidence, or fail-closed behavior.
+- Build and maintain the public site, lead/contact-first path, Keeper-native borrower application/document intake, assigned-agent and administrator review, recruitment, candidate application and review, onboarding, controlled-document, administration, and approved agent-profile experience.
+- Keep lender submission, underwriting decisions/automation, deal-compliance workflow, credit-bureau connectivity, commissions, payroll, and full CRM behavior outside Keeper unless separately approved.
+- Do not introduce a new sensitive-data class beyond the approved borrower requirements, custom legal e-signature platform, automated regulatory/identity verification claim, lender-network claim, approval claim, or compensation claim without an approved decision.
+- Do not weaken server-side authorization, MFA, privacy boundaries, malware scanning, private-object storage, lifecycle controls, audit evidence, retention controls, or fail-closed behavior.
 
-## Phase 1F planning boundary
+## Production and controlled-pilot readiness boundary
 
-Before Phase 1F implementation, prepare and obtain approval for a production and controlled-pilot readiness plan covering at minimum:
+Before production or controlled-pilot execution, complete the approved readiness plan and obtain the required evidence and owner approvals covering at minimum:
 
 - Supabase Studio local-only enforcement;
 - confirmation that Supabase Storage remains disabled;
@@ -99,17 +104,19 @@ Before Phase 1F implementation, prepare and obtain approval for a production and
 - ClamAV signature freshness, health monitoring, alerting, and fail-closed operation;
 - firewall, service binding, and network exposure;
 - secrets, credentials, MFA, roles, access review, revocation, and offboarding;
+- borrower encryption-key custody, rotation, compromise recovery, backup, and restore;
+- exact borrower-origin DNS/TLS, ingress trust, cookies, CSRF/CORS, abuse controls, and request limits;
+- borrower draft/submission retention, legal holds, purge, correction, export, and incident handling;
 - production authentication and email configuration;
 - logging and PII safety;
-- retention, deletion, correction, export, and legal hold;
 - incident response, stop criteria, rollback, and return-to-service;
 - monitoring, synthetic checks, escalation ownership, and alert testing;
-- privacy, legal, regulatory, claims, and accessibility review;
+- privacy, legal, regulatory, claims, consent-copy, and accessibility review;
 - deployment architecture and environment guardrails;
-- database migration, backup, rollback, and restore boundaries;
+- database migration, backup, rollback, and isolated restore boundaries;
 - pilot roster, support ownership, eligibility, go/no-go criteria, and evidence documents.
 
-Do not invoke Codex for Phase 1F implementation until the plan, evidence requirements, owner decisions, scope, and acceptance criteria are approved.
+Do not enable real-borrower submission or deploy the borrower workflow until the applicable implementation, evidence requirements, owner decisions, exact consent copy, scope, and acceptance criteria are approved.
 
 ## Implementation discipline
 
@@ -143,7 +150,7 @@ After editing:
 
 ## Git and operations
 
-Unless explicitly authorized, do not commit, push, merge, open a pull request, deploy, alter a shared database, rotate credentials, change external services, delete data, or use destructive Git commands.
+The owner authorized standard branch, commit, push, pull-request, and merge operations for the approved borrower-application work on 2026-07-24. This does not authorize force-push, history rewriting, branch deletion, deployment, shared-database mutation, credential rotation, external-service changes, or destructive data operations unless separately and explicitly approved.
 
 Use one dedicated branch or worktree per implementation phase. Do not allow concurrent writers to modify the same files, branch, or worktree.
 

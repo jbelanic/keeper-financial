@@ -68,11 +68,12 @@ The page must present both options without making either look secondary.
 
 ### Start a secure application
 
-- Explain that financial information will be entered in the selected secure mortgage platform.
-- State expected time where verified.
-- Explain save-and-return only when supported by the vendor.
-- Direct call to action.
-- No embedded duplicate application form.
+- Enter the exact Keeper-owned `apply.keeperfinancial.ca` workflow; do not redirect to an external provider.
+- State expected time only where verified.
+- Explain that the accountless draft resumes only in the same browser while its secure capability remains valid; do not imply emailed or cross-device resume.
+- Use a direct call to action with adjacent privacy/security guidance.
+- Keep the full application separate from the minimal contact form rather than duplicating sensitive fields on `/apply`.
+- The borrower workflow must provide accessible step navigation, explicit required/optional labels, linked error summaries, save state, review before submission, document status, consent immediately before submission, and no sensitive browser persistence.
 
 ## Candidate portal
 

@@ -1,5 +1,7 @@
 # Consolidated Codex Prompt — Keeper Financial Phase 1 Foundation
 
+> **Historical bootstrap prompt.** This file records the original Phase 0/1 foundation instruction and is not current product authority. The 2026-07-24 owner decision in `docs/00_PROJECT_SOURCE_OF_TRUTH.md`, `docs/09_DECISIONS_ASSUMPTIONS_AND_OPEN_QUESTIONS.md`, and `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` supersedes its external mortgage-application restriction. Do not execute this prompt against the current repository.
+
 You are working in a fresh repository for **Keeper Financial**, a newly established Ontario mortgage brokerage.
 
 Act as a senior product engineer, software architect, security-conscious SaaS developer, and implementation analyst.

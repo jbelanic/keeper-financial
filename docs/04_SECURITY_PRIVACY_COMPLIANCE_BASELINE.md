@@ -25,6 +25,7 @@ This document defines product controls. It is not legal advice and does not repl
 - Agent information not approved for publication.
 - Consent records.
 - Review history.
+- Borrower contact, date of birth, addresses, application answers, and consent evidence.
 
 ### Restricted
 
@@ -33,10 +34,11 @@ This document defines product controls. It is not legal advice and does not repl
 - Background or suitability evidence.
 - Private onboarding records.
 - Security events.
+- Borrower SIN, financial/property data, free text, identity/supporting documents, encrypted snapshots, legal holds, and access/reveal history.
 
 ## Data minimization
 
-The contact-first mortgage inquiry form must not become a mortgage application.
+The contact-first mortgage inquiry form must not become a mortgage application. The separate Keeper borrower application may collect only the fields approved in `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`.
 
 Free-text fields must display a warning not to submit:
 
@@ -48,6 +50,8 @@ Free-text fields must display a warning not to submit:
 - identification documents;
 - medical information;
 - passwords.
+
+Borrower application fields must not be copied into contact inquiries, URLs, analytics, email, notifications, logs, or audit payloads. Data minimization applies inside the approved full application as well as at the contact boundary.
 
 ## Consent
 
@@ -62,6 +66,8 @@ Each consent record should include:
 - timestamp;
 - capture source;
 - withdrawal timestamp where applicable.
+
+Borrower submission uses one separately versioned privacy/credit-use consent immediately before submission. It is not marketing consent or an electronic signature. Exact production wording remains a real-data release blocker until owner-approved after appropriate review.
 
 ## Candidate privacy
 
@@ -87,6 +93,8 @@ The server owns the wording version and acknowledgement timestamp. A wording cha
 - Rate limiting and anti-automation controls.
 - Secure password-reset flow.
 - Session revocation on suspension/offboarding.
+- Borrower draft access uses an accountless exact-draft capability in a secure host-only cookie; the digest, origin, CSRF, expiry, revision, and lifecycle are validated server-side.
+- Assigned agents and administrators require active local authorization plus AAL2 for borrower application, document, legal-hold, and SIN-reveal operations.
 
 ## Authorization
 
@@ -169,8 +177,12 @@ Initial categories:
 - consent evidence;
 - audit event;
 - security incident.
+- borrower abandoned draft: purge after 30 days of inactivity;
+- borrower submitted application and documents: purge seven calendar years after original submission unless an active legal hold excludes the record;
+- borrower legal hold: retain until explicit administrator/AAL2 release, then resume the original retention deadline;
+- encrypted backups: rolling 30 days unless a later approved operational policy changes it.
 
-Do not hard-code final legal retention periods without approved policy.
+The borrower periods above are owner-approved engineering requirements. They do not replace legal/privacy review of the production policy, notices, correction/export process, backup purge, or legal-hold authority. Other record classes still require approved periods.
 
 ## Security operations required before production
 
@@ -192,6 +204,8 @@ Do not hard-code final legal retention periods without approved policy.
 - Vendor and subprocessor register.
 - Privacy, legal, regulatory, claims, complaints, consent, and accessibility review.
 - Pilot roster, support ownership, evidence documents, go/no-go criteria, and owner release approval.
+- Borrower encryption-key custody, rotation, compromise response, offline recovery, and restored-system overdue-purge exercise.
+- Exact borrower-origin DNS/TLS, ingress trust, capability-cookie, CSRF/CORS, rate-limit, request-size, cache, and bot-mitigation review.
 
 ## Accessibility
 

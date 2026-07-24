@@ -80,6 +80,38 @@ while the profile is later non-public.
 
 Minimal client contact-first inquiry. It is not a mortgage application.
 
+### BorrowerApplication
+
+Authoritative metadata for one accountless borrower draft and its submitted/review lifecycle. It binds the capability digest, typed encrypted payload, one primary borrower and at most one co-borrower, schema/revision, attribution, assignment, consent, submission snapshot, retention deadline, and legal hold. It is distinct from `CandidateApplication`.
+
+### BorrowerApplicationPayload
+
+One encrypted, versioned typed payload revision for an exact borrower application, with schema version, key ID, nonce, ciphertext, purpose-bound integrity evidence, and timestamps. Plaintext answers never occupy searchable columns.
+
+### BorrowerDocument
+
+Metadata for one encrypted private borrower object, including exact application, category, original-filename display value, safe content metadata, plaintext/ciphertext integrity evidence, scan result, object key, key ID, and lifecycle. Bytes remain in private MinIO.
+
+### BorrowerConsentRecord
+
+Immutable evidence that the controlling borrower acknowledged the exact server-owned privacy/credit-use wording version for the submitted revision, including its named-borrower coverage and safe capability-session reference. It does not claim separate co-borrower assent, marketing consent, or a signature.
+
+### BorrowerApplicationSnapshot
+
+Metadata for an immutable encrypted MinIO snapshot created on successful submission. Prior snapshots are never overwritten; later corrections, if separately approved, are append-only revisions.
+
+### BorrowerApplicationStatusHistory
+
+Append-oriented evidence of each allowed application lifecycle transition, actor/capability source, revision, bounded reason category, and timestamp without borrower answers.
+
+### BorrowerAssignmentHistory
+
+Immutable original attribution plus every administrator/AAL2 assignment or reassignment, exact agent relationship, bounded reason, actor, and timestamp. Current assignment is a server-owned projection of this history.
+
+### BorrowerLegalHold
+
+Administrator/AAL2 placement and release evidence that excludes one submitted application and its documents from automated purge without widening access.
+
 ### ConsentRecord
 
 Versioned evidence of a defined consent or acknowledgement.
@@ -232,6 +264,21 @@ new → assigned → contacted → closed
 ```
 
 This is not a full CRM lifecycle. It exists only to prevent website inquiries from being lost.
+
+## Borrower application lifecycle
+
+```text
+draft → submitted → under_review → completed
+  └──────────────→ withdrawn
+  └──────────────→ expired
+```
+
+- Draft access requires the exact capability; 30 days of inactivity expires and purges it.
+- Successful submission is atomic/idempotent, writes an immutable encrypted snapshot, revokes the capability, records consent, and starts a seven-year retention clock.
+- Only the assigned active agent or administrator at AAL2 may enter/review; assignment changes are administrator/AAL2, reasoned, and audited.
+- A legal hold pauses purge only. It does not change state, assignment, or authorization.
+- Seven years after original submission, the application, documents, projections, and ordinary backup copies are purged unless held. Amendments do not reset that date.
+- Borrower post-submission editing is not part of the MVP. Any internal correction operation requires a later append-only specification.
 
 ## 2026-07-18 browser-completion clarification
 

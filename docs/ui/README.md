@@ -7,8 +7,8 @@ Phase 1A implementation:
 1. Approved paper/ink/gold values are mapped into `packages/ui/src/tokens.css`; reusable primitives and public compositions live in `packages/ui` and `apps/web/lib/public-components.tsx`.
 2. The public navigation, mobile `details`/`summary` menu, footer, hero, cards, forms, disclosures, breadcrumbs, status states, and CTA patterns adapt desktop intent for semantics, keyboard focus, reduced motion, and narrow-screen reflow.
 3. No mockup rating, lender count, rate, award, testimonial, example person, agent licence, NMLS value, compensation promise, production/pipeline metric, or CRM capability is reproduced as a public claim.
-4. `/apply` keeps both paths visually equal and preserves the Phase 0 data-minimization, consent, abuse-control, and validated redirect boundary.
-5. The agent-profile mockup is used only for shared card/icon/spacing direction. No CRM dashboard or mortgage-origination functionality is implemented.
+4. `/apply` keeps the contact-first and Keeper-native application paths visually equal; the full-application action enters only `apply.keeperfinancial.ca`, while each path preserves its own data-minimization, consent, abuse, and security boundary.
+5. The agent-profile mockup is used only for shared card/icon/spacing direction. No CRM dashboard, credit-bureau, automated underwriting/approval, lender-submission, or deal-compliance functionality is implemented.
 
 ## Phase 1A raster assets
 

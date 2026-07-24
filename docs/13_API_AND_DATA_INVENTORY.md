@@ -12,7 +12,7 @@
 | POST       | `/api/v1/leads`                                                           | Public                              | Minimal contact-first inquiry and separate consent evidence.                                   |
 | GET        | `/api/v1/leads?limit=&offset=&status=`                                    | Brokerage admin                     | No-store bounded lead queue.                                                                   |
 | POST       | `/api/v1/leads/{lead_id}/marketing-consent/withdrawal`                    | Brokerage admin                     | Idempotent marketing-only withdrawal.                                                          |
-| GET        | `/api/v1/integrations/mortgage-application`                               | Public                              | Validated configured external-provider redirect.                                               |
+| GET        | `/api/v1/integrations/mortgage-application`                               | Public                              | Current legacy redirect route; scheduled for removal only when the Keeper-native borrower entry path is implemented. |
 | GET        | `/api/v1/recruitment/postings`                                            | Public                              | Published recruitment summaries only.                                                          |
 | GET        | `/api/v1/recruitment/postings/{slug}`                                     | Public                              | Published posting detail; non-public records return safe `404`.                                |
 | POST       | `/api/v1/recruitment/postings/{slug}/applications/start`                  | Verified external identity          | Atomic, narrow candidate provisioning and posting-specific attempt creation.                   |
@@ -70,6 +70,18 @@
 | POST       | `/api/v1/agents/{profile_id}/status`        | Brokerage admin | Apply the approval/publication/suspension/archive lifecycle with audit evidence.     |
 
 Production disables OpenAPI. Local and controlled non-production expose `/openapi.json` and `/docs`.
+
+### Approved borrower routes — not implemented at Phase A
+
+Exact final route names are generated and reviewed with implementation, but the approved resource surface is bounded to:
+
+- public start plus capability-authorized draft read/update;
+- capability-authorized document list/upload/delete;
+- capability-authorized review/submit with exact consent version;
+- assigned-agent/AAL2 queue, detail, document download, and explicit SIN reveal;
+- administrator/AAL2 unassigned queue, assignment/reassignment, legal-hold placement/release, lifecycle, and retention operations.
+
+No borrower route accepts an arbitrary user/agent ID, public object key, external redirect, marketing consent, typed signature, credit-bureau request, underwriting decision, lender submission, or Filogix operation.
 
 ## Browser authentication and candidate provisioning orchestration
 
@@ -141,7 +153,9 @@ The authoritative live environment is the local Linux Docker Compose stack. Appl
 | `ConsentRecord`                                                                                | Server-versioned service or optional marketing evidence, grant time, optional withdrawal time, and trusted capture source.                                                                                                                             |
 | `AuditEvent`                                                                                   | Append-oriented safe lead creation, marketing grant/withdrawal, lifecycle, publication, and document event metadata.                                                                                                                                   |
 
-UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. There is deliberately no mortgage deal, borrower finance, borrower document, credit, lender submission, commission, or payroll model.
+Approved future models, not present at Phase A, are `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerDocument`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, and `BorrowerLegalHold`, with existing `AuditEvent` used only for safe high-risk metadata. PostgreSQL stores encrypted payloads and authoritative metadata; private MinIO stores encrypted bytes. The implementing phase must add a forward Alembic migration, model registration, OpenAPI schemas, generated TypeScript contracts, and this inventory in one review.
+
+UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. Borrower intake/document models are approved but not implemented at Phase A; mortgage deal, credit-bureau, automated underwriting, lender submission, deal-compliance, full CRM, commission, and payroll models remain excluded.
 
 Migration `20260715_0003` brings the schema into conformance with `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: posting and immutable source provenance are mandatory, attempt/application lifecycle is distinct, the questionnaire/disclosure are version-controlled, and every new candidate document has explicit application/category linkage. The migration refuses to invent provenance or linkage for incompatible legacy rows.
 
