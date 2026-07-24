@@ -107,7 +107,7 @@ Required:
 
 ## Keeper-native borrower application
 
-The same repository and release process serve `https://apply.keeperfinancial.ca`. The public `/apply` page enters that exact Keeper-owned origin; no external-provider redirect, Filogix handoff, export, or API integration is required in the MVP.
+The same repository and release process will serve `https://apply.keeperfinancial.ca`. After implementation and acceptance, the public `/apply` page must enter that exact Keeper-owned origin; no external-provider redirect, Filogix handoff, export, or API integration is required in the MVP. At Phase A this is target architecture only, and current code still contains the legacy external redirect.
 
 Borrowers use a high-entropy capability stored only in a secure host-only cookie, while PostgreSQL stores a keyed digest bound to one draft. The capability is not identity verification and grants no internal access. Exact host/origin, CSRF, rate-limit, expiry, revision, and lifecycle checks remain mandatory.
 
