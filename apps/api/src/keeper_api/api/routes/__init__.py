@@ -1,6 +1,6 @@
 """Versioned API routes."""
 
-from keeper_api.api.routes import (
+from . import (
     agents,
     auth,
     borrower_applications,
