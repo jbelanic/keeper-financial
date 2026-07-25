@@ -178,3 +178,10 @@ An owner-operated administrator information-request browser ceremony and a genui
   candidate TOTP/AAL2 plus clean ClamAV/MinIO upload and metadata refresh.
 - Responsive browser evidence measures overflow and shared container geometry
   at 320, 375, 768, 1024, 1280, 1366, 1536, and 1920 CSS pixels at normal zoom.
+
+## Phase C borrower-web additions
+
+- API-client tests pin same-origin relative paths, `credentials: include`, `cache: no-store`, CSRF headers, optimistic revisions, bounded validation errors, and opaque-ID-only recovery.
+- Component tests cover start/recovery, successful section advancement, failure value/step preservation, focused accessible error summary, masked/provided SIN replacement, one co-borrower, stable repeat controls, synthetic versioned consent, and the absence of a submit request.
+- Source regression tests reject application-answer/SIN persistence, console/analytics calls, and borrower submission paths. Proxy tests prove exact application-host routing, conflicting forwarded-host refusal, borrower-only API proxying, and no Supabase call in the accountless flow.
+- The production build proves `/mortgage-application` is dynamic and not statically embedded with borrower answers. No Chromium/Playwright executable is installed in the Phase C worktree, and sandbox port binding is denied, so genuine-browser keyboard, zoom, network inspection, and measured 320 CSS-pixel reflow remain explicit acceptance evidence rather than being inferred from jsdom/CSS tests.

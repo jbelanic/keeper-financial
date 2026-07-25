@@ -2,7 +2,58 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { requestUrl } from "@/lib/request-url";
 
+const applicationHosts = new Set([
+  "apply.localhost:3000",
+  "apply.keeperfinancial.ca",
+]);
+
+function normalizedHost(value: string | null) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
 export async function proxy(request: NextRequest) {
+  const host = normalizedHost(request.headers.get("host"));
+  const forwardedHost = normalizedHost(request.headers.get("x-forwarded-host"));
+  if (forwardedHost && forwardedHost !== host) {
+    return new NextResponse("Invalid forwarded host", { status: 400 });
+  }
+
+  if (applicationHosts.has(host)) {
+    if (request.nextUrl.pathname.startsWith("/api/v1/borrower-applications")) {
+      const apiOrigin =
+        process.env.API_INTERNAL_URL ??
+        process.env.NEXT_PUBLIC_API_BASE_URL ??
+        "http://localhost:8000";
+      const target = new URL(
+        `${request.nextUrl.pathname}${request.nextUrl.search}`,
+        apiOrigin,
+      );
+      const headers = new Headers(request.headers);
+      if (host === "apply.localhost:3000") {
+        headers.set("host", "localhost:8000");
+        headers.set("origin", "http://localhost:8000");
+      } else {
+        headers.set("host", "apply.keeperfinancial.ca");
+        headers.set("origin", "https://apply.keeperfinancial.ca");
+      }
+      return NextResponse.rewrite(target, { request: { headers } });
+    }
+
+    if (
+      request.nextUrl.pathname === "/" ||
+      request.nextUrl.pathname === "/mortgage-application"
+    ) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/mortgage-application";
+      return NextResponse.rewrite(target);
+    }
+
+    const target = request.nextUrl.clone();
+    target.pathname = "/mortgage-application";
+    target.search = "";
+    return NextResponse.redirect(target);
+  }
+
   const forwardedHeaders = new Headers(request.headers);
   let response = NextResponse.next({ request: { headers: forwardedHeaders } });
   const supabase = createServerClient(
@@ -47,5 +98,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/candidate/:path*", "/admin/:path*", "/auth/:path*"],
+  matcher: [
+    "/",
+    "/mortgage-application",
+    "/api/v1/borrower-applications/:path*",
+    "/candidate/:path*",
+    "/admin/:path*",
+    "/auth/:path*",
+  ],
 };

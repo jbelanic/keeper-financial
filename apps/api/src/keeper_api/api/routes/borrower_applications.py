@@ -4,9 +4,9 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import APIKeyCookie
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from keeper_api.core.config import Settings, get_settings
@@ -164,8 +164,6 @@ def get_application(
 
     capability = extract_capability_from_cookie(request)
     if not capability:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="application not found")
 
     verify_borrower_capability(db, crypto_state, application_id, capability)
@@ -205,15 +203,16 @@ def save_application(
 
     capability = extract_capability_from_cookie(request)
     if not capability:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="application not found")
 
     ctx = verify_borrower_capability(db, crypto_state, application_id, capability)
 
-    from keeper_api.schemas.borrower_payload import validate_borrower_payload
+    from keeper_api.schemas.borrower_payload import validate_borrower_draft
 
-    validated_payload = validate_borrower_payload(body.payload)
+    try:
+        validated_payload = validate_borrower_draft(body.payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
     payload_dict = validated_payload.model_dump(mode="python", exclude_none=True)
 
     application = save_draft_payload(
@@ -287,8 +286,6 @@ def sin_reveal(
             assurance_level=principal.aal,
         )
     except ValueError as err:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="application not found") from err
 
     return BorrowerSinRevealResponse(

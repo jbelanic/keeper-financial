@@ -124,4 +124,50 @@ describe("Supabase SSR session refresh proxy", () => {
       "http://127.0.0.1:3000/auth/sign-in?error=session&returnTo=%2Fcandidate",
     );
   });
+
+  it("routes the exact local application host without invoking Supabase", async () => {
+    const { proxy } = await import("@/proxy");
+    const response = await proxy(
+      new NextRequest("http://apply.localhost:3000/", {
+        headers: { host: "apply.localhost:3000" },
+      }),
+    );
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "http://apply.localhost:3000/mortgage-application",
+    );
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects conflicting forwarded hosts before borrower routing", async () => {
+    const { proxy } = await import("@/proxy");
+    const response = await proxy(
+      new NextRequest("http://apply.localhost:3000/", {
+        headers: {
+          host: "apply.localhost:3000",
+          "x-forwarded-host": "unexpected.example",
+        },
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it("proxies only borrower API paths from the exact application host", async () => {
+    const { proxy } = await import("@/proxy");
+    const response = await proxy(
+      new NextRequest(
+        "http://apply.localhost:3000/api/v1/borrower-applications/start",
+        {
+          headers: {
+            host: "apply.localhost:3000",
+            origin: "http://apply.localhost:3000",
+          },
+        },
+      ),
+    );
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "http://localhost:8000/api/v1/borrower-applications/start",
+    );
+    expect(getUser).not.toHaveBeenCalled();
+  });
 });

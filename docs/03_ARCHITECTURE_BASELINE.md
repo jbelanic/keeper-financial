@@ -107,7 +107,7 @@ Required:
 
 ## Keeper-native borrower application
 
-The same repository and release process will serve `https://apply.keeperfinancial.ca`. After implementation and acceptance, the public `/apply` page must enter that exact Keeper-owned origin; no external-provider redirect, Filogix handoff, export, or API integration is required in the MVP. Phase B implements the API-side secure draft foundation and generated contracts, while the public Next.js form and removal of the legacy external redirect remain Phase C work.
+The same repository and release process will serve `https://apply.keeperfinancial.ca`. The Phase C branch implements the exact-host Next.js borrower route, Keeper-native form, public `/apply` entry, same-origin no-store browser client, and removal of the web dependency on the legacy external redirect. No external-provider redirect, Filogix handoff, export, or API integration is required in the MVP. This source work is not deployment, genuine-browser, or real-data evidence; the Phase C completion report records the remaining API integration reconciliation.
 
 Borrowers use a high-entropy capability stored only in a secure host-only cookie, while PostgreSQL stores a keyed digest bound to one draft. The capability is not identity verification and grants no internal access. Exact host/origin, CSRF, rate-limit, expiry, revision, and lifecycle checks remain mandatory.
 

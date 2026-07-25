@@ -59,3 +59,7 @@ export const ADMIN_ROUTES = [
   "/admin/onboarding",
   "/admin/agents",
 ] as const;
+
+export const BORROWER_ROUTES = {
+  application: "/mortgage-application",
+} as const;

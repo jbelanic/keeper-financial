@@ -85,6 +85,14 @@ There is no public submit route. Document, queue, reassignment, legal-hold, purg
 
 No borrower route accepts an arbitrary user/agent ID, public object key, external redirect, marketing consent, typed signature, credit-bureau request, underwriting decision, lender submission, or Filogix operation.
 
+### Phase C borrower browser orchestration
+
+- Exact `apply.localhost:3000` and `apply.keeperfinancial.ca` hosts route to the dynamic `/mortgage-application` page without invoking Supabase borrower identity.
+- The browser client uses only the mounted start/get/patch inventory through same-origin, credentialed, `no-store` requests with the borrower CSRF marker. It never reads the capability cookie.
+- Only the opaque application ID is retained in `sessionStorage` as a route locator. Application answers and SIN remain in React memory until sent to the API and are not written to browser storage, URLs, analytics, console output, or server-rendered markup.
+- Recovery revalidates the opaque ID against the HTTP-only capability cookie and receives only revision/lifecycle plus `has_sin` and `has_co_borrower` redaction flags.
+- The web form sends section-shaped partial payloads under the generated `payload: Record<string, unknown>` contract. Current API source nevertheless invokes `validate_borrower_payload()` for the complete `BorrowerApplicationPayloadInput` before `save_draft_payload()` and that service writes a replacement encrypted payload rather than an explicit merge. The Phase C completion report records this as a true integration discrepancy; Phase C did not modify or weaken the API.
+
 ## Browser authentication and candidate provisioning orchestration
 
 The browser routes orchestrate the existing API inventory; they are not additional FastAPI routes:

@@ -12,10 +12,12 @@ The current baseline includes the explicitly owner-accepted 2026-07-19 operator-
 
 The Phase B secure borrower foundation is implemented and validated as source on `feat/borrower-secure-foundation`. This is not owner acceptance and is not a deployable borrower intake.
 
-## Borrower application limitations after Phase B
+## Borrower application limitations after Phase C web source
 
-- Current code still uses the former configuration-only external mortgage-application redirect. It must not be represented as the approved target after the 2026-07-24 decision.
-- Phase B provides borrower models/migration, typed encrypted draft revisions, capability authorization, SIN masking/reveal primitives, exact-assignment internal authorization, and consent/snapshot/legal-hold schema primitives. It does not provide the borrower UI, borrower object-byte persistence, final submission coordinator, internal queue/review UI breadth, purge/legal-hold operations, or dedicated TLS ingress.
+- The Phase C branch replaces the web entry dependency on the former configuration-only external redirect with an exact-origin Keeper-native borrower form. It remains unaccepted source work and is not deployed.
+- Phase B provides borrower models/migration, typed encrypted draft revisions, capability authorization, SIN masking/reveal primitives, exact-assignment internal authorization, and consent/snapshot/legal-hold schema primitives. Phase C provides the web UI and browser draft client. Neither phase provides borrower object-byte persistence, final submission coordinator, internal queue/review UI breadth, purge/legal-hold operations, or dedicated TLS ingress.
+- A source-level integration discrepancy remains: the web follows the approved partial-section `PATCH` contract, but the current route calls the complete Pydantic payload validator before saving and the service replaces rather than explicitly merges the encrypted payload. Subject-property style, occupancy, lot, and garage fields required by the approved matrix are also absent from the current API schema. No API change was authorized in Phase C, so backend-backed section saves are not claimed green until this is reconciled in an authorized API phase.
+- Same-browser recovery retains only an opaque application ID in `sessionStorage`; it stores no answers or SIN. The redacted GET returns flags/revision rather than editable answers, so recovery intentionally does not repopulate previously entered ordinary fields.
 - No public submit route exists. Final submission cannot report success or revoke draft access until Phase D durably coordinates the immutable encrypted snapshot and consent evidence.
 - Borrower settings are typed in API source, but `.env.example` and Compose borrower wiring are not yet present; both borrower feature gates remain off.
 - Exact production privacy/credit-use consent wording/version remains unresolved; real-borrower submission must stay disabled.
