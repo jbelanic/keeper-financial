@@ -63,18 +63,13 @@ No Chromium/Playwright executable is installed in this environment. Attempting t
 
 The first exact `npm run build` attempt failed before compilation because Turbopack rejects an external `node_modules` symlink. The exact lockfile hash matched the dependency source; copying that installed tree locally made the unchanged build pass. `npm ci` could not construct it directly because the sandbox denied esbuild's install-time binary check (`EPERM`).
 
-## 5. True API integration discrepancy
+## 5. API integration correction and remaining vocabulary discrepancy
 
-The owner clarification directed Phase C to implement the web against a permissive partial-save contract and not change the API. The generated request contract is permissive (`payload: Record<string, unknown>`), so the web sends a section-shaped partial payload and advances only on a successful PATCH.
+Post-merge correction dated 2026-07-25: on branch `feat/borrower-web-form` at `5a9912b`, the partial PATCH merge and subject-property schema fields were already present and committed. `save_draft_payload()` uses `_deep_merge` in `apps/api/src/keeper_api/services/borrower_applications.py`, and `SubjectProperty` in `apps/api/src/keeper_api/schemas/borrower_payload.py` already includes `property_type`, `property_style`, `occupancy`, `lot_details`, and `garage_details` with `extra="forbid"`.
 
-Current runtime source differs from that stated contract:
+The discrepancy text above was written against an earlier uncommitted worktree and is stale on those points. It should not be read as current evidence that partial PATCH merge behavior or those subject-property fields are missing from this branch.
 
-1. `save_application()` calls `validate_borrower_payload(body.payload)`.
-2. `BorrowerApplicationPayloadInput` requires `mortgage_request` and `primary_borrower`, while `BorrowerInfo` requires at least one employment entry.
-3. `save_draft_payload()` encrypts the passed payload as the new revision; it does not explicitly merge a section into the prior decrypted payload.
-4. Approved subject-property style, occupancy, lot, and garage fields are not present in the Phase B Pydantic schema.
-
-Consequently, a real backend-backed first-section PATCH is expected to return `422`, and section-shaped later writes cannot safely be claimed to preserve prior sections. Phase C did not modify the API, weaken validation, or fake an integration success. The web implements the documented contract and fails safely; reconciliation requires separately authorized API work.
+The remaining real discrepancy was the web/API vocabulary mismatch for subject-property `occupancy` and `property_style`. This task reconciled that mismatch under owner decision A: the web follows the existing API enum, no API/schema/enum change was made, and no `second_home` or `rental` values were added. The occupancy select now emits only `owner_occupied`, `tenant`, `vacant`, and `other`; the property-style control is a closed select over `detached`, `semi_detached`, `townhouse_row`, `apartment`, and `other`.
 
 ## 6. Files changed
 

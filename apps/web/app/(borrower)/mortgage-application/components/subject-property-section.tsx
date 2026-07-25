@@ -80,14 +80,19 @@ export function SubjectPropertySection({
             </select>
           </FormField>
           <FormField id="subject-style" label="Property style (required)">
-            <input
+            <select
               id="subject-style"
-              maxLength={100}
               value={value.property_style}
               onChange={(event) =>
                 set("property_style", event.currentTarget.value)
               }
-            />
+            >
+              <option value="detached">Detached</option>
+              <option value="semi_detached">Semi-detached</option>
+              <option value="townhouse_row">Townhouse row</option>
+              <option value="apartment">Apartment</option>
+              <option value="other">Other</option>
+            </select>
           </FormField>
           <FormField id="subject-occupancy" label="Occupancy (required)">
             <select
@@ -95,10 +100,9 @@ export function SubjectPropertySection({
               value={value.occupancy}
               onChange={(event) => set("occupancy", event.currentTarget.value)}
             >
-              <option value="">Select occupancy</option>
               <option value="owner_occupied">Owner occupied</option>
-              <option value="rental">Rental</option>
-              <option value="second_home">Second home</option>
+              <option value="tenant">Rental</option>
+              <option value="vacant">Vacant</option>
               <option value="other">Other</option>
             </select>
           </FormField>
