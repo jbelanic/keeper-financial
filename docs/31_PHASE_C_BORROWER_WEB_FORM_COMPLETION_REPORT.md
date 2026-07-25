@@ -5,7 +5,7 @@
 - **Worktree:** `/home/john/dev/keeper-financial-phase-c`
 - **Base/HEAD during implementation:** `9068cdefe86105c09b2465758b62dbe71c3bf1df`
 - **Alembic head:** `20260724_0011` (one head; unchanged)
-- **Status:** Phase C web source implemented and deterministically validated; owner acceptance, genuine-browser evidence, and the API integration discrepancy below remain pending. This is not production, pilot, deployment, or real-borrower approval.
+- **Status:** Phase C web source implemented and deterministically validated; subject-property vocabulary reconciled (see §5). Owner acceptance and genuine-browser evidence remain pending. This is not production, pilot, deployment, or real-borrower approval.
 
 ## 1. Confirmed scope
 
@@ -63,13 +63,15 @@ No Chromium/Playwright executable is installed in this environment. Attempting t
 
 The first exact `npm run build` attempt failed before compilation because Turbopack rejects an external `node_modules` symlink. The exact lockfile hash matched the dependency source; copying that installed tree locally made the unchanged build pass. `npm ci` could not construct it directly because the sandbox denied esbuild's install-time binary check (`EPERM`).
 
-## 5. API integration correction and remaining vocabulary discrepancy
+## 5. Subject-property API contract — current state
 
-Post-merge correction dated 2026-07-25: on branch `feat/borrower-web-form` at `5a9912b`, the partial PATCH merge and subject-property schema fields were already present and committed. `save_draft_payload()` uses `_deep_merge` in `apps/api/src/keeper_api/services/borrower_applications.py`, and `SubjectProperty` in `apps/api/src/keeper_api/schemas/borrower_payload.py` already includes `property_type`, `property_style`, `occupancy`, `lot_details`, and `garage_details` with `extra="forbid"`.
+On branch `feat/borrower-web-form`, the borrower-application draft API and web subject-property handling are reconciled as follows:
 
-The discrepancy text above was written against an earlier uncommitted worktree and is stale on those points. It should not be read as current evidence that partial PATCH merge behavior or those subject-property fields are missing from this branch.
+- **Partial PATCH merge:** `save_draft_payload()` in `apps/api/src/keeper_api/services/borrower_applications.py` decrypts the prior revision and deep-merges the incoming section via `_deep_merge`, so incremental section saves accumulate rather than replace. This behavior is committed at `5a9912b` and is unchanged by the vocabulary fix below.
+- **Subject-property schema:** `SubjectProperty` in `apps/api/src/keeper_api/schemas/borrower_payload.py` defines `property_type`, `property_style`, `occupancy`, `lot_details`, `garage_details`, and related fields, all under `extra="forbid"` (fail-closed). The permissive draft model `BorrowerApplicationDraftInput` validates partial section saves; `validate_borrower_draft()` is the entry point used by the PATCH route.
+- **Web/API vocabulary alignment (resolved):** the subject-property section previously emitted `occupancy` values `rental`/`second_home` and a free-text `property_style`, which would return `422` against the API enum. Under owner decision A — the web follows the existing API enum, with no API/schema/enum change — the occupancy `<select>` now emits exactly `owner_occupied`, `tenant`, `vacant`, `other`, and `property_style` is a closed `<select>` over `detached`, `semi_detached`, `townhouse_row`, `apartment`, `other`. No `second_home` or `rental` value was added; no API change was made. This reconciliation landed in commit `322e359`.
 
-The remaining real discrepancy was the web/API vocabulary mismatch for subject-property `occupancy` and `property_style`. This task reconciled that mismatch under owner decision A: the web follows the existing API enum, no API/schema/enum change was made, and no `second_home` or `rental` values were added. The occupancy select now emits only `owner_occupied`, `tenant`, `vacant`, and `other`; the property-style control is a closed select over `detached`, `semi_detached`, `townhouse_row`, `apartment`, and `other`.
+Result: a backend-backed partial PATCH carrying a subject-property section now validates against the existing API schema for in-vocabulary values. Validation on this machine (web 171 passed / 3 skipped after the added vocabulary test; API suite green on in-memory SQLite; one Alembic head `20260724_0011`) confirms the web emits only in-vocabulary values. A real PostgreSQL-backed PATCH run and genuine-browser evidence remain deferred (see §7).
 
 ## 6. Files changed
 
@@ -95,7 +97,7 @@ No API, contract, migration, dependency, lockfile, historical report, external s
 
 ## 7. Deferred scope and release risks
 
-1. Reconcile the partial PATCH/merge and subject-property contract discrepancy under explicit API authority before claiming a backend-complete Phase C journey.
+1. (Resolved) The partial PATCH/merge and subject-property vocabulary discrepancy was reconciled under owner decision A — web follows the existing API enum, no API change (see §5). A real PostgreSQL-backed PATCH run remains deferred for full parity evidence.
 2. Phase D owns documents, immutable submission snapshot, exact approved consent enforcement, capability revocation, and the real submit operation.
 3. Exact production consent wording/version is still unapproved; this UI uses conspicuously synthetic draft wording.
 4. Genuine browser/accessibility, exact cookie behavior, ingress/TLS, abuse controls, key custody, backup/restore, retention/purge/legal hold, monitoring, incident response, and deployment evidence remain required.
