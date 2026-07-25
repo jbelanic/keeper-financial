@@ -18,11 +18,9 @@ type PublicSiteConfig = ReturnType<typeof getPublicSiteConfig>;
 export function ApplyPaths({
   agentSlug,
   config = siteConfig,
-  apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
 }: {
   agentSlug?: string;
   config?: PublicSiteConfig;
-  apiBase?: string;
 }) {
   const attribution = agentSlug
     ? `?${new URLSearchParams({ agent: agentSlug }).toString()}`
@@ -74,21 +72,21 @@ export function ApplyPaths({
             <p className="eyebrow">Option two</p>
             <h2>Continue to the mortgage application</h2>
             <p>
-              Use the configured mortgage application service for detailed
-              financial, credit, identity and document information.
+              Start a private, same-browser Keeper application for detailed
+              financial, identity, property and mortgage information.
             </p>
             <a
               className="button-link"
-              href={`${apiBase}/api/v1/integrations/mortgage-application${attribution}`}
+              href={`${config.mortgageApplicationUrl}${attribution}`}
             >
               Continue to the mortgage application
             </a>
             <p className="fine-print">
-              You will leave the Keeper Financial public website and enter the
-              mortgage application service configured by Keeper Financial.
-              Review the destination’s privacy and security information before
-              providing detailed information. If the application service is
-              unavailable, call {config.phoneDisplay} or email {config.email}.
+              Your draft stays with Keeper and resumes only in this browser
+              while its secure cookie remains available. Do not use a shared
+              device. Final submission and document upload are not yet
+              available. If the application is unavailable, call{" "}
+              {config.phoneDisplay} or email {config.email}.
             </p>
           </Card>
         </div>

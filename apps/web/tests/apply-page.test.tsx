@@ -37,15 +37,9 @@ describe("apply paths and attribution", () => {
     expect(safeAgentAttribution(value)).toBe(expected);
   });
 
-  it("renders balanced minimal-contact and backend-redirect paths without a direct provider URL", () => {
+  it("renders balanced minimal-contact and Keeper-native application paths", () => {
     const config = getPublicSiteConfig({});
-    render(
-      <ApplyPaths
-        agentSlug="published-agent"
-        config={config}
-        apiBase="https://api.keeper.example"
-      />,
-    );
+    render(<ApplyPaths agentSlug="published-agent" config={config} />);
 
     expect(
       screen.getByRole("heading", { name: "Ask a general question" }),
@@ -60,11 +54,9 @@ describe("apply paths and attribution", () => {
     });
     expect(mortgageLink).toHaveAttribute(
       "href",
-      "https://api.keeper.example/api/v1/integrations/mortgage-application?agent=published-agent",
+      "https://apply.keeperfinancial.ca/?agent=published-agent",
     );
-    expect(document.body.textContent).not.toContain(
-      config.mortgageApplicationUrl,
-    );
+    expect(document.body.textContent).toContain("same-browser");
     expect(
       screen.getAllByText(/Do not (submit|include)/i).length,
     ).toBeGreaterThanOrEqual(2);
@@ -77,16 +69,12 @@ describe("apply paths and attribution", () => {
     const available = getPublicSiteConfig({
       NEXT_PUBLIC_BOOKING_URL: "https://booking.keeper.example/call",
     });
-    const { rerender } = render(
-      <ApplyPaths config={unavailable} apiBase="https://api.keeper.example" />,
-    );
+    const { rerender } = render(<ApplyPaths config={unavailable} />);
     expect(
       screen.queryByRole("link", { name: /Book a call/i }),
     ).not.toBeInTheDocument();
 
-    rerender(
-      <ApplyPaths config={available} apiBase="https://api.keeper.example" />,
-    );
+    rerender(<ApplyPaths config={available} />);
     expect(screen.getByRole("link", { name: /Book a call/i })).toHaveAttribute(
       "href",
       "https://booking.keeper.example/call",

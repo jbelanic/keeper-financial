@@ -96,6 +96,21 @@ class PropertyType(StrEnum):
     OTHER = "other"
 
 
+class PropertyStyle(StrEnum):
+    DETACHED = "detached"
+    SEMI_DETACHED = "semi_detached"
+    TOWNHOUSE_ROW = "townhouse_row"
+    APARTMENT = "apartment"
+    OTHER = "other"
+
+
+class OccupancyType(StrEnum):
+    OWNER_OCCUPIED = "owner_occupied"
+    TENANT = "tenant"
+    VACANT = "vacant"
+    OTHER = "other"
+
+
 class AssetType(StrEnum):
     SAVINGS = "savings"
     CHEQUING = "chequing"
@@ -260,6 +275,24 @@ class MortgageRequest(BaseModel):
         return self
 
 
+class MortgageRequestDraft(BaseModel):
+    """Partial-save mirror of MortgageRequest; amounts optional so a draft may
+    be saved before the applicant supplies figures."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mortgage_objective: MortgageObjective | None = None
+    requested_amount: Decimal | None = Field(None, gt=Decimal("0"), decimal_places=2)
+    estimated_property_value: Decimal | None = Field(None, gt=Decimal("0"), decimal_places=2)
+    expected_closing_date: date | None = None
+    down_payment_sources: list[DownPaymentEntry] | None = Field(None, max_length=10)
+    preferred_agent_slug: str | None = Field(None, max_length=128)
+    property_address: str | None = Field(None, max_length=200)
+    property_city: str | None = Field(None, max_length=100)
+    property_province: str | None = Field(None, max_length=2)
+    property_postal_code: str | None = Field(None, max_length=7)
+
+
 class SubjectProperty(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -268,6 +301,10 @@ class SubjectProperty(BaseModel):
     province: str | None = Field(None, max_length=2)
     postal_code: str | None = Field(None, max_length=7)
     property_type: PropertyType | None = None
+    property_style: PropertyStyle | None = None
+    occupancy: OccupancyType | None = None
+    lot_details: str | None = Field(None, max_length=200)
+    garage_details: str | None = Field(None, max_length=200)
     year_built: int | None = Field(None, ge=1800, le=2100)
     livable_area_sqft: int | None = Field(None, gt=0, le=50000)
     units: int | None = Field(None, gt=0, le=100)
@@ -335,5 +372,100 @@ class BorrowerApplicationPayloadInput(BaseModel):
         return self
 
 
+class BorrowerInfoDraft(BaseModel):
+    """Partial-save mirror of BorrowerInfo; every field optional so a section
+    save need not resend the entire borrower. SIN and employment relax to
+    optional; other field validators still apply when a value is present."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
+    email: str | None = Field(None, max_length=320)
+    phone: str | None = Field(None, max_length=20)
+    preferred_contact_method: PreferredContactMethod | None = None
+    date_of_birth: date | None = None
+    sin: str | None = Field(None, min_length=9, max_length=9)
+    marital_status: MaritalStatus | None = None
+    number_of_dependants: int | None = Field(None, ge=0, le=20)
+    gender: BorrowerGender | None = None
+    current_address: BorrowerAddress | None = None
+    employment: list[EmploymentEntry] | None = Field(None, max_length=5)
+    relationship_to_primary: str | None = Field(None, max_length=100)
+
+    @field_validator("sin")
+    @classmethod
+    def validate_sin(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        digits = v.replace("-", "").replace(" ", "")
+        if not digits.isdigit():
+            raise ValueError("SIN must contain only digits")
+        if len(digits) != 9:
+            raise ValueError("SIN must be exactly 9 digits")
+        if not _luhn_check(digits):
+            raise ValueError("SIN failed Luhn validation")
+        return digits
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        if not EMAIL_RE.match(v):
+            raise ValueError("must be a valid email address")
+        return v.lower()
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        cleaned = re.sub(r"[\s\-\(\)\.]", "", v)
+        if not CANADIAN_PHONE_RE.match(cleaned):
+            raise ValueError("must be a valid North American phone number")
+        return cleaned
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def validate_date_of_birth(cls, v: date | None) -> date | None:
+        if v is None:
+            return None
+        if v >= date.today():
+            raise ValueError("date of birth must be in the past")
+        if v < date(1900, 1, 1):
+            raise ValueError("date of birth is implausibly early")
+        return v
+
+
+class BorrowerApplicationDraftInput(BaseModel):
+    """Permissive draft payload for incremental section saves. Every top-level
+    field is optional so a partial PATCH validates; unknown keys are still
+    rejected (extra='forbid') to fail closed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mortgage_request: MortgageRequestDraft | None = None
+    primary_borrower: BorrowerInfoDraft | None = None
+    co_borrower: BorrowerInfoDraft | None = None
+    subject_property: SubjectProperty | None = None
+    other_properties: list[OtherProperty] | None = Field(None, max_length=10)
+    assets: list[AssetEntry] | None = Field(None, max_length=50)
+    assets_complete: bool | None = None
+    liabilities: list[LiabilityEntry] | None = Field(None, max_length=50)
+    liabilities_complete: bool | None = None
+    additional_notes: str | None = Field(None, max_length=MAX_NOTES_LENGTH)
+
+    @model_validator(mode="after")
+    def validate_co_borrower(self) -> BorrowerApplicationDraftInput:
+        if self.co_borrower is not None and self.co_borrower.relationship_to_primary is None:
+            raise ValueError("co_borrower must have relationship_to_primary")
+        return self
+
+
 def validate_borrower_payload(payload_data: dict[str, Any]) -> BorrowerApplicationPayloadInput:
     return BorrowerApplicationPayloadInput.model_validate(payload_data)
+
+
+def validate_borrower_draft(payload_data: dict[str, Any]) -> BorrowerApplicationDraftInput:
+    return BorrowerApplicationDraftInput.model_validate(payload_data)

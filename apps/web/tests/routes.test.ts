@@ -1,4 +1,9 @@
-import { ADMIN_ROUTES, CANDIDATE_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
+import {
+  ADMIN_ROUTES,
+  BORROWER_ROUTES,
+  CANDIDATE_ROUTES,
+  PUBLIC_ROUTES,
+} from "@/lib/routes";
 
 describe("route inventory", () => {
   it("keeps all required public routes outside portal inventories", () => {
@@ -39,5 +44,10 @@ describe("route inventory", () => {
     expect(ADMIN_ROUTES.every((route) => route.startsWith("/admin"))).toBe(
       true,
     );
+  });
+
+  it("keeps the accountless borrower route separate from portal routes", () => {
+    expect(BORROWER_ROUTES.application).toBe("/mortgage-application");
+    expect(PUBLIC_ROUTES).not.toContain(BORROWER_ROUTES.application);
   });
 });

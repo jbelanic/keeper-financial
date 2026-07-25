@@ -2,7 +2,7 @@
 
 - **Decision date:** 2026-07-24
 - **Status:** owner-approved product, architecture, security, privacy, and lifecycle requirements
-- **Implementation status:** Phase B secure foundation implemented and source-validated on `feat/borrower-secure-foundation`; owner acceptance and Phases C–G remain pending
+- **Implementation status:** Phase B secure foundation is owner-accepted as source evidence. Phase C borrower-web source and deterministic web tests are implemented on `feat/borrower-web-form`; owner acceptance, genuine-browser evidence, API integration reconciliation described in the Phase C completion report, and Phases D–G remain pending.
 - **Phase B branch base:** `1acf8b6f409284b9dd386cfe6403fd7c266a975d`
 - **Legacy reference:** `jbelanic/MortgageApp` at `251077177315ade4a94d12eb62df750684ed2bb7`
 

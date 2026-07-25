@@ -18,11 +18,22 @@ function controlledValue(value: string | undefined, fallback: string) {
   return normalized ? normalized : fallback;
 }
 
-function controlledHttpsUrl(value: string | undefined, fallback: string) {
+function controlledApplicationOrigin(
+  value: string | undefined,
+  fallback: string,
+) {
   try {
     const candidate = new URL(value?.trim() || fallback);
+    const isProductionOrigin =
+      candidate.protocol === "https:" &&
+      candidate.hostname === "apply.keeperfinancial.ca" &&
+      !candidate.port;
+    const isLocalOrigin =
+      candidate.protocol === "http:" &&
+      candidate.hostname === "apply.localhost" &&
+      candidate.port === "3000";
     if (
-      candidate.protocol !== "https:" ||
+      (!isProductionOrigin && !isLocalOrigin) ||
       candidate.username ||
       candidate.password ||
       candidate.search ||
@@ -30,6 +41,7 @@ function controlledHttpsUrl(value: string | undefined, fallback: string) {
     ) {
       return fallback;
     }
+    candidate.pathname = "/";
     return candidate.toString();
   } catch {
     return fallback;
@@ -122,7 +134,7 @@ export function getPublicSiteConfig(environment: Environment = process.env) {
       environment.NEXT_PUBLIC_SITE_URL,
       approvedPublicFacts.siteUrl,
     ),
-    mortgageApplicationUrl: controlledHttpsUrl(
+    mortgageApplicationUrl: controlledApplicationOrigin(
       environment.NEXT_PUBLIC_MORTGAGE_APPLICATION_URL,
       approvedPublicFacts.mortgageApplicationUrl,
     ),

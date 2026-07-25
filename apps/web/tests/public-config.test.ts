@@ -37,4 +37,18 @@ describe("controlled public configuration", () => {
         .siteUrl,
     ).toBe(approvedPublicFacts.siteUrl);
   });
+
+  it("accepts only exact local or production borrower application origins", () => {
+    expect(
+      getPublicSiteConfig({
+        NEXT_PUBLIC_MORTGAGE_APPLICATION_URL: "http://apply.localhost:3000",
+      }).mortgageApplicationUrl,
+    ).toBe("http://apply.localhost:3000/");
+    expect(
+      getPublicSiteConfig({
+        NEXT_PUBLIC_MORTGAGE_APPLICATION_URL:
+          "https://apply.keeperfinancial.ca.evil.example",
+      }).mortgageApplicationUrl,
+    ).toBe(approvedPublicFacts.mortgageApplicationUrl);
+  });
 });

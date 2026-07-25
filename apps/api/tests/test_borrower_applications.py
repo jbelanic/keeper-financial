@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import tempfile
@@ -8,10 +9,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from keeper_api.core.config import Settings
 from keeper_api.db.base import Base
+from keeper_api.db.session import get_db
+from keeper_api.main import app
 from keeper_api.models.borrower import (
     BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
@@ -557,6 +563,131 @@ class TestHasSubmissionEvidence:
 
         assert has_submission_evidence(db_session, application.id) is False
 
+
+class TestIncrementalDraftMerge:
+    """Phase C API correction: a partial PATCH must merge into the prior saved
+    draft (not replace it), preserve a previously stored SIN when the partial
+    omits it, and reject unknown keys (fail closed)."""
+
+    def test_partial_save_merges_prior_sections(
+        self, db_session: Session, crypto_state: BorrowerCryptoState
+    ) -> None:
+        application, _ = start_borrower_application(
+            db=db_session, crypto_state=crypto_state, settings=None
+        )
+
+        save_draft_payload(
+            db=db_session,
+            crypto_state=crypto_state,
+            application_id=application.id,
+            capability_session_id=application.capability_session_id,
+            expected_revision=0,
+            payload_data={"mortgage_request": {"mortgage_objective": "purchase"}},
+            settings=None,
+        )
+
+        save_draft_payload(
+            db=db_session,
+            crypto_state=crypto_state,
+            application_id=application.id,
+            capability_session_id=application.capability_session_id,
+            expected_revision=1,
+            payload_data={
+                "primary_borrower": {
+                    "first_name": "Jane",
+                    "last_name": "Smith",
+                    "sin": "046454286",
+                }
+            },
+            settings=None,
+        )
+
+        merged = get_latest_payload(db_session, crypto_state, application.id, 2)
+        assert merged["mortgage_request"]["mortgage_objective"] == "purchase"
+        assert merged["primary_borrower"]["first_name"] == "Jane"
+        assert merged["primary_borrower"]["sin"] == "046454286"
+
+    def test_sin_preserved_when_partial_omits_sin(
+        self, db_session: Session, crypto_state: BorrowerCryptoState
+    ) -> None:
+        application, _ = start_borrower_application(
+            db=db_session, crypto_state=crypto_state, settings=None
+        )
+
+        save_draft_payload(
+            db=db_session,
+            crypto_state=crypto_state,
+            application_id=application.id,
+            capability_session_id=application.capability_session_id,
+            expected_revision=0,
+            payload_data={
+                "primary_borrower": {
+                    "first_name": "Jane",
+                    "sin": "046454286",
+                }
+            },
+            settings=None,
+        )
+        summary_with_sin = get_application_summary(
+            db_session,
+            db_session.get(BorrowerApplication, application.id),
+        )
+        assert summary_with_sin["has_sin"] is True
+
+        # Partial save that updates only the last name must not wipe the SIN.
+        save_draft_payload(
+            db=db_session,
+            crypto_state=crypto_state,
+            application_id=application.id,
+            capability_session_id=application.capability_session_id,
+            expected_revision=1,
+            payload_data={
+                "primary_borrower": {"first_name": "Janet"},
+            },
+            settings=None,
+        )
+        summary_after = get_application_summary(
+            db_session,
+            db_session.get(BorrowerApplication, application.id),
+        )
+        assert summary_after["has_sin"] is True
+        merged = get_latest_payload(db_session, crypto_state, application.id, 2)
+        assert merged["primary_borrower"]["first_name"] == "Janet"
+        # SIN is stored in a dedicated ciphertext, never returned in the payload.
+        assert "sin" not in merged["primary_borrower"]
+
+    def test_unknown_key_rejected_fail_closed(
+        self, db_session: Session, crypto_state: BorrowerCryptoState
+    ) -> None:
+        from pydantic import ValidationError
+
+        from keeper_api.schemas.borrower_payload import validate_borrower_draft
+
+        with pytest.raises(ValidationError):
+            validate_borrower_draft(
+                {"mortgage_request": {"mortgage_objective": "purchase"}, "bogus_field": 1}
+            )
+
+    def test_subject_property_optional_fields_accepted(
+        self, db_session: Session, crypto_state: BorrowerCryptoState
+    ) -> None:
+        from keeper_api.schemas.borrower_payload import validate_borrower_draft
+
+        draft = validate_borrower_draft(
+            {
+                "subject_property": {
+                    "property_style": "detached",
+                    "occupancy": "owner_occupied",
+                    "lot_details": "50ft x 120ft",
+                    "garage_details": "attached 2-car",
+                }
+            }
+        )
+        assert draft.subject_property.property_style.value == "detached"
+        assert draft.subject_property.occupancy.value == "owner_occupied"
+        assert draft.subject_property.lot_details == "50ft x 120ft"
+        assert draft.subject_property.garage_details == "attached 2-car"
+
     def test_has_submission_evidence_submitted(
         self, db_session: Session, crypto_state: BorrowerCryptoState
     ) -> None:
@@ -628,3 +759,175 @@ class TestHasSubmissionEvidence:
         )
 
         assert has_submission_evidence(db_session, application.id) is True
+
+
+class TestBorrowerDraftRouteIntegration:
+    """End-to-end route tests proving the Phase C API correction: a partial
+    PATCH now validates (200, not 422) and merges into the prior draft, while
+    unknown keys still fail closed (422)."""
+
+    @pytest.fixture
+    def route_client(self, tmp_path: Path, monkeypatch):
+        keyring_path = tmp_path / "keyring.json"
+        hmac_path = tmp_path / "hmac.key"
+        keyring_path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "keys": {
+                        "v1": base64.b64encode(os.urandom(32)).decode(),
+                    },
+                }
+            )
+        )
+        hmac_path.write_bytes(os.urandom(32))
+
+        settings = Settings(
+            _env_file=None,
+            app_env="local",
+            database_url="sqlite+pysqlite:///:memory:",
+            borrower_application_enabled=True,
+            borrower_application_origin="http://localhost:8000",
+            borrower_encryption_keyring_file=str(keyring_path),
+            borrower_capability_hmac_key_file=str(hmac_path),
+        )
+
+        engine = create_engine(
+            "sqlite+pysqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        SessionLocal = sessionmaker(bind=engine)
+
+        def override_db():
+            with SessionLocal() as session:
+                yield session
+
+        from keeper_api.core.config import get_settings as _real_get_settings
+
+        monkeypatch.setattr(_real_get_settings, "cache_clear", lambda: None)
+        monkeypatch.setattr("keeper_api.core.config.get_settings", lambda: settings)
+        monkeypatch.setattr(
+            "keeper_api.api.routes.borrower_applications.get_settings",
+            lambda: settings,
+        )
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[_real_get_settings] = lambda: settings
+        try:
+            with TestClient(app) as client:
+                yield client
+        finally:
+            app.dependency_overrides.clear()
+
+    def _start(self, client: TestClient) -> tuple[str, str]:
+        resp = client.post(
+            "/api/v1/borrower-applications/start",
+            headers={
+                "Host": "localhost:8000",
+                "Origin": "http://localhost:8000",
+                "x-keeper-borrower-csrf": "1",
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        return body["application_id"], resp.cookies.get("__Host-keeper-borrower-draft")
+
+    def test_partial_patch_merges_and_returns_200(self, route_client: TestClient) -> None:
+        application_id, _ = self._start(route_client)
+        headers = {
+            "Host": "localhost:8000",
+            "Origin": "http://localhost:8000",
+            "x-keeper-borrower-csrf": "1",
+        }
+
+        first = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+            json={
+                "expected_revision": 0,
+                "payload": {"mortgage_request": {"mortgage_objective": "purchase"}},
+            },
+        )
+        assert first.status_code == 200, first.text
+        assert first.json()["revision"] == 1
+
+        second = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+            json={
+                "expected_revision": 1,
+                "payload": {
+                    "primary_borrower": {
+                        "first_name": "Jane",
+                        "last_name": "Smith",
+                        "sin": "046454286",
+                    }
+                },
+            },
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["revision"] == 2
+        assert second.json()["has_sin"] is True
+
+    def test_partial_patch_rejects_unknown_key(self, route_client: TestClient) -> None:
+        application_id, _ = self._start(route_client)
+        resp = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers={
+                "Host": "localhost:8000",
+                "Origin": "http://localhost:8000",
+                "x-keeper-borrower-csrf": "1",
+            },
+            json={
+                "expected_revision": 0,
+                "payload": {
+                    "mortgage_request": {"mortgage_objective": "purchase"},
+                    "bogus_field": 1,
+                },
+            },
+        )
+        assert resp.status_code == 422, resp.text
+
+    def test_web_shaped_subject_property_partial_merges(self, route_client: TestClient) -> None:
+        application_id, _ = self._start(route_client)
+        headers = {
+            "Host": "localhost:8000",
+            "Origin": "http://localhost:8000",
+            "x-keeper-borrower-csrf": "1",
+        }
+        first = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+            json={
+                "expected_revision": 0,
+                "payload": {
+                    "subject_property": {
+                        "address": "123 Main St",
+                        "city": "Toronto",
+                        "province": "ON",
+                        "postal_code": "M5V 2T6",
+                        "property_type": "single_family",
+                        "property_style": "detached",
+                        "occupancy": "owner_occupied",
+                    }
+                },
+            },
+        )
+        assert first.status_code == 200, first.text
+
+        second = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+            json={
+                "expected_revision": 1,
+                "payload": {
+                    "subject_property": {
+                        "lot_details": "50ft frontage",
+                        "garage_details": "attached 2-car",
+                    }
+                },
+            },
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["revision"] == 2
