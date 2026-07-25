@@ -913,6 +913,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/borrower-applications/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start Application */
+    post: operations["start_application_api_v1_borrower_applications_start_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/borrower-applications/{application_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Application */
+    get: operations["get_application_api_v1_borrower_applications__application_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Save Application */
+    patch: operations["save_application_api_v1_borrower_applications__application_id__patch"];
+    trace?: never;
+  };
+  "/api/v1/borrower-applications/{application_id}/internal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Internal Application */
+    get: operations["get_internal_application_api_v1_borrower_applications__application_id__internal_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/borrower-applications/{application_id}/sin/reveal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Sin Reveal */
+    post: operations["sin_reveal_api_v1_borrower_applications__application_id__sin_reveal_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1318,6 +1387,53 @@ export interface components {
     Body_upload_document_api_v1_upload_document_post: {
       /** File */
       file: string;
+    };
+    /** BorrowerApplicationSaveRequest */
+    BorrowerApplicationSaveRequest: {
+      /** Expected Revision */
+      expected_revision: number;
+      /** Payload */
+      payload: {
+        [key: string]: unknown;
+      };
+    };
+    /** BorrowerApplicationSaveResponse */
+    BorrowerApplicationSaveResponse: {
+      /** Application Id */
+      application_id: string;
+      /** Revision */
+      revision: number;
+      /** Lifecycle Status */
+      lifecycle_status: string;
+      /** Has Sin */
+      has_sin: boolean;
+      /** Has Co Borrower */
+      has_co_borrower: boolean;
+      /** Last Activity At */
+      last_activity_at: string;
+      /** Draft Expires At */
+      draft_expires_at: string | null;
+    };
+    /** BorrowerApplicationStartResponse */
+    BorrowerApplicationStartResponse: {
+      /** Application Id */
+      application_id: string;
+      /** Revision */
+      revision: number;
+      /** Lifecycle Status */
+      lifecycle_status: string;
+    };
+    /** BorrowerSinRevealRequest */
+    BorrowerSinRevealRequest: {
+      /** Reason Category */
+      reason_category: string;
+    };
+    /** BorrowerSinRevealResponse */
+    BorrowerSinRevealResponse: {
+      /** Application Id */
+      application_id: string;
+      /** Sin */
+      sin: string;
     };
     /** CandidateApplicationResponse */
     CandidateApplicationResponse: {
@@ -5815,6 +5931,166 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  start_application_api_v1_borrower_applications_start_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerApplicationStartResponse"];
+        };
+      };
+    };
+  };
+  get_application_api_v1_borrower_applications__application_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerApplicationSaveResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  save_application_api_v1_borrower_applications__application_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BorrowerApplicationSaveRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerApplicationSaveResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_internal_application_api_v1_borrower_applications__application_id__internal_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  sin_reveal_api_v1_borrower_applications__application_id__sin_reveal_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BorrowerSinRevealRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerSinRevealResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
       };
     };
   };

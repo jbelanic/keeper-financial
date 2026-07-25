@@ -96,6 +96,8 @@ The server owns the wording version and acknowledgement timestamp. A wording cha
 - Borrower draft access uses an accountless exact-draft capability in a secure host-only cookie; the digest, origin, CSRF, expiry, revision, and lifecycle are validated server-side.
 - Assigned agents and administrators require active local authorization plus AAL2 for borrower application, document, legal-hold, and SIN-reveal operations.
 
+Phase B implements and source-tests the encrypted typed draft, keyed capability digest, exact-origin/host/CSRF boundary, default SIN masking, explicit audited SIN reveal, and exact-assignment/internal AAL2 authorization. It does not authorize real data or production operation. Document bytes, immutable submission coordination, purge/legal-hold operations, exact production consent, deployment, and browser/operational evidence remain pending in later phases.
+
 ## Authorization
 
 - Deny by default.

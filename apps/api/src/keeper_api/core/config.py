@@ -84,6 +84,17 @@ class Settings(BaseSettings):
     documenso_ica_signer_recipient_id: int | None = Field(default=None, gt=0)
     crm_provider: str = "disabled"
 
+    borrower_application_enabled: bool = False
+    borrower_real_data_enabled: bool = False
+    borrower_application_origin: str = "https://apply.keeperfinancial.ca"
+    borrower_encryption_keyring_file: str | None = None
+    borrower_capability_hmac_key_file: str | None = None
+    borrower_encryption_active_key_id: str = "v1"
+    borrower_draft_inactivity_days: int = 30
+    borrower_rate_limit_requests: int = Field(default=10, ge=1, le=100)
+    borrower_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+    borrower_rate_limit_tracked_clients: int = Field(default=10_000, ge=100, le=100_000)
+
     @field_validator("mortgage_application_agent_links", mode="before")
     @classmethod
     def parse_agent_links(cls, value: object) -> object:
@@ -257,6 +268,31 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "Documenso public URL must be exactly https://sign.keeperfinancial.ca"
                 )
+
+        if self.borrower_application_enabled:
+            if not self.borrower_encryption_keyring_file:
+                raise ValueError(
+                    "BORROWER_ENCRYPTION_KEYRING_FILE is required when borrower application is enabled"
+                )
+            if not self.borrower_capability_hmac_key_file:
+                raise ValueError(
+                    "BORROWER_CAPABILITY_HMAC_KEY_FILE is required when borrower application is enabled"
+                )
+            from pathlib import Path
+
+            keyring_path = Path(self.borrower_encryption_keyring_file)
+            hmac_path = Path(self.borrower_capability_hmac_key_file)
+            if not keyring_path.exists():
+                raise ValueError("BORROWER_ENCRYPTION_KEYRING_FILE must exist")
+            if not hmac_path.exists():
+                raise ValueError("BORROWER_CAPABILITY_HMAC_KEY_FILE must exist")
+            try:
+                parsed_origin = urlparse(self.borrower_application_origin)
+                if not parsed_origin.scheme or not parsed_origin.hostname:
+                    raise ValueError("BORROWER_APPLICATION_ORIGIN must be a valid URL")
+            except ValueError:
+                raise ValueError("BORROWER_APPLICATION_ORIGIN must be a valid URL") from None
+
         return self
 
 

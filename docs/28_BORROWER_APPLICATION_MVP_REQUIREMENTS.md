@@ -2,8 +2,8 @@
 
 - **Decision date:** 2026-07-24
 - **Status:** owner-approved product, architecture, security, privacy, and lifecycle requirements
-- **Implementation status:** not implemented at this documentation checkpoint
-- **Keeper baseline:** `5f8a41f34bb3586c59d613848fafc9435a86b50d`
+- **Implementation status:** Phase B secure foundation implemented and source-validated on `feat/borrower-secure-foundation`; owner acceptance and Phases C–G remain pending
+- **Phase B branch base:** `1acf8b6f409284b9dd386cfe6403fd7c266a975d`
 - **Legacy reference:** `jbelanic/MortgageApp` at `251077177315ade4a94d12eb62df750684ed2bb7`
 
 This document is the current phase specification for the Keeper-native borrower application. It reverses the former external-application boundary. It is an engineering requirements document, not legal advice, a privacy opinion, a credit-bureau authorization, or production approval.

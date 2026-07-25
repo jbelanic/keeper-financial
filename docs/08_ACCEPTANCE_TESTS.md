@@ -44,6 +44,8 @@ The redirect assertions above characterize the currently implemented Phase 1B bo
 
 ## Borrower application
 
+Phase B source tests cover the model/migration/encryption/capability/typed-draft/internal-authorization subset below and prove that no successful public submission or capability revocation is available without the Phase D coordinator. Document, final-submission, retention/purge, UI, genuine-browser, deployment, and operational criteria remain unfulfilled; passing Phase B tests is not owner acceptance.
+
 - `apply.keeperfinancial.ca` is an exact Keeper-owned origin from the same repository; unknown hosts, reflected origins, wildcard CORS, and untrusted forwarded host/proto fail closed.
 - Starting a draft returns a high-entropy capability only in a secure host-only HTTP-only same-site cookie; only a keyed digest persists and no capability appears in response JSON, URL, logs, analytics, or audit.
 - Missing, wrong, expired, submitted, replayed, cross-application, and cross-origin capabilities are denied without revealing whether another application exists.

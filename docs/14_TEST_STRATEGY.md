@@ -2,15 +2,12 @@
 
 ## Borrower application additions
 
-- Schema/model/migration tests prove typed versioned payloads, one primary plus at most one co-borrower, constraints/indexes, forward upgrade, one head, `alembic check`, and generated OpenAPI/TypeScript determinism.
-- Capability tests cover entropy, keyed-digest storage, secure-cookie attributes, exact application/origin/CSRF/revision/lifecycle binding, inactivity expiry, submit revocation, replay, wrong/cross-application secrets, indistinguishable denial, and no token leakage.
-- Encryption tests use deterministic test keys only and cover AES-GCM round trip, unique nonces, authenticated metadata/purpose binding, wrong/tampered key/nonce/ciphertext/AAD failure, active/old key IDs, key unavailability, serializer/error redaction, and no plaintext persistence.
-- SIN tests cover nine-digit/Luhn validation, no saved-value return to borrowers, masked projections, separate assigned-agent/admin AAL2 reveal, safe audit metadata, cross-assignment denial, and absence from logs, traces, URLs, search, notifications, and generic schemas.
-- Document tests cover PDF/DOC/DOCX/JPEG/PNG signature/MIME/structure, 25 MiB/file, 25-file, 250 MiB aggregate limits, malformed/polyglot/archive/executable/macro/encrypted input, ClamAV detection/outage/timeout/protocol failure, encrypt-after-clean ordering, MinIO/database cleanup, private delivery, and cross-application denial.
-- Submission tests inject object/database failures and races to prove full validation, exact consent version, durable immutable snapshot, atomic/idempotent result, capability revocation, safe orphan reconciliation, and no early browser reset/success.
-- Internal authorization tests apply the full anonymous/identity-only/inactive/wrong-role/unassigned/other-agent/AAL1/suspended/stale-lifecycle matrix to queue, detail, download, reveal, assignment, legal hold, and lifecycle operations.
-- Retention tests cover 30-day inactive drafts, seven-year calendar deadline from original submission, amendment non-reset, hold placement/release, partial cross-store failure/retry, idempotent purge, backup expiry, and restored-system overdue purge before service.
-- Next.js/component/browser tests cover no sensitive local storage, accessible step/error/review behavior, duplicate suppression, cookie/CSRF/CORS/cache/security headers, responsive reflow, no console leakage, synthetic file flows, and assigned-agent isolation.
+- Phase B schema/model/migration tests prove typed versioned payloads, one primary plus at most one co-borrower, constraints/indexes, forward upgrade to one `20260724_0011` head, clean `alembic check`, and generated OpenAPI/TypeScript determinism.
+- Phase B capability tests cover entropy, keyed-digest storage, secure-cookie attributes, exact application/origin/CSRF/revision/lifecycle binding, inactivity expiry, replay, wrong/cross-application secrets, indistinguishable denial, no-op activity semantics, and no token leakage.
+- Phase B encryption tests use synthetic test keys only and cover AES-GCM round trip, unique nonces, authenticated metadata/purpose binding, wrong/tampered key/nonce/ciphertext/AAD failure, active/old key IDs, malformed key material, serializer/error redaction, and no plaintext persistence.
+- Phase B SIN and authorization tests cover nine-digit/Luhn validation, no saved-value return to borrowers, masked projection, explicit AAL2 reveal, safe audit metadata, administrator/exact-assigned-agent matrices, and cross-assignment denial.
+- Phase B sequencing tests prove no public submit route exists and no draft internal projection succeeds without durable snapshot/consent evidence. Unit-tested lifecycle primitives do not substitute for the Phase D coordinator.
+- Phase D must add document and atomic/idempotent final-submission failure/race/orphan tests; Phase F must add retention/legal-hold/purge/restore tests; Phases C–F must add genuine browser and operational evidence.
 - Genuine integration evidence uses only synthetic borrowers and generated safe documents. Passing source tests alone is not production, privacy, legal, operational, or release acceptance.
 
 ## 2026-07-20 onboarding-completion additions

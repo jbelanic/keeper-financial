@@ -5028,6 +5028,291 @@
           }
         }
       }
+    },
+    "/api/v1/borrower-applications/start": {
+      "post": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Start Application",
+        "operationId": "start_application_api_v1_borrower_applications_start_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerApplicationStartResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Get Application",
+        "operationId": "get_application_api_v1_borrower_applications__application_id__get",
+        "security": [
+          {
+            "__Host-keeper-borrower-draft": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerApplicationSaveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Save Application",
+        "operationId": "save_application_api_v1_borrower_applications__application_id__patch",
+        "security": [
+          {
+            "__Host-keeper-borrower-draft": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BorrowerApplicationSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerApplicationSaveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}/internal": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Get Internal Application",
+        "operationId": "get_internal_application_api_v1_borrower_applications__application_id__internal_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Internal Application Api V1 Borrower Applications  Application Id  Internal Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}/sin/reveal": {
+      "post": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Sin Reveal",
+        "operationId": "sin_reveal_api_v1_borrower_applications__application_id__sin_reveal_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BorrowerSinRevealRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerSinRevealResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6320,6 +6605,137 @@
           "file"
         ],
         "title": "Body_upload_document_api_v1_upload_document_post"
+      },
+      "BorrowerApplicationSaveRequest": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "payload"
+        ],
+        "title": "BorrowerApplicationSaveRequest"
+      },
+      "BorrowerApplicationSaveResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "has_sin": {
+            "type": "boolean",
+            "title": "Has Sin"
+          },
+          "has_co_borrower": {
+            "type": "boolean",
+            "title": "Has Co Borrower"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "title": "Last Activity At"
+          },
+          "draft_expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "revision",
+          "lifecycle_status",
+          "has_sin",
+          "has_co_borrower",
+          "last_activity_at",
+          "draft_expires_at"
+        ],
+        "title": "BorrowerApplicationSaveResponse"
+      },
+      "BorrowerApplicationStartResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "revision",
+          "lifecycle_status"
+        ],
+        "title": "BorrowerApplicationStartResponse"
+      },
+      "BorrowerSinRevealRequest": {
+        "properties": {
+          "reason_category": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Reason Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason_category"
+        ],
+        "title": "BorrowerSinRevealRequest"
+      },
+      "BorrowerSinRevealResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "sin": {
+            "type": "string",
+            "title": "Sin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "sin"
+        ],
+        "title": "BorrowerSinRevealResponse"
       },
       "CandidateApplicationResponse": {
         "properties": {
@@ -9376,6 +9792,11 @@
       "HTTPBearer": {
         "type": "http",
         "scheme": "bearer"
+      },
+      "__Host-keeper-borrower-draft": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-keeper-borrower-draft"
       }
     }
   }

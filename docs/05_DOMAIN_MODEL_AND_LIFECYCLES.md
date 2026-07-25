@@ -267,6 +267,8 @@ This is not a full CRM lifecycle. It exists only to prevent website inquiries fr
 
 ## Borrower application lifecycle
 
+Phase B implements lifecycle metadata, transition validation, and consent/snapshot schema primitives only. No public submit route is mounted. A draft cannot become visible through the internal projection without durable submission evidence, and only the future Phase D submission coordinator may perform the successful `draft → submitted` operation after verifying encrypted immutable snapshot and consent evidence.
+
 ```text
 draft → submitted → under_review → completed
   └──────────────→ withdrawn
