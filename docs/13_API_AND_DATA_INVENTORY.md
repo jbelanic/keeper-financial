@@ -71,15 +71,17 @@
 
 Production disables OpenAPI. Local and controlled non-production expose `/openapi.json` and `/docs`.
 
-### Approved borrower routes — not implemented at Phase A
+### Phase B borrower routes
 
-Exact final route names are generated and reviewed with implementation, but the approved resource surface is bounded to:
+The generated Phase B contract mounts only:
 
-- public start plus capability-authorized draft read/update;
-- capability-authorized document list/upload/delete;
-- capability-authorized review/submit with exact consent version;
-- assigned-agent/AAL2 queue, detail, document download, and explicit SIN reveal;
-- administrator/AAL2 unassigned queue, assignment/reassignment, legal-hold placement/release, lifecycle, and retention operations.
+- `POST /api/v1/borrower-applications/start` — exact-host/origin/CSRF guarded draft start and secure capability cookie;
+- `GET /api/v1/borrower-applications/{application_id}` — exact-draft capability read;
+- `PATCH /api/v1/borrower-applications/{application_id}` — exact-draft capability and optimistic typed encrypted save;
+- `GET /api/v1/borrower-applications/{application_id}/internal` — exact assigned-agent or administrator AAL2 internal projection, gated on durable submission evidence;
+- `POST /api/v1/borrower-applications/{application_id}/sin/reveal` — dedicated administrator/AAL2 reveal with bounded reason and safe audit.
+
+There is no public submit route. Document, queue, reassignment, legal-hold, purge, and final-submission operations remain later-phase work.
 
 No borrower route accepts an arbitrary user/agent ID, public object key, external redirect, marketing consent, typed signature, credit-bureau request, underwriting decision, lender submission, or Filogix operation.
 
@@ -153,9 +155,9 @@ The authoritative live environment is the local Linux Docker Compose stack. Appl
 | `ConsentRecord`                                                                                | Server-versioned service or optional marketing evidence, grant time, optional withdrawal time, and trusted capture source.                                                                                                                             |
 | `AuditEvent`                                                                                   | Append-oriented safe lead creation, marketing grant/withdrawal, lifecycle, publication, and document event metadata.                                                                                                                                   |
 
-Approved future models, not present at Phase A, are `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerDocument`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, and `BorrowerLegalHold`, with existing `AuditEvent` used only for safe high-risk metadata. PostgreSQL stores encrypted payloads and authoritative metadata; private MinIO stores encrypted bytes. The implementing phase must add a forward Alembic migration, model registration, OpenAPI schemas, generated TypeScript contracts, and this inventory in one review.
+Phase B adds `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerDocument`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, `BorrowerLegalHold`, and `BorrowerSinRevealAudit`, with existing `AuditEvent` used only for safe high-risk metadata. PostgreSQL stores encrypted payloads and authoritative metadata. Borrower document and snapshot object-byte persistence to private MinIO remains unimplemented until Phase D.
 
-UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. Borrower intake/document models are approved but not implemented at Phase A; mortgage deal, credit-bureau, automated underwriting, lender submission, deal-compliance, full CRM, commission, and payroll models remain excluded.
+UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. Migration `20260724_0011` creates the Phase B borrower tables and indexes from `20260722_0010`; the chain has one head. Mortgage deal, credit-bureau, automated underwriting, lender submission, deal-compliance, full CRM, commission, and payroll models remain excluded.
 
 Migration `20260715_0003` brings the schema into conformance with `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: posting and immutable source provenance are mandatory, attempt/application lifecycle is distinct, the questionnaire/disclosure are version-controlled, and every new candidate document has explicit application/category linkage. The migration refuses to invent provenance or linkage for incompatible legacy rows.
 

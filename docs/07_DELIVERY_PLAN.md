@@ -139,7 +139,9 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 ### Phase B — Secure borrower foundation
 
-- Borrower models, forward Alembic migration, encryption/key-ID boundary, accountless capability, lifecycle, assignment authorization, AAL2, OpenAPI/contracts, and adversarial tests.
+- **Source implementation completed on `feat/borrower-secure-foundation`; owner acceptance remains separate.**
+- Borrower models, forward migration `20260724_0011`, AES-256-GCM key-ID boundary, keyed accountless capability, typed encrypted drafts, lifecycle and submission-evidence primitives, exact assignment/admin AAL2 authorization, generated OpenAPI/contracts, and adversarial tests.
+- No public submit route is mounted. Final submission, borrower document bytes, the Next.js flow, production consent, deployment, and genuine browser/operational evidence remain pending in Phases C–F.
 
 ### Phase C — Keeper-native form
 

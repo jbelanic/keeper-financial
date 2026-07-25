@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from keeper_api.api.routes import (
     agents,
     auth,
+    borrower_applications,
     candidate_applications,
     candidate_documents,
     candidate_onboarding,
@@ -29,3 +30,4 @@ api_router.include_router(review.router)
 api_router.include_router(onboarding.router)
 api_router.include_router(candidate_onboarding.router)
 api_router.include_router(upload_document.router)
+api_router.include_router(borrower_applications.router)

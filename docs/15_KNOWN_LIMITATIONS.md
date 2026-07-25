@@ -6,16 +6,18 @@ Source supports the bounded configured-template issuance and explicit atomic com
 
 The remaining ceremony is: configure the approved ICA template and signer-recipient IDs; send one synthetic agreement; open the returned signing link; exercise failed/recovery-only safe reissuance; sign the current replacement; refresh provider state to completed; explicitly complete onboarding; verify the user appears in the eligible agent-profile selector. This is not production/pilot approval and does not add webhooks, agreement authoring/storage, automatic profiles/publication, or broad Phase 1F readiness.
 
-The current source baseline for the borrower Phase A documentation decision is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, including merged work through PR #9. Historical checkpoints remain documented in their original reports.
+The Phase B branch remains based on `origin/main` at `1acf8b6f409284b9dd386cfe6403fd7c266a975d`. Historical checkpoints remain documented in their original reports.
 
 The current baseline includes the explicitly owner-accepted 2026-07-19 operator-workflow refinement and later forward migrations through `20260722_0010`. Historical `20260719_0008` migration evidence remains valid for that checkpoint. Completed Git publication does not authorize deployment, shared-database migration, production/pilot operation, credential/external-service changes, legal/privacy/regulatory/claims/accessibility approval, or processing of real candidate or borrower data.
 
-The borrower requirements are approved but not implemented at Phase A. The next gate is Phase B secure foundation, not a claim of deployable borrower intake.
+The Phase B secure borrower foundation is implemented and validated as source on `feat/borrower-secure-foundation`. This is not owner acceptance and is not a deployable borrower intake.
 
-## Borrower application limitations at Phase A
+## Borrower application limitations after Phase B
 
 - Current code still uses the former configuration-only external mortgage-application redirect. It must not be represented as the approved target after the 2026-07-24 decision.
-- No borrower database models/migration, capability session, application-level encryption/key ring, SIN handling, borrower document bucket, submission snapshot, assigned-agent review, legal-hold/purge job, or dedicated TLS ingress exists yet.
+- Phase B provides borrower models/migration, typed encrypted draft revisions, capability authorization, SIN masking/reveal primitives, exact-assignment internal authorization, and consent/snapshot/legal-hold schema primitives. It does not provide the borrower UI, borrower object-byte persistence, final submission coordinator, internal queue/review UI breadth, purge/legal-hold operations, or dedicated TLS ingress.
+- No public submit route exists. Final submission cannot report success or revoke draft access until Phase D durably coordinates the immutable encrypted snapshot and consent evidence.
+- Borrower settings are typed in API source, but `.env.example` and Compose borrower wiring are not yet present; both borrower feature gates remain off.
 - Exact production privacy/credit-use consent wording/version remains unresolved; real-borrower submission must stay disabled.
 - Key custody/recovery owners, legal-hold authority, public DNS/TLS ceremony, Caddy configuration, backup/restore/purge drill, monitoring/incident response, and public abuse capacity remain operational blockers.
 - No legacy MortgageApp data import is approved. The legacy repository remains unarchived until accepted implementation, deployment, and cutover.

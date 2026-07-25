@@ -21,17 +21,25 @@
 
 Production startup validation is intentionally topology-specific: it rejects remote database, identity, object-storage, and web origins rather than silently accepting hosted infrastructure. No real credentials belong in the repository.
 
-## Reserved borrower-application configuration
+## Borrower-application configuration
 
-The following names are approved design inputs but are **not implemented or present in `.env.example` at Phase A**. The implementing phase must add typed validation, tests, `.env.example`, Compose wiring, and this reference together. Key material itself must remain in root-owned secret files, never environment values or Git.
+Phase B implements typed API settings and tests for the secure draft foundation. Key material itself remains in root-owned restricted secret files, never environment values or Git. `.env.example` and Compose wiring for borrower operation are not yet present, so the feature and real-data gates remain off and this source must not be treated as deployable borrower configuration.
+
+| Group | Current names | Required boundary |
+| --- | --- | --- |
+| Feature/release gate | `BORROWER_APPLICATION_ENABLED`, `BORROWER_REAL_DATA_ENABLED` | Default false; real data cannot be enabled without exact consent copy and release evidence. |
+| Origin | `BORROWER_APPLICATION_ORIGIN` | Exact configured origin; no wildcard/reflection. Production ingress trust remains Phase F work. |
+| Capability | `BORROWER_CAPABILITY_HMAC_KEY_FILE` | Root-owned key file; capability inactivity/revocation follows the server-owned draft lifecycle. |
+| Encryption | `BORROWER_ENCRYPTION_ACTIVE_KEY_ID`, `BORROWER_ENCRYPTION_KEYRING_FILE` | Versioned key IDs and a root-owned read-only keyring file; no key bytes in environment. |
+| Draft retention | `BORROWER_DRAFT_INACTIVITY_DAYS` | Fixed at the approved 30 days. Reads, failures, no-op saves, and internal activity do not extend it. |
+| Start abuse guard | `BORROWER_RATE_LIMIT_REQUESTS`, `BORROWER_RATE_LIMIT_WINDOW_SECONDS`, `BORROWER_RATE_LIMIT_TRACKED_CLIENTS` | Bounded process-local control that does not trust forwarding headers. Deployment-level capacity and proxy controls remain pending. |
+
+The following settings remain reserved for later document, retention, and deployment phases and are not Phase B runtime configuration:
 
 | Group | Reserved names | Required boundary |
 | --- | --- | --- |
-| Feature/release gate | `BORROWER_APPLICATION_ENABLED`, `BORROWER_REAL_DATA_ENABLED` | Default false; real data cannot be enabled without exact consent copy and release evidence. |
-| Origin/ingress | `BORROWER_APPLICATION_ORIGIN`, `TRUSTED_PROXY_NETWORKS` | Exact HTTPS origin and explicit ingress trust only; no wildcard/reflection. |
-| Internal MFA | `REQUIRE_AGENT_MFA` | Required true with admin MFA in production. |
-| Capability | `BORROWER_CAPABILITY_HMAC_KEY_FILE` | Root-owned key file; capability inactivity/revocation follows the server-owned draft lifecycle. |
-| Encryption | `BORROWER_ENCRYPTION_ACTIVE_KEY_ID`, `BORROWER_ENCRYPTION_KEYRING_DIR` | Versioned key IDs and root-owned read-only files; no key bytes in environment. |
+| Ingress trust | `TRUSTED_PROXY_NETWORKS` | Explicit approved ingress only. |
+| Internal MFA policy | `REQUIRE_AGENT_MFA` | Internal borrower access remains unconditionally AAL2 in current source; any deployment setting must not weaken that rule. |
 | Object storage | `BORROWER_S3_BUCKET`, `BORROWER_S3_ACCESS_KEY_ID`, `BORROWER_S3_SECRET_ACCESS_KEY` | Dedicated private bucket/least-privilege credentials; secret value remains ignored. |
 | Document limits | `BORROWER_MAX_DOCUMENT_BYTES`, `BORROWER_MAX_DOCUMENT_COUNT`, `BORROWER_MAX_TOTAL_DOCUMENT_BYTES`, `BORROWER_ALLOWED_DOCUMENT_MIME_TYPES` | Owner-approved maxima are 25 MiB, 25 files, 250 MiB, and PDF/DOC/DOCX/JPEG/PNG. Configuration may narrow but must fail closed rather than expand these limits without a later decision; strict structure and ClamAV remain mandatory. |
-| Retention | `BORROWER_DRAFT_INACTIVITY_DAYS`, `BORROWER_BACKUP_RETENTION_DAYS` | Approved values are 30 days and 30 days and must fail closed if changed without a later decision. Submitted retention is the server-enforced seven-year rule, not a deployment-tunable value; legal hold blocks submitted purge only. |
+| Backup retention | `BORROWER_BACKUP_RETENTION_DAYS` | Approved value is 30 days and must fail closed if changed without a later decision. Submitted retention is the server-enforced seven-year rule, not a deployment-tunable value; legal hold blocks submitted purge only. |

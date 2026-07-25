@@ -107,11 +107,13 @@ Required:
 
 ## Keeper-native borrower application
 
-The same repository and release process will serve `https://apply.keeperfinancial.ca`. After implementation and acceptance, the public `/apply` page must enter that exact Keeper-owned origin; no external-provider redirect, Filogix handoff, export, or API integration is required in the MVP. At Phase A this is target architecture only, and current code still contains the legacy external redirect.
+The same repository and release process will serve `https://apply.keeperfinancial.ca`. After implementation and acceptance, the public `/apply` page must enter that exact Keeper-owned origin; no external-provider redirect, Filogix handoff, export, or API integration is required in the MVP. Phase B implements the API-side secure draft foundation and generated contracts, while the public Next.js form and removal of the legacy external redirect remain Phase C work.
 
 Borrowers use a high-entropy capability stored only in a secure host-only cookie, while PostgreSQL stores a keyed digest bound to one draft. The capability is not identity verification and grants no internal access. Exact host/origin, CSRF, rate-limit, expiry, revision, and lifecycle checks remain mandatory.
 
 PostgreSQL holds encrypted mutable drafts and authoritative metadata. Private MinIO holds encrypted documents and immutable encrypted submission snapshots. Because borrower objects contain application-layer ciphertext, authorized downloads are API-proxied decryptions rather than direct presigned MinIO URLs. Agent attribution is resolved from an eligible public slug on the server; internal reads require exact assignment or administrator authority and AAL2.
+
+Phase B does not write borrower document or snapshot bytes, expose a public submit operation, deploy the borrower origin, or provide browser/operational evidence. Final submission remains fail-closed until the Phase D coordinator can verify durable encrypted snapshot and consent evidence.
 
 ## E-signature
 
