@@ -694,7 +694,9 @@ def list_admin_review_queue(db: Session) -> list[dict[str, Any]]:
     for application in applications:
         if not has_submission_evidence(db, application.id):
             continue
-        agent = db.get(User, application.assigned_agent_id) if application.assigned_agent_id else None
+        agent = (
+            db.get(User, application.assigned_agent_id) if application.assigned_agent_id else None
+        )
         rows.append(
             {
                 "application_id": str(application.id),

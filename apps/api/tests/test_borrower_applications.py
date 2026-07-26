@@ -1362,9 +1362,7 @@ class TestBorrowerPhaseDRouteIntegration:
             assert audit.safe_metadata["assigned_agent_id"] == str(agent_id)
             assert "Synthetic bounded assignment reason" not in str(audit.safe_metadata)
 
-    def test_internal_projection_admin_and_exact_agent_only(
-        self, route_client: TestClient
-    ) -> None:
+    def test_internal_projection_admin_and_exact_agent_only(self, route_client: TestClient) -> None:
         application_id = self._submit_full_application(route_client)
         session_factory = route_client._keeper_session_factory
         with session_factory() as session:

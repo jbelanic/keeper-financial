@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 
 const queue = {
   total: 1,
@@ -94,7 +100,10 @@ describe("admin borrower review console", () => {
       if (path.endsWith("/sin/reveal")) {
         return {
           ok: true,
-          json: async () => ({ application_id: queue.items[0].application_id, sin: "046454286" }),
+          json: async () => ({
+            application_id: queue.items[0].application_id,
+            sin: "046454286",
+          }),
         } as Response;
       }
       if (path.endsWith("/download")) {
@@ -127,15 +136,22 @@ describe("admin borrower review console", () => {
 
     const assignForm = screen.getByRole("heading", { name: /assign agent/i })
       .parentElement as HTMLElement;
-    fireEvent.change(within(assignForm).getByLabelText(/active mortgage agent/i), {
-      target: { value: eligibleAgents[0].user_id },
-    });
+    fireEvent.change(
+      within(assignForm).getByLabelText(/active mortgage agent/i),
+      {
+        target: { value: eligibleAgents[0].user_id },
+      },
+    );
     fireEvent.change(within(assignForm).getByLabelText(/^reason$/i), {
       target: { value: "initial_assignment" },
     });
-    fireEvent.click(within(assignForm).getByRole("button", { name: /save assignment/i }));
+    fireEvent.click(
+      within(assignForm).getByRole("button", { name: /save assignment/i }),
+    );
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(/assignment recorded/i),
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /assignment recorded/i,
+      ),
     );
 
     const revealForm = screen.getByRole("heading", { name: /reveal sin/i })
@@ -143,7 +159,9 @@ describe("admin borrower review console", () => {
     fireEvent.change(within(revealForm).getByLabelText(/reason/i), {
       target: { value: "credit_review" },
     });
-    fireEvent.click(within(revealForm).getByRole("button", { name: /reveal sin/i }));
+    fireEvent.click(
+      within(revealForm).getByRole("button", { name: /reveal sin/i }),
+    );
     await screen.findByText(/046454286/);
 
     vi.spyOn(document, "createElement").mockReturnValue({
@@ -155,7 +173,9 @@ describe("admin borrower review console", () => {
     } as unknown as HTMLAnchorElement);
     fireEvent.click(screen.getByRole("button", { name: /download/i }));
     await waitFor(() => expect(click).toHaveBeenCalledOnce());
-    expect(requester.mock.calls.some(([path]) => String(path).endsWith("/download"))).toBe(true);
+    expect(
+      requester.mock.calls.some(([path]) => String(path).endsWith("/download")),
+    ).toBe(true);
 
     URL.createObjectURL = originalCreateObjectURL;
     URL.revokeObjectURL = originalRevokeObjectURL;

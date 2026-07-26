@@ -55,8 +55,12 @@ export function BorrowerReviewConsole({
     setRevealedSin("");
     try {
       const [detailResponse, documentResponse] = await Promise.all([
-        requester(`/api/v1/borrower-applications/${item.application_id}/internal`),
-        requester(`/api/v1/borrower-applications/${item.application_id}/documents`),
+        requester(
+          `/api/v1/borrower-applications/${item.application_id}/internal`,
+        ),
+        requester(
+          `/api/v1/borrower-applications/${item.application_id}/documents`,
+        ),
       ]);
       if (!detailResponse.ok || !documentResponse.ok) {
         throw new Error("review detail unavailable");
@@ -64,7 +68,8 @@ export function BorrowerReviewConsole({
       setSelected({
         queueItem: item,
         detail: (await detailResponse.json()) as BorrowerInternalProjection,
-        documents: (await documentResponse.json()) as BorrowerDocumentListResponse,
+        documents:
+          (await documentResponse.json()) as BorrowerDocumentListResponse,
       });
       setNotice("Borrower application loaded.");
     } catch {
@@ -157,7 +162,9 @@ export function BorrowerReviewConsole({
   async function revealSin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected || busy) return;
-    const reason = String(new FormData(event.currentTarget).get("reason") ?? "");
+    const reason = String(
+      new FormData(event.currentTarget).get("reason") ?? "",
+    );
     setBusy(true);
     setErrors([]);
     setNotice("Revealing SIN for this session...");
@@ -223,13 +230,23 @@ export function BorrowerReviewConsole({
       <ErrorSummary errors={errors} />
 
       <section aria-labelledby="borrower-queue-heading">
-        <h2 id="borrower-queue-heading">Submitted applications ({queue.total})</h2>
+        <h2 id="borrower-queue-heading">
+          Submitted applications ({queue.total})
+        </h2>
         {queue.items.length === 0 ? (
-          <p>No submitted borrower applications are currently awaiting review.</p>
+          <p>
+            No submitted borrower applications are currently awaiting review.
+          </p>
         ) : (
           <DataTable
             caption="Submitted borrower applications"
-            headers={["Application", "Status", "Assigned agent", "Submitted", "Action"]}
+            headers={[
+              "Application",
+              "Status",
+              "Assigned agent",
+              "Submitted",
+              "Action",
+            ]}
             rows={queue.items.map((item) => [
               <code key="id">{item.application_id}</code>,
               <StatusBadge key="status" tone="warning">
@@ -244,7 +261,9 @@ export function BorrowerReviewConsole({
                   </>
                 ) : null}
               </span>,
-              item.submitted_at ? new Date(item.submitted_at).toLocaleString() : "Pending",
+              item.submitted_at
+                ? new Date(item.submitted_at).toLocaleString()
+                : "Pending",
               <Button
                 key="action"
                 type="button"
@@ -263,7 +282,9 @@ export function BorrowerReviewConsole({
           <h2 id="borrower-detail-heading">Application detail</h2>
           <p>
             Status:{" "}
-            <StatusBadge>{selected.detail.lifecycle_status.replace(/_/g, " ")}</StatusBadge>
+            <StatusBadge>
+              {selected.detail.lifecycle_status.replace(/_/g, " ")}
+            </StatusBadge>
           </p>
 
           <form onSubmit={assign} aria-busy={busy}>
@@ -292,7 +313,11 @@ export function BorrowerReviewConsole({
               <option value="correction">Correction</option>
             </select>
             <label htmlFor="assignment-detail">Reason detail</label>
-            <textarea id="assignment-detail" name="reason_detail" maxLength={512} />
+            <textarea
+              id="assignment-detail"
+              name="reason_detail"
+              maxLength={512}
+            />
             <div className="button-row">
               <Button type="submit" disabled={busy}>
                 Save assignment
@@ -314,7 +339,9 @@ export function BorrowerReviewConsole({
                 <dt>Phone</dt>
                 <dd>{selected.detail.primary_borrower.phone}</dd>
                 <dt>SIN</dt>
-                <dd>{selected.detail.primary_borrower.sin?.display ?? "Masked"}</dd>
+                <dd>
+                  {selected.detail.primary_borrower.sin?.display ?? "Masked"}
+                </dd>
               </dl>
             ) : (
               <p>No primary borrower projection is available.</p>

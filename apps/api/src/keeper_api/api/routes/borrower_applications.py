@@ -591,8 +591,7 @@ def list_borrower_documents_for_review(
 
 def _content_disposition(filename: str) -> str:
     safe_ascii = "".join(
-        char if char.isascii() and char not in {'"', "\\", "\r", "\n"} else "_"
-        for char in filename
+        char if char.isascii() and char not in {'"', "\\", "\r", "\n"} else "_" for char in filename
     ).strip()
     if not safe_ascii:
         safe_ascii = "borrower-document"
