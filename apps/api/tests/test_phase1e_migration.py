@@ -48,7 +48,7 @@ def test_phase1e_migration_alters_foundational_agent_profiles_without_destroying
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260726_0012"]
+    assert script.get_heads() == ["20260726_0013"]
 
     migration = _migration_module()
     assert migration.revision == "20260717_0005"  # type: ignore[attr-defined]

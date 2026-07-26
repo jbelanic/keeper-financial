@@ -55,6 +55,7 @@ app.add_middleware(
         "X-Dev-Auth-AAL",
         "X-Dev-Auth-Email",
         "X-Dev-Auth-Verified",
+        "X-Keeper-Borrower-CSRF",
     ],
 )
 
@@ -98,8 +99,10 @@ async def request_context(
         response.headers["Cache-Control"] = "no-store"
     if request.url.path == "/api/v1/upload-document":
         response.headers["Cache-Control"] = "no-store"
-    elif request.url.path.startswith("/api/v1/candidate/") or request.url.path.endswith(
-        "/applications/start"
+    elif (
+        request.url.path.startswith("/api/v1/borrower-applications/")
+        or request.url.path.startswith("/api/v1/candidate/")
+        or request.url.path.endswith("/applications/start")
     ):
         response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Request-ID"] = request_id

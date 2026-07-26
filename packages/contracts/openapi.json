@@ -5029,6 +5029,70 @@
         }
       }
     },
+    "/api/v1/borrower-applications/review-queue": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Review Queue",
+        "operationId": "review_queue_api_v1_borrower_applications_review_queue_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerReviewQueueResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/borrower-applications/start": {
       "post": {
         "tags": [
@@ -5154,6 +5218,278 @@
         }
       }
     },
+    "/api/v1/borrower-applications/{application_id}/documents": {
+      "post": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Upload Borrower Document",
+        "operationId": "upload_borrower_document_api_v1_borrower_applications__application_id__documents_post",
+        "security": [
+          {
+            "__Host-keeper-borrower-draft": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_borrower_document_api_v1_borrower_applications__application_id__documents_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerDocumentUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "List Borrower Documents For Review",
+        "operationId": "list_borrower_documents_for_review_api_v1_borrower_applications__application_id__documents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerDocumentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}/submit": {
+      "post": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Submit Application",
+        "operationId": "submit_application_api_v1_borrower_applications__application_id__submit_post",
+        "security": [
+          {
+            "__Host-keeper-borrower-draft": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BorrowerApplicationSubmitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerApplicationSubmitResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}/assignment": {
+      "post": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Assign Application For Review",
+        "operationId": "assign_application_for_review_api_v1_borrower_applications__application_id__assignment_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BorrowerAssignmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerAssignmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/borrower-applications/{application_id}/internal": {
       "get": {
         "tags": [
@@ -5210,10 +5546,90 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Get Internal Application Api V1 Borrower Applications  Application Id  Internal Get"
+                  "$ref": "#/components/schemas/BorrowerInternalProjection"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}/documents/{document_id}/download": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Download Borrower Document For Review",
+        "operationId": "download_borrower_document_for_review_api_v1_borrower_applications__application_id__documents__document_id__download_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -6573,6 +6989,20 @@
         ],
         "title": "ApplicationListResponse"
       },
+      "Body_upload_borrower_document_api_v1_borrower_applications__application_id__documents_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_borrower_document_api_v1_borrower_applications__application_id__documents_post"
+      },
       "Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post": {
         "properties": {
           "category": {
@@ -6702,12 +7132,422 @@
         ],
         "title": "BorrowerApplicationStartResponse"
       },
-      "BorrowerSinRevealRequest": {
+      "BorrowerApplicationSubmitRequest": {
         "properties": {
+          "consent_version": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Consent Version"
+          },
+          "consent_wording_digest": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 64,
+            "title": "Consent Wording Digest"
+          },
+          "borrower_coverage": {
+            "type": "string",
+            "pattern": "^(primary|co_borrower|both)$",
+            "title": "Borrower Coverage"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "consent_version",
+          "consent_wording_digest",
+          "borrower_coverage",
+          "expected_revision"
+        ],
+        "title": "BorrowerApplicationSubmitRequest"
+      },
+      "BorrowerApplicationSubmitResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "submitted_at": {
+            "type": "string",
+            "title": "Submitted At"
+          },
+          "retention_due_at": {
+            "type": "string",
+            "title": "Retention Due At"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "consent_record_id": {
+            "type": "string",
+            "title": "Consent Record Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "lifecycle_status",
+          "submitted_at",
+          "retention_due_at",
+          "snapshot_id",
+          "consent_record_id"
+        ],
+        "title": "BorrowerApplicationSubmitResponse"
+      },
+      "BorrowerAssignmentRequest": {
+        "properties": {
+          "agent_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Agent User Id"
+          },
           "reason_category": {
             "type": "string",
             "maxLength": 64,
             "minLength": 1,
+            "title": "Reason Category"
+          },
+          "reason_detail": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "agent_user_id",
+          "reason_category"
+        ],
+        "title": "BorrowerAssignmentRequest"
+      },
+      "BorrowerAssignmentResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "assigned_agent_id": {
+            "type": "string",
+            "title": "Assigned Agent Id"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "lifecycle_status",
+          "assigned_agent_id",
+          "assigned_at"
+        ],
+        "title": "BorrowerAssignmentResponse"
+      },
+      "BorrowerDocumentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BorrowerDocumentMetadata"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "BorrowerDocumentListResponse"
+      },
+      "BorrowerDocumentMetadata": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "scan_status": {
+            "type": "string",
+            "title": "Scan Status"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "title": "Uploaded At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "mime_type",
+          "size_bytes",
+          "scan_status",
+          "uploaded_at"
+        ],
+        "title": "BorrowerDocumentMetadata"
+      },
+      "BorrowerDocumentUploadResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "scan_status": {
+            "type": "string",
+            "title": "Scan Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "size_bytes",
+          "scan_status"
+        ],
+        "title": "BorrowerDocumentUploadResponse"
+      },
+      "BorrowerInternalProjection": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "has_sin": {
+            "type": "boolean",
+            "title": "Has Sin"
+          },
+          "has_co_borrower": {
+            "type": "boolean",
+            "title": "Has Co Borrower"
+          },
+          "primary_borrower": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MaskedBorrowerInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "co_borrower": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MaskedBorrowerInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mortgage_request": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mortgage Request"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "title": "Last Activity At"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "lifecycle_status",
+          "revision",
+          "has_sin",
+          "has_co_borrower",
+          "primary_borrower",
+          "last_activity_at"
+        ],
+        "title": "BorrowerInternalProjection"
+      },
+      "BorrowerReviewQueueItem": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "assigned_agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent Id"
+          },
+          "assigned_agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent Name"
+          },
+          "assigned_agent_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "lifecycle_status",
+          "submitted_at",
+          "assigned_agent_id",
+          "assigned_agent_name",
+          "assigned_agent_email"
+        ],
+        "title": "BorrowerReviewQueueItem"
+      },
+      "BorrowerReviewQueueResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BorrowerReviewQueueItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "BorrowerReviewQueueResponse"
+      },
+      "BorrowerSinRevealRequest": {
+        "properties": {
+          "reason_category": {
+            "type": "string",
+            "enum": [
+              "credit_review",
+              "borrower_identity_review",
+              "document_reconciliation",
+              "supervisory_review"
+            ],
             "title": "Reason Category"
           }
         },
@@ -8821,6 +9661,97 @@
           "evidence_reference"
         ],
         "title": "ManualGateEvidenceCreate"
+      },
+      "MaskedBorrowerInfo": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth"
+          },
+          "sin": {
+            "$ref": "#/components/schemas/MaskedSIN"
+          },
+          "marital_status": {
+            "type": "string",
+            "title": "Marital Status"
+          },
+          "number_of_dependants": {
+            "type": "integer",
+            "title": "Number Of Dependants"
+          },
+          "current_address": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Current Address"
+          },
+          "employment": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Employment"
+          },
+          "has_sin": {
+            "type": "boolean",
+            "title": "Has Sin",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "email",
+          "phone",
+          "date_of_birth",
+          "sin",
+          "marital_status",
+          "number_of_dependants",
+          "current_address",
+          "employment"
+        ],
+        "title": "MaskedBorrowerInfo"
+      },
+      "MaskedSIN": {
+        "properties": {
+          "last_three": {
+            "type": "string",
+            "maxLength": 3,
+            "minLength": 3,
+            "pattern": "^\\d{3}$",
+            "title": "Last Three"
+          },
+          "display": {
+            "type": "string",
+            "pattern": "^\\*\\*\\* \\*\\*\\* \\d{3}$",
+            "title": "Display"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "last_three",
+          "display"
+        ],
+        "title": "MaskedSIN"
       },
       "OnboardingAssignmentResponse": {
         "properties": {

@@ -122,6 +122,11 @@ def require_internal_agent_access(
     if application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value:
         raise HTTPException(status_code=404, detail="application not found")
 
+    from keeper_api.services.borrower_applications import has_submission_evidence
+
+    if not has_submission_evidence(db, application_id):
+        raise HTTPException(status_code=404, detail="application not found")
+
     if "agent" not in principal.roles:
         raise HTTPException(status_code=403, detail="agent access is required")
 
@@ -165,6 +170,11 @@ def require_admin_borrower_access(
     if application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value:
         raise HTTPException(status_code=404, detail="application not found")
 
+    from keeper_api.services.borrower_applications import has_submission_evidence
+
+    if not has_submission_evidence(db, application_id):
+        raise HTTPException(status_code=404, detail="application not found")
+
     return principal
 
 
@@ -190,7 +200,29 @@ def require_admin_aal2_borrower_access(
     if application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value:
         raise HTTPException(status_code=404, detail="application not found")
 
+    from keeper_api.services.borrower_applications import has_submission_evidence
+
+    if not has_submission_evidence(db, application_id):
+        raise HTTPException(status_code=404, detail="application not found")
+
     return principal
+
+
+def authorize_internal_borrower_reviewer(
+    principal: Principal,
+    application_id: uuid.UUID,
+    db: Session,
+    settings: Settings,
+) -> tuple[Principal, str]:
+    if "brokerage_admin" in principal.roles:
+        return (
+            require_admin_aal2_borrower_access(principal, application_id, db, settings),
+            "brokerage_admin",
+        )
+    return (
+        require_internal_agent_access(principal, application_id, db, settings),
+        "agent",
+    )
 
 
 def resolve_agent_from_slug(

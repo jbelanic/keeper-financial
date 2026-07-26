@@ -83,7 +83,16 @@ The generated borrower contract mounts:
 - `GET /api/v1/borrower-applications/{application_id}/internal` — exact assigned-agent or administrator AAL2 internal projection, gated on durable submission evidence;
 - `POST /api/v1/borrower-applications/{application_id}/sin/reveal` — dedicated administrator/AAL2 reveal with bounded reason and safe audit.
 
-Queue, reassignment, legal-hold, purge, borrower document download, and internal review UI operations remain later-phase work.
+Phase E adds the bounded internal review surface:
+
+- `GET /api/v1/borrower-applications/review-queue` — brokerage administrator/AAL2 queue for submitted or under-review applications with durable submission evidence; drafts and terminal records are omitted.
+- `POST /api/v1/borrower-applications/{application_id}/assignment` — brokerage administrator/AAL2 assignment or reassignment to a server-validated active agent relationship, with bounded reason and safe assignment/audit evidence. Submitted applications enter `under_review` on assignment.
+- `GET /api/v1/borrower-applications/{application_id}/internal` — assigned active exact agent/AAL2 or brokerage administrator/AAL2 masked internal projection; durable submission evidence is required.
+- `GET /api/v1/borrower-applications/{application_id}/documents` — assigned active exact agent/AAL2 or brokerage administrator/AAL2 borrower document metadata list without object keys.
+- `GET /api/v1/borrower-applications/{application_id}/documents/{document_id}/download` — assigned active exact agent/AAL2 or brokerage administrator/AAL2 API-proxied decrypting document download with private/no-store/nosniff and safe content disposition; no direct, public, or presigned MinIO URL is returned.
+- `POST /api/v1/borrower-applications/{application_id}/sin/reveal` — assigned active exact agent/AAL2 or brokerage administrator/AAL2 explicit SIN reveal with bounded reason category and safe reveal audit.
+
+Legal-hold, purge, retention operations, dedicated ingress, browser evidence, and operational readiness remain later-phase work.
 
 No borrower route accepts an arbitrary user/agent ID, public object key, external redirect, marketing consent, typed signature, credit-bureau request, underwriting decision, lender submission, or Filogix operation.
 
@@ -165,7 +174,7 @@ The authoritative live environment is the local Linux Docker Compose stack. Appl
 | `ConsentRecord`                                                                                | Server-versioned service or optional marketing evidence, grant time, optional withdrawal time, and trusted capture source.                                                                                                                             |
 | `AuditEvent`                                                                                   | Append-oriented safe lead creation, marketing grant/withdrawal, lifecycle, publication, and document event metadata.                                                                                                                                   |
 
-Phase B adds `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, `BorrowerLegalHold`, and `BorrowerSinRevealAudit`, with existing `AuditEvent` used only for safe high-risk metadata. Phase D.1 adds `BorrowerDocument` and `BorrowerConsentCatalog`, and extends submitted snapshots with payload revision, schema version, ciphertext, and exact consent-record binding. PostgreSQL stores encrypted payloads and authoritative metadata; private object storage holds encrypted borrower document bytes and submitted snapshot bytes.
+Phase B adds `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, `BorrowerLegalHold`, and `BorrowerSinRevealAudit`, with existing `AuditEvent` used only for safe high-risk metadata. Phase D.1 adds `BorrowerDocument` and `BorrowerConsentCatalog`, and extends submitted snapshots with payload revision, schema version, ciphertext, and exact consent-record binding. Phase E adds forward migration `20260726_0013`, which records the borrower-document encryption payload revision needed to decrypt document ciphertext with the same purpose/application/revision AAD used at upload time. PostgreSQL stores encrypted payloads and authoritative metadata; private object storage holds encrypted borrower document bytes and submitted snapshot bytes.
 
 UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. Migration `20260724_0011` creates the Phase B borrower tables and indexes from `20260722_0010`; migration `20260726_0012` adds borrower documents, the consent catalog, and D.1 snapshot-binding columns. The chain has one head. Mortgage deal, credit-bureau, automated underwriting, lender submission, deal-compliance, full CRM, commission, and payroll models remain excluded.
 

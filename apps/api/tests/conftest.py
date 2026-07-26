@@ -5,6 +5,7 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 
 import pytest
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -54,6 +55,14 @@ def client(db: Session, settings: Settings) -> Generator[TestClient, None, None]
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_settings] = lambda: settings
+    if app.openapi_url is None:
+        app.openapi_url = "/openapi.json"
+        if not any(getattr(route, "path", None) == "/openapi.json" for route in app.routes):
+            app.add_route(
+                "/openapi.json",
+                lambda _request: JSONResponse(app.openapi()),
+                include_in_schema=False,
+            )
     previous_guard = app.state.lead_submission_guard
     app.state.lead_submission_guard = LeadSubmissionGuard(
         request_limit=settings.lead_rate_limit_requests,

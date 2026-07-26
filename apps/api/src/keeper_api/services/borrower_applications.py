@@ -21,6 +21,8 @@ from keeper_api.models.borrower import (
     BorrowerConsentCatalog,
     BorrowerConsentRecord,
 )
+from keeper_api.models.domain import User
+from keeper_api.services.audit import AuditService
 from keeper_api.services.borrower_crypto import (
     BorrowerCryptoState,
     BorrowerDecryptionError,
@@ -648,6 +650,8 @@ def has_submission_evidence(db: Session, application_id: uuid.UUID) -> bool:
         BorrowerApplicationLifecycleStatus.SUBMITTED.value,
         BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
         BorrowerApplicationLifecycleStatus.COMPLETED.value,
+        BorrowerApplicationLifecycleStatus.WITHDRAWN.value,
+        BorrowerApplicationLifecycleStatus.EXPIRED.value,
     ):
         return False
 
@@ -674,6 +678,156 @@ def has_submission_evidence(db: Session, application_id: uuid.UUID) -> bool:
         )
     )
     return consent is not None
+
+
+def list_admin_review_queue(db: Session) -> list[dict[str, Any]]:
+    statuses = (
+        BorrowerApplicationLifecycleStatus.SUBMITTED.value,
+        BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
+    )
+    applications = db.scalars(
+        select(BorrowerApplication)
+        .where(BorrowerApplication.lifecycle_status.in_(statuses))
+        .order_by(BorrowerApplication.submitted_at.asc(), BorrowerApplication.id.asc())
+    ).all()
+    rows: list[dict[str, Any]] = []
+    for application in applications:
+        if not has_submission_evidence(db, application.id):
+            continue
+        agent = db.get(User, application.assigned_agent_id) if application.assigned_agent_id else None
+        rows.append(
+            {
+                "application_id": str(application.id),
+                "lifecycle_status": application.lifecycle_status,
+                "submitted_at": application.submitted_at.isoformat()
+                if application.submitted_at
+                else None,
+                "assigned_agent_id": str(application.assigned_agent_id)
+                if application.assigned_agent_id
+                else None,
+                "assigned_agent_name": agent.display_name if agent else None,
+                "assigned_agent_email": agent.email if agent else None,
+            }
+        )
+    return rows
+
+
+def assign_submitted_application(
+    db: Session,
+    application_id: uuid.UUID,
+    agent_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    reason_category: str,
+    reason_detail: str | None = None,
+    request_id: str | None = None,
+) -> BorrowerApplication:
+    from keeper_api.services.borrower_authorization import validate_assignment_target
+
+    allowed_reasons = {
+        "initial_assignment",
+        "reassignment",
+        "workload",
+        "coverage",
+        "conflict",
+        "correction",
+    }
+    if reason_category not in allowed_reasons:
+        raise ValueError("invalid assignment reason")
+
+    validate_assignment_target(db, agent_user_id)
+
+    application = db.scalar(
+        select(BorrowerApplication)
+        .where(BorrowerApplication.id == application_id)
+        .with_for_update()
+    )
+    if application is None:
+        raise ValueError("application not found")
+
+    if application.lifecycle_status not in (
+        BorrowerApplicationLifecycleStatus.SUBMITTED.value,
+        BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
+    ):
+        raise ValueError("application is not assignable")
+
+    if not has_submission_evidence(db, application_id):
+        raise ValueError("application not found")
+
+    if application.assigned_agent_id == agent_user_id:
+        if application.lifecycle_status == BorrowerApplicationLifecycleStatus.SUBMITTED.value:
+            application.lifecycle_status = BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value
+            db.add(
+                BorrowerApplicationStatusHistory(
+                    application_id=application_id,
+                    from_status=BorrowerApplicationLifecycleStatus.SUBMITTED.value,
+                    to_status=BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
+                    actor_user_id=actor_user_id,
+                    actor_source="administrator",
+                    reason_category="assignment_review_start",
+                    reason_detail=None,
+                    revision=application.revision,
+                    capability_session_id=None,
+                )
+            )
+            AuditService(db).record(
+                "borrower_application_assignment_idempotent_review_start",
+                "borrower_application",
+                application_id,
+                actor_user_id=actor_user_id,
+                request_id=request_id,
+                safe_metadata={"result": "under_review"},
+            )
+            db.commit()
+        return application
+
+    now = datetime.now(UTC)
+    previous_agent_id = application.assigned_agent_id
+    from_status = application.lifecycle_status
+    application.assigned_agent_id = agent_user_id
+    application.assigned_at = now
+    if application.lifecycle_status == BorrowerApplicationLifecycleStatus.SUBMITTED.value:
+        application.lifecycle_status = BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value
+        db.add(
+            BorrowerApplicationStatusHistory(
+                application_id=application_id,
+                from_status=from_status,
+                to_status=BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
+                actor_user_id=actor_user_id,
+                actor_source="administrator",
+                reason_category="assignment_review_start",
+                reason_detail=None,
+                revision=application.revision,
+                capability_session_id=None,
+            )
+        )
+
+    db.add(
+        BorrowerAssignmentHistory(
+            application_id=application_id,
+            agent_user_id=agent_user_id,
+            actor_user_id=actor_user_id,
+            actor_source="administrator",
+            reason_category=reason_category,
+            reason_detail=reason_detail,
+            assigned_at=now,
+        )
+    )
+    AuditService(db).record(
+        "borrower_application_assigned",
+        "borrower_application",
+        application_id,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+        safe_metadata={
+            "reason_category": reason_category,
+            "previous_agent_id": str(previous_agent_id) if previous_agent_id else None,
+            "assigned_agent_id": str(agent_user_id),
+            "result": "success",
+        },
+    )
+    db.commit()
+    db.refresh(application)
+    return application
 
 
 def get_internal_projection(
@@ -769,6 +923,15 @@ def reveal_sin(
     actor_role: str,
     assurance_level: str,
 ) -> str:
+    allowed_reasons = {
+        "credit_review",
+        "borrower_identity_review",
+        "document_reconciliation",
+        "supervisory_review",
+    }
+    if reason_category not in allowed_reasons:
+        raise ValueError("invalid reveal reason")
+
     if crypto_state is None:
         raise ValueError("borrower cryptography is unavailable")
 

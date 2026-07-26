@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import Any, Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.security import APIKeyCookie
@@ -12,21 +13,25 @@ from sqlalchemy.orm import Session
 from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
 from keeper_api.models.borrower import BorrowerApplication
+from keeper_api.schemas.borrower_internal import BorrowerInternalProjection
+from keeper_api.services.audit import AuditService
 from keeper_api.services.auth import Principal, get_current_principal
 from keeper_api.services.borrower_applications import (
     BorrowerSubmissionError,
+    assign_submitted_application,
     get_application_summary,
     get_internal_projection,
+    list_admin_review_queue,
     reveal_sin,
     save_draft_payload,
     start_borrower_application,
     submit_borrower_application,
 )
 from keeper_api.services.borrower_authorization import (
+    authorize_internal_borrower_reviewer,
     extract_capability_from_cookie,
     require_admin_aal2_borrower_access,
     require_borrower_feature_enabled,
-    require_internal_agent_access,
     validate_borrower_origin,
     verify_borrower_capability,
 )
@@ -38,6 +43,8 @@ from keeper_api.services.borrower_crypto import (
 from keeper_api.services.borrower_documents import (
     BorrowerDocumentRejected,
     BorrowerDocumentStorageError,
+    download_document,
+    list_document_metadata,
     upload_document,
 )
 
@@ -49,6 +56,12 @@ _BORROWER_CAPABILITY_COOKIE = APIKeyCookie(
     scheme_name=_BORROWER_COOKIE_NAME,
     auto_error=False,
 )
+_SIN_REVEAL_REASONS = {
+    "credit_review",
+    "borrower_identity_review",
+    "document_reconciliation",
+    "supervisory_review",
+}
 
 
 router = APIRouter(prefix="/borrower-applications", tags=["borrower-applications"])
@@ -111,7 +124,12 @@ class BorrowerApplicationSaveResponse(BaseModel):
 class BorrowerSinRevealRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    reason_category: str = Field(..., min_length=1, max_length=64)
+    reason_category: Literal[
+        "credit_review",
+        "borrower_identity_review",
+        "document_reconciliation",
+        "supervisory_review",
+    ]
 
 
 class BorrowerSinRevealResponse(BaseModel):
@@ -148,6 +166,80 @@ class BorrowerApplicationSubmitResponse(BaseModel):
     retention_due_at: str
     snapshot_id: str
     consent_record_id: str
+
+
+class BorrowerReviewQueueItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    application_id: str
+    lifecycle_status: str
+    submitted_at: str | None
+    assigned_agent_id: str | None
+    assigned_agent_name: str | None
+    assigned_agent_email: str | None
+
+
+class BorrowerReviewQueueResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[BorrowerReviewQueueItem]
+    total: int
+
+
+class BorrowerAssignmentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    agent_user_id: uuid.UUID
+    reason_category: str = Field(..., min_length=1, max_length=64)
+    reason_detail: str | None = Field(default=None, max_length=512)
+
+
+class BorrowerAssignmentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    application_id: str
+    lifecycle_status: str
+    assigned_agent_id: str
+    assigned_at: str | None
+
+
+class BorrowerDocumentMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str
+    filename: str
+    mime_type: str
+    size_bytes: int
+    scan_status: str
+    uploaded_at: str
+
+
+class BorrowerDocumentListResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[BorrowerDocumentMetadata]
+    total: int
+
+
+@router.get(
+    "/review-queue",
+    response_model=BorrowerReviewQueueResponse,
+)
+def review_queue(
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> BorrowerReviewQueueResponse:
+    require_borrower_feature_enabled(settings)
+    if not principal.is_active or principal.verified_at is None:
+        raise HTTPException(status_code=403, detail="active verified access is required")
+    if "brokerage_admin" not in principal.roles:
+        raise HTTPException(status_code=403, detail="brokerage administrator access is required")
+    if principal.aal != "aal2":
+        raise HTTPException(status_code=403, detail="administrator MFA is required")
+
+    items = [BorrowerReviewQueueItem(**row) for row in list_admin_review_queue(db)]
+    return BorrowerReviewQueueResponse(items=items, total=len(items))
 
 
 @router.post(
@@ -400,8 +492,48 @@ def submit_application(
     )
 
 
+@router.post(
+    "/{application_id}/assignment",
+    response_model=BorrowerAssignmentResponse,
+)
+def assign_application_for_review(
+    application_id: uuid.UUID,
+    body: BorrowerAssignmentRequest,
+    request: Request,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> BorrowerAssignmentResponse:
+    require_borrower_feature_enabled(settings)
+    require_admin_aal2_borrower_access(principal, application_id, db, settings)
+
+    try:
+        application = assign_submitted_application(
+            db=db,
+            application_id=application_id,
+            agent_user_id=body.agent_user_id,
+            actor_user_id=principal.user_id,
+            reason_category=body.reason_category,
+            reason_detail=body.reason_detail,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        if detail == "application not found":
+            raise HTTPException(status_code=404, detail="application not found") from exc
+        raise HTTPException(status_code=422, detail="invalid assignment request") from exc
+
+    return BorrowerAssignmentResponse(
+        application_id=str(application.id),
+        lifecycle_status=application.lifecycle_status,
+        assigned_agent_id=str(application.assigned_agent_id),
+        assigned_at=application.assigned_at.isoformat() if application.assigned_at else None,
+    )
+
+
 @router.get(
     "/{application_id}/internal",
+    response_model=BorrowerInternalProjection,
 )
 def get_internal_application(
     application_id: uuid.UUID,
@@ -411,12 +543,110 @@ def get_internal_application(
     settings: Settings = Depends(get_settings),
 ) -> dict[str, Any]:
     require_borrower_feature_enabled(settings)
-    require_internal_agent_access(principal, application_id, db, settings)
+    _, reviewer_role = authorize_internal_borrower_reviewer(principal, application_id, db, settings)
 
     crypto_state = _get_crypto_state(request)
 
-    result = get_internal_projection(db, crypto_state, application_id)
+    try:
+        result = get_internal_projection(db, crypto_state, application_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="application not found") from exc
+    AuditService(db).record(
+        "borrower_application_viewed",
+        "borrower_application",
+        application_id,
+        actor_user_id=principal.user_id,
+        request_id=getattr(request.state, "request_id", None),
+        safe_metadata={"reviewer_role": reviewer_role, "result": "success"},
+    )
+    db.commit()
     return result
+
+
+@router.get(
+    "/{application_id}/documents",
+    response_model=BorrowerDocumentListResponse,
+)
+def list_borrower_documents_for_review(
+    application_id: uuid.UUID,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> BorrowerDocumentListResponse:
+    require_borrower_feature_enabled(settings)
+    authorize_internal_borrower_reviewer(principal, application_id, db, settings)
+    items = [
+        BorrowerDocumentMetadata(
+            document_id=str(document.id),
+            filename=document.filename,
+            mime_type=document.mime_type,
+            size_bytes=document.size_bytes,
+            scan_status=document.scan_status,
+            uploaded_at=document.created_at.isoformat(),
+        )
+        for document in list_document_metadata(db, application_id)
+    ]
+    return BorrowerDocumentListResponse(items=items, total=len(items))
+
+
+def _content_disposition(filename: str) -> str:
+    safe_ascii = "".join(
+        char if char.isascii() and char not in {'"', "\\", "\r", "\n"} else "_"
+        for char in filename
+    ).strip()
+    if not safe_ascii:
+        safe_ascii = "borrower-document"
+    return f"attachment; filename=\"{safe_ascii}\"; filename*=UTF-8''{quote(filename)}"
+
+
+@router.get("/{application_id}/documents/{document_id}/download")
+def download_borrower_document_for_review(
+    application_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    require_borrower_feature_enabled(settings)
+    _, reviewer_role = authorize_internal_borrower_reviewer(principal, application_id, db, settings)
+    crypto_state = _get_crypto_state(request)
+    try:
+        downloaded = download_document(
+            db=db,
+            crypto_state=crypto_state,
+            application_id=application_id,
+            document_id=document_id,
+            settings=settings,
+        )
+    except BorrowerDocumentRejected as exc:
+        raise HTTPException(status_code=exc.status_code, detail="document not found") from exc
+    except BorrowerDocumentStorageError as exc:
+        raise HTTPException(status_code=404, detail="document not found") from exc
+
+    AuditService(db).record(
+        "borrower_document_downloaded",
+        "borrower_document",
+        document_id,
+        actor_user_id=principal.user_id,
+        request_id=getattr(request.state, "request_id", None),
+        safe_metadata={
+            "application_id": str(application_id),
+            "reviewer_role": reviewer_role,
+            "result": "success",
+        },
+    )
+    db.commit()
+    return Response(
+        content=downloaded.content,
+        media_type=downloaded.content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "Pragma": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": _content_disposition(downloaded.filename),
+        },
+    )
 
 
 @router.post(
@@ -432,7 +662,9 @@ def sin_reveal(
     settings: Settings = Depends(get_settings),
 ) -> BorrowerSinRevealResponse:
     require_borrower_feature_enabled(settings)
-    require_admin_aal2_borrower_access(principal, application_id, db, settings)
+    _, reviewer_role = authorize_internal_borrower_reviewer(principal, application_id, db, settings)
+    if body.reason_category not in _SIN_REVEAL_REASONS:
+        raise HTTPException(status_code=422, detail="invalid reveal reason")
 
     crypto_state = _get_crypto_state(request)
 
@@ -444,7 +676,7 @@ def sin_reveal(
             selector="primary",
             reason_category=body.reason_category,
             actor_user_id=principal.user_id,
-            actor_role="brokerage_admin",
+            actor_role=reviewer_role,
             assurance_level=principal.aal,
         )
     except ValueError as err:
