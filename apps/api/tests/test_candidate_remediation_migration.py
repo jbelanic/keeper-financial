@@ -25,7 +25,7 @@ def test_candidate_remediation_remains_the_issued_revision_after_phase1e() -> No
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260726_0013"]
+    assert script.get_heads() == ["20260726_0014"]
     migration = migration_module()
     assert migration.revision == "20260717_0006"  # type: ignore[attr-defined]
     assert migration.down_revision == "20260717_0005"  # type: ignore[attr-defined]

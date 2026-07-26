@@ -155,12 +155,13 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 - **Source implementation completed on `feat/borrower-phase-e-review`; owner acceptance remains separate.**
 - Administrator/AAL2 queue for submitted/under-review borrower applications, administrator/AAL2 assignment or reassignment to server-validated active agents, exact assigned-agent/AAL2 and administrator/AAL2 masked internal review, document metadata, API-proxied decrypting downloads, and explicit audited SIN reveal for authorized reviewers.
-- Forward migration `20260726_0013` records borrower-document encryption payload revision so document download can verify the original purpose/application/revision encryption context.
+- Forward migrations `20260726_0013` and `20260726_0014` record borrower-document encryption payload revision and refuse upgrades containing legacy documents without provable encryption provenance. Assignment targets also require a verified Supabase identity, and encrypted downloads enforce a bounded stored-object size.
 - Genuine browser, production consent wording, legal/privacy/accessibility approval, operational readiness, retention/legal-hold/purge, ingress, backup/restore, monitoring, and cutover remain pending in later phases.
 
 ### Phase F — Retention and self-hosted readiness
 
-- Thirty-day draft purge, seven-year submitted retention, legal holds, Caddy exact-host TLS ingress, backup/restore, incident/monitoring controls, and genuine synthetic browser evidence.
+- The corrective borrower-review hardening is implemented on `feat/borrower-phase-f-readiness-lifecycle`; the Phase E merge remains historical and is not rewritten.
+- Thirty-day draft purge, seven-year submitted retention, legal holds, Caddy exact-host TLS ingress, backup/restore, incident/monitoring controls, and genuine synthetic browser evidence remain bounded Phase F work.
 
 ### Phase G — Cutover and legacy archive
 

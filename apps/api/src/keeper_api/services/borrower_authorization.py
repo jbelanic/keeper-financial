@@ -12,7 +12,7 @@ from keeper_api.models.borrower import (
     BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
 )
-from keeper_api.models.domain import Candidate, Role, User, UserRole
+from keeper_api.models.domain import Candidate, Role, User, UserIdentity, UserRole
 from keeper_api.models.statuses import CandidateStatus
 from keeper_api.services.auth import Principal
 from keeper_api.services.borrower_crypto import (
@@ -268,6 +268,16 @@ def validate_assignment_target(
 ) -> None:
     user = db.get(User, agent_user_id)
     if user is None or not user.is_active:
+        raise HTTPException(status_code=422, detail="invalid assignment target")
+
+    has_verified_identity = db.scalar(
+        select(UserIdentity.id).where(
+            UserIdentity.user_id == user.id,
+            UserIdentity.provider == "supabase",
+            UserIdentity.verified_at.is_not(None),
+        )
+    )
+    if has_verified_identity is None:
         raise HTTPException(status_code=422, detail="invalid assignment target")
 
     has_agent_role = db.scalar(

@@ -44,6 +44,7 @@ BORROWER_DOCUMENT_POLICY = DocumentPolicy(
         ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     },
 )
+MAX_BORROWER_ENCRYPTED_BYTES = BORROWER_DOCUMENT_POLICY.maximum_bytes + 16
 
 
 class BorrowerDocumentRejected(ValueError):
@@ -124,6 +125,8 @@ def _get_borrower_object(settings: Settings, *, object_key: str) -> bytes:
         if root not in path.parents or not path.is_file():
             raise BorrowerDocumentStorageError("storage_unavailable")
         try:
+            if path.stat().st_size > MAX_BORROWER_ENCRYPTED_BYTES:
+                raise BorrowerDocumentStorageError("storage_unavailable")
             return path.read_bytes()
         except OSError as exc:
             raise BorrowerDocumentStorageError("storage_unavailable") from exc
@@ -140,10 +143,19 @@ def _get_borrower_object(settings: Settings, *, object_key: str) -> bytes:
     }
     client = boto3.client("s3", endpoint_url=settings.s3_endpoint_url, **client_options)
     try:
+        head = client.head_object(Bucket=settings.s3_bucket, Key=object_key)
+        if (
+            int(head.get("ContentLength", MAX_BORROWER_ENCRYPTED_BYTES + 1))
+            > MAX_BORROWER_ENCRYPTED_BYTES
+        ):
+            raise BorrowerDocumentStorageError("storage_unavailable")
         response = client.get_object(Bucket=settings.s3_bucket, Key=object_key)
         body = response["Body"]
         try:
-            return cast(bytes, body.read())
+            content = cast(bytes, body.read(MAX_BORROWER_ENCRYPTED_BYTES + 1))
+            if len(content) > MAX_BORROWER_ENCRYPTED_BYTES:
+                raise BorrowerDocumentStorageError("storage_unavailable")
+            return content
         finally:
             body.close()
     except (BotoCoreError, ClientError, KeyError, OSError) as exc:
