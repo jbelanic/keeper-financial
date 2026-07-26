@@ -14,12 +14,15 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from keeper_api.db.base import Base
 from keeper_api.models.borrower import (
+    BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
+    BorrowerApplicationSnapshot,
 )
 from keeper_api.models.domain import Candidate, Role, User, UserRole
 from keeper_api.models.statuses import CandidateStatus
 from keeper_api.services.auth import Principal
 from keeper_api.services.borrower_applications import (
+    create_consent_record,
     start_borrower_application,
 )
 from keeper_api.services.borrower_authorization import (
@@ -98,6 +101,36 @@ def crypto_state(
         active_key_id="v1",
         borrower_origin="https://apply.keeperfinancial.ca",
         production=False,
+    )
+
+
+def add_submission_evidence(db: Session, application_id: uuid.UUID) -> None:
+    snapshot = BorrowerApplicationSnapshot(
+        application_id=application_id,
+        submission_revision=1,
+        key_id="v1",
+        nonce=os.urandom(12),
+        ciphertext_hash="abc123",
+        plaintext_hash="def456",
+        object_key="snapshots/test.key",
+        size_bytes=1024,
+    )
+    db.add(snapshot)
+    db.flush()
+
+    application = db.get(BorrowerApplication, application_id)
+    assert application is not None
+    create_consent_record(
+        db=db,
+        application_id=application_id,
+        submission_revision=1,
+        consent_version="v1.0",
+        wording_digest="abc123",
+        borrower_coverage="primary_only",
+        borrower_count=1,
+        capture_source="borrower_draft",
+        capability_session_id=application.capability_session_id,
+        acknowledged_at=datetime.now(UTC),
     )
 
 
@@ -353,6 +386,7 @@ class TestRequireInternalAgentAccess:
             capability_session_id=application.capability_session_id,
         )
 
+        add_submission_evidence(db_session, application.id)
         application.assigned_agent_id = user.id
         db_session.commit()
 
@@ -431,6 +465,7 @@ class TestRequireInternalAgentAccess:
             capability_session_id=application.capability_session_id,
         )
 
+        add_submission_evidence(db_session, application.id)
         principal = Principal(
             user_id=user.id,
             identity_subject=str(uuid.uuid4()),
@@ -506,6 +541,7 @@ class TestRequireInternalAgentAccess:
             capability_session_id=application.capability_session_id,
         )
 
+        add_submission_evidence(db_session, application.id)
         application.assigned_agent_id = user.id
         db_session.commit()
 
@@ -580,6 +616,7 @@ class TestRequireAdminBorrowerAccess:
             capability_session_id=application.capability_session_id,
         )
 
+        add_submission_evidence(db_session, application.id)
         principal = Principal(
             user_id=user.id,
             identity_subject=str(uuid.uuid4()),

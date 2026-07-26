@@ -6,7 +6,7 @@ import uuid
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import BinaryIO
+from typing import BinaryIO, cast
 
 import boto3
 from botocore.config import Config
@@ -21,6 +21,9 @@ from keeper_api.models.borrower import (
 )
 from keeper_api.services.borrower_crypto import (
     BorrowerCryptoState,
+    BorrowerDecryptionError,
+    EncryptedEnvelope,
+    decrypt_payload,
     encrypt_payload,
 )
 from keeper_api.services.candidate_files import (
@@ -57,6 +60,13 @@ class BorrowerDocumentStorageError(ValueError):
 @dataclass(frozen=True)
 class BorrowerStoredObject:
     object_key: str
+
+
+@dataclass(frozen=True)
+class BorrowerDocumentDownload:
+    filename: str
+    content_type: str
+    content: bytes
 
 
 def _put_borrower_object(
@@ -105,6 +115,39 @@ def _put_borrower_object(
     except (BotoCoreError, ClientError) as exc:
         raise BorrowerDocumentStorageError("storage_unavailable") from exc
     return BorrowerStoredObject(object_key=object_key)
+
+
+def _get_borrower_object(settings: Settings, *, object_key: str) -> bytes:
+    if settings.storage_backend == "local":
+        root = settings.local_storage_path.resolve()
+        path = (root / object_key).resolve()
+        if root not in path.parents or not path.is_file():
+            raise BorrowerDocumentStorageError("storage_unavailable")
+        try:
+            return path.read_bytes()
+        except OSError as exc:
+            raise BorrowerDocumentStorageError("storage_unavailable") from exc
+
+    client_options = {
+        "aws_access_key_id": settings.s3_access_key_id,
+        "aws_secret_access_key": (
+            settings.s3_secret_access_key.get_secret_value()
+            if settings.s3_secret_access_key
+            else None
+        ),
+        "region_name": settings.s3_region,
+        "config": Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+    }
+    client = boto3.client("s3", endpoint_url=settings.s3_endpoint_url, **client_options)
+    try:
+        response = client.get_object(Bucket=settings.s3_bucket, Key=object_key)
+        body = response["Body"]
+        try:
+            return cast(bytes, body.read())
+        finally:
+            body.close()
+    except (BotoCoreError, ClientError, KeyError, OSError) as exc:
+        raise BorrowerDocumentStorageError("storage_unavailable") from exc
 
 
 def delete_borrower_object(settings: Settings, object_key: str) -> None:
@@ -213,6 +256,7 @@ def upload_document(
         minio_object_key=stored.object_key,
         encryption_key_id=envelope.key_id,
         encryption_nonce=envelope.nonce,
+        encryption_payload_revision=application.revision,
         scan_status="clean",
         scan_timestamp=datetime.now(UTC),
         uploaded_by="borrower",
@@ -229,3 +273,56 @@ def upload_document(
         delete_borrower_object(settings, stored.object_key)
         raise
     return document
+
+
+def list_document_metadata(db: Session, application_id: uuid.UUID) -> list[BorrowerDocument]:
+    return (
+        db.query(BorrowerDocument)
+        .filter(BorrowerDocument.application_id == application_id)
+        .order_by(BorrowerDocument.created_at.asc(), BorrowerDocument.id.asc())
+        .all()
+    )
+
+
+def download_document(
+    db: Session,
+    crypto_state: BorrowerCryptoState | None,
+    application_id: uuid.UUID,
+    document_id: uuid.UUID,
+    settings: Settings,
+) -> BorrowerDocumentDownload:
+    if crypto_state is None:
+        raise BorrowerDocumentStorageError("borrower_cryptography_unavailable")
+
+    document = db.get(BorrowerDocument, document_id)
+    if document is None or document.application_id != application_id:
+        raise BorrowerDocumentRejected("document_not_found", status_code=404)
+    if document.encryption_payload_revision is None:
+        raise BorrowerDocumentStorageError("storage_unavailable")
+
+    ciphertext = _get_borrower_object(settings, object_key=document.minio_object_key)
+    try:
+        plaintext = decrypt_payload(
+            state=crypto_state,
+            envelope=EncryptedEnvelope(
+                format_version=1,
+                key_id=document.encryption_key_id,
+                nonce=document.encryption_nonce,
+                ciphertext=ciphertext,
+            ),
+            application_id=str(application_id),
+            purpose="borrower_document",
+            schema_version="1.0",
+            payload_revision=document.encryption_payload_revision,
+        )
+    except BorrowerDecryptionError as exc:
+        raise BorrowerDocumentStorageError("storage_unavailable") from exc
+
+    if hashlib.sha256(plaintext).hexdigest() != document.sha256:
+        raise BorrowerDocumentStorageError("storage_unavailable")
+
+    return BorrowerDocumentDownload(
+        filename=document.filename,
+        content_type=document.mime_type,
+        content=plaintext,
+    )

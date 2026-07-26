@@ -485,7 +485,7 @@ class TestSinReveal:
             crypto_state=crypto_state,
             application_id=application.id,
             selector="primary",
-            reason_category="credit_assessment",
+            reason_category="credit_review",
             actor_user_id=uuid.uuid4(),
             actor_role="brokerage_admin",
             assurance_level="aal2",
@@ -498,7 +498,7 @@ class TestSinReveal:
         assert audit.result == "success"
         assert audit.safe_reason_code == "revealed"
         assert audit.selector == "primary"
-        assert audit.reason_category == "credit_assessment"
+        assert audit.reason_category == "credit_review"
         assert "046454286" not in str(audit.__dict__.values())
 
     def test_reveal_sin_draft_blocked(
@@ -512,7 +512,7 @@ class TestSinReveal:
                 crypto_state=crypto_state,
                 application_id=application.id,
                 selector="primary",
-                reason_category="test",
+                reason_category="credit_review",
                 actor_user_id=uuid.uuid4(),
                 actor_role="agent",
                 assurance_level="aal2",
@@ -529,7 +529,7 @@ class TestSinReveal:
                 crypto_state=crypto_state,
                 application_id=application.id,
                 selector="primary",
-                reason_category="test",
+                reason_category="credit_review",
                 actor_user_id=uuid.uuid4(),
                 actor_role="agent",
                 assurance_level="aal2",

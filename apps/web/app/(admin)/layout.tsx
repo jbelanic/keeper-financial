@@ -8,6 +8,7 @@ const links: Array<[string, string]> = [
   ["Leads", "/admin/leads"],
   ["Recruitment postings", "/admin/recruitment"],
   ["Candidates", "/admin/candidates"],
+  ["Borrower applications", "/admin/borrower-applications"],
   ["Onboarding", "/admin/onboarding"],
   ["Agents", "/admin/agents"],
 ];

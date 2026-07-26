@@ -431,6 +431,8 @@ class BorrowerDocument(IdTimestampsMixin, Base):
 
     encryption_nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)
 
+    encryption_payload_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     scan_status: Mapped[str] = mapped_column(String(32), nullable=False)
 
     scan_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

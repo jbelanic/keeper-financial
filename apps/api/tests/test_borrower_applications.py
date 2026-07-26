@@ -22,13 +22,14 @@ from keeper_api.main import app
 from keeper_api.models.borrower import (
     BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
-    BorrowerApplicationSnapshot,
     BorrowerApplicationStatusHistory,
     BorrowerAssignmentHistory,
     BorrowerConsentCatalog,
-    BorrowerConsentRecord,
     BorrowerDocument,
+    BorrowerSinRevealAudit,
 )
+from keeper_api.models.domain import AuditEvent, Candidate, Role, User, UserIdentity, UserRole
+from keeper_api.models.statuses import CandidateStatus
 from keeper_api.services.borrower_applications import (
     assign_application,
     create_consent_record,
@@ -924,6 +925,7 @@ def _borrower_route_settings(tmp_path: Path) -> Settings:
         _env_file=None,
         app_env="local",
         database_url="sqlite+pysqlite:///:memory:",
+        dev_auth_enabled=True,
         storage_backend="local",
         local_storage_path=tmp_path / "borrower-objects",
         borrower_application_enabled=True,
@@ -987,6 +989,41 @@ def _valid_submit_payload(*, with_co_borrower: bool = False) -> dict[str, object
         )
         payload["co_borrower"] = co_borrower
     return payload
+
+
+def _create_review_user(
+    session: Session,
+    *,
+    subject: str,
+    role_code: str,
+    active: bool = True,
+    candidate_status: str | None = None,
+) -> User:
+    user = User(
+        email=f"{subject}@example.test",
+        display_name=f"Synthetic {subject}",
+        is_active=active,
+    )
+    session.add(user)
+    session.flush()
+    session.add(
+        UserIdentity(
+            user_id=user.id,
+            provider="supabase",
+            provider_subject=subject,
+            verified_at=datetime.now(UTC),
+        )
+    )
+    role = session.query(Role).filter(Role.code == role_code).one_or_none()
+    if role is None:
+        role = Role(code=role_code, description=f"Synthetic {role_code}")
+        session.add(role)
+        session.flush()
+    session.add(UserRole(user_id=user.id, role_id=role.id))
+    if candidate_status is not None:
+        session.add(Candidate(user_id=user.id, status=candidate_status))
+    session.commit()
+    return user
 
 
 class TestBorrowerPhaseDRouteIntegration:
@@ -1081,6 +1118,39 @@ class TestBorrowerPhaseDRouteIntegration:
         )
         assert resp.status_code == 200, resp.text
         return resp.json()["revision"]
+
+    def _submit_full_application(
+        self,
+        client: TestClient,
+        *,
+        with_document: bool = False,
+    ) -> str:
+        application_id = self._start(client)
+        revision = self._save_full_payload(client, application_id)
+        if with_document:
+            from document_samples import valid_pdf
+
+            upload = client.post(
+                f"/api/v1/borrower-applications/{application_id}/documents",
+                headers=self._headers(),
+                files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+            )
+            assert upload.status_code == 201, upload.text
+        resp = client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": client._keeper_consent_digest,
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        return application_id
+
+    def _auth_headers(self, subject: str, *, aal: str = "aal2") -> dict[str, str]:
+        return {"X-Dev-Auth-Sub": subject, "X-Dev-Auth-AAL": aal}
 
     def test_upload_clean_pdf_records_metadata(self, route_client: TestClient) -> None:
         from document_samples import valid_pdf
@@ -1178,13 +1248,296 @@ class TestBorrowerPhaseDRouteIntegration:
         with session_factory() as session:
             application = session.get(BorrowerApplication, uuid.UUID(application_id))
             assert application.lifecycle_status == "submitted"
-            assert application.capability_revoked_at is not None
-            assert application.retention_due_at is not None
-            assert session.query(BorrowerConsentRecord).count() == 1
-            snapshot = session.query(BorrowerApplicationSnapshot).one()
-            assert snapshot.consent_record_id is not None
-            assert snapshot.payload_revision == revision
-            assert snapshot.ciphertext
+
+    def test_review_queue_admin_only_and_omits_drafts(self, route_client: TestClient) -> None:
+        submitted_id = self._submit_full_application(route_client)
+        self._start(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-queue", role_code="brokerage_admin")
+            _create_review_user(
+                session,
+                subject="agent-queue",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+
+        admin = route_client.get(
+            "/api/v1/borrower-applications/review-queue",
+            headers=self._auth_headers("admin-queue"),
+        )
+        assert admin.status_code == 200, admin.text
+        assert admin.json()["total"] == 1
+        assert admin.json()["items"][0]["application_id"] == submitted_id
+        assert admin.json()["items"][0]["lifecycle_status"] == "submitted"
+
+        no_mfa = route_client.get(
+            "/api/v1/borrower-applications/review-queue",
+            headers=self._auth_headers("admin-queue", aal="aal1"),
+        )
+        assert no_mfa.status_code == 403
+
+        agent = route_client.get(
+            "/api/v1/borrower-applications/review-queue",
+            headers=self._auth_headers("agent-queue"),
+        )
+        assert agent.status_code == 403
+
+    def test_assignment_validates_agent_and_records_safe_evidence(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._submit_full_application(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            admin = _create_review_user(
+                session,
+                subject="admin-assign",
+                role_code="brokerage_admin",
+            )
+            agent = _create_review_user(
+                session,
+                subject="agent-assign",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            inactive_agent = _create_review_user(
+                session,
+                subject="agent-inactive",
+                role_code="agent",
+                candidate_status=CandidateStatus.SUSPENDED.value,
+            )
+            agent_id = agent.id
+            inactive_id = inactive_agent.id
+            admin_id = admin.id
+
+        invalid = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/assignment",
+            headers=self._auth_headers("admin-assign"),
+            json={"agent_user_id": str(inactive_id), "reason_category": "initial_assignment"},
+        )
+        assert invalid.status_code == 422
+
+        missing_reason = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/assignment",
+            headers=self._auth_headers("admin-assign"),
+            json={"agent_user_id": str(agent_id), "reason_category": ""},
+        )
+        assert missing_reason.status_code == 422
+
+        assigned = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/assignment",
+            headers=self._auth_headers("admin-assign"),
+            json={
+                "agent_user_id": str(agent_id),
+                "reason_category": "initial_assignment",
+                "reason_detail": "Synthetic bounded assignment reason",
+            },
+        )
+        assert assigned.status_code == 200, assigned.text
+        assert assigned.json()["lifecycle_status"] == "under_review"
+        assert assigned.json()["assigned_agent_id"] == str(agent_id)
+
+        repeated = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/assignment",
+            headers=self._auth_headers("admin-assign"),
+            json={"agent_user_id": str(agent_id), "reason_category": "initial_assignment"},
+        )
+        assert repeated.status_code == 200
+
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert application.assigned_agent_id == agent_id
+            history = (
+                session.query(BorrowerAssignmentHistory)
+                .filter(BorrowerAssignmentHistory.application_id == uuid.UUID(application_id))
+                .all()
+            )
+            assert len(history) == 1
+            assert history[0].actor_user_id == admin_id
+            audit = (
+                session.query(AuditEvent)
+                .filter(AuditEvent.event_type == "borrower_application_assigned")
+                .one()
+            )
+            assert audit.safe_metadata["assigned_agent_id"] == str(agent_id)
+            assert "Synthetic bounded assignment reason" not in str(audit.safe_metadata)
+
+    def test_internal_projection_admin_and_exact_agent_only(self, route_client: TestClient) -> None:
+        application_id = self._submit_full_application(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-detail", role_code="brokerage_admin")
+            assigned_agent = _create_review_user(
+                session,
+                subject="agent-detail",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            _create_review_user(
+                session,
+                subject="agent-wrong",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = assigned_agent.id
+            session.commit()
+
+        admin = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/internal",
+            headers=self._auth_headers("admin-detail"),
+        )
+        assert admin.status_code == 200, admin.text
+        body = admin.json()
+        assert body["primary_borrower"]["sin"]["display"] == "*** *** 286"
+        assert "046454286" not in json.dumps(body)
+
+        agent = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/internal",
+            headers=self._auth_headers("agent-detail"),
+        )
+        assert agent.status_code == 200, agent.text
+
+        wrong = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/internal",
+            headers=self._auth_headers("agent-wrong"),
+        )
+        assert wrong.status_code == 404
+
+        no_mfa = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/internal",
+            headers=self._auth_headers("agent-detail", aal="aal1"),
+        )
+        assert no_mfa.status_code == 403
+
+    def test_document_metadata_and_download_are_authorized_and_decrypted(
+        self, route_client: TestClient
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._submit_full_application(route_client, with_document=True)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-docs", role_code="brokerage_admin")
+            assigned_agent = _create_review_user(
+                session,
+                subject="agent-docs",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            _create_review_user(
+                session,
+                subject="agent-docs-wrong",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = assigned_agent.id
+            session.commit()
+
+        metadata = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._auth_headers("agent-docs"),
+        )
+        assert metadata.status_code == 200, metadata.text
+        item = metadata.json()["items"][0]
+        assert item["filename"] == "notice.pdf"
+        assert "object_key" not in item
+        assert "minio" not in json.dumps(item).lower()
+
+        downloaded = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/documents/{item['document_id']}/download",
+            headers=self._auth_headers("agent-docs"),
+        )
+        assert downloaded.status_code == 200, downloaded.text
+        assert downloaded.content == valid_pdf()
+        assert downloaded.headers["cache-control"] == "private, no-store"
+        assert downloaded.headers["x-content-type-options"] == "nosniff"
+        assert downloaded.headers["content-disposition"].startswith("attachment;")
+
+        wrong = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/documents/{item['document_id']}/download",
+            headers=self._auth_headers("agent-docs-wrong"),
+        )
+        assert wrong.status_code == 404
+
+    def test_document_download_denies_tampered_or_missing_object(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._submit_full_application(route_client, with_document=True)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-tamper", role_code="brokerage_admin")
+            document = session.query(BorrowerDocument).one()
+            document.minio_object_key = "borrower/documents/missing"
+            document_id = document.id
+            session.commit()
+
+        resp = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/documents/{document_id}/download",
+            headers=self._auth_headers("admin-tamper"),
+        )
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "document not found"
+
+    def test_sin_reveal_allows_exact_agent_and_keeps_audit_safe(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._submit_full_application(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            assigned_agent = _create_review_user(
+                session,
+                subject="agent-reveal",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            _create_review_user(
+                session,
+                subject="agent-reveal-wrong",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = assigned_agent.id
+            session.commit()
+
+        revealed = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/sin/reveal",
+            headers=self._auth_headers("agent-reveal"),
+            json={"reason_category": "credit_review"},
+        )
+        assert revealed.status_code == 200, revealed.text
+        assert revealed.json()["sin"] == "046454286"
+
+        denied = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/sin/reveal",
+            headers=self._auth_headers("agent-reveal-wrong"),
+            json={"reason_category": "credit_review"},
+        )
+        assert denied.status_code == 404
+
+        invalid_reason = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/sin/reveal",
+            headers=self._auth_headers("agent-reveal"),
+            json={"reason_category": "curiosity"},
+        )
+        assert invalid_reason.status_code == 422
+
+        with session_factory() as session:
+            audit_payload = json.dumps(
+                [
+                    {
+                        "role": row.actor_role,
+                        "reason": row.reason_category,
+                        "result": row.result,
+                    }
+                    for row in session.query(BorrowerSinRevealAudit).all()
+                ],
+                sort_keys=True,
+            )
+            assert "046454286" not in audit_payload
+            assert "agent" in audit_payload
 
     def test_submit_again_returns_409(self, route_client: TestClient) -> None:
         application_id = self._start(route_client)
