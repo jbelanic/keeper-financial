@@ -787,7 +787,9 @@ class TestMigrationParity:
             BorrowerApplicationSnapshot,
             BorrowerApplicationStatusHistory,
             BorrowerAssignmentHistory,
+            BorrowerConsentCatalog,
             BorrowerConsentRecord,
+            BorrowerDocument,
             BorrowerLegalHold,
             BorrowerSinRevealAudit,
         )
@@ -797,8 +799,10 @@ class TestMigrationParity:
             "borrower_application_payloads": BorrowerApplicationPayload,
             "borrower_application_status_history": BorrowerApplicationStatusHistory,
             "borrower_assignment_history": BorrowerAssignmentHistory,
+            "borrower_consent_catalog": BorrowerConsentCatalog,
             "borrower_consent_records": BorrowerConsentRecord,
             "borrower_application_snapshots": BorrowerApplicationSnapshot,
+            "borrower_documents": BorrowerDocument,
             "borrower_legal_holds": BorrowerLegalHold,
             "borrower_sin_reveal_audit": BorrowerSinRevealAudit,
         }

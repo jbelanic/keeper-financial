@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
@@ -14,11 +14,13 @@ from keeper_api.db.session import get_db
 from keeper_api.models.borrower import BorrowerApplication
 from keeper_api.services.auth import Principal, get_current_principal
 from keeper_api.services.borrower_applications import (
+    BorrowerSubmissionError,
     get_application_summary,
     get_internal_projection,
     reveal_sin,
     save_draft_payload,
     start_borrower_application,
+    submit_borrower_application,
 )
 from keeper_api.services.borrower_authorization import (
     extract_capability_from_cookie,
@@ -31,6 +33,12 @@ from keeper_api.services.borrower_authorization import (
 from keeper_api.services.borrower_crypto import (
     BorrowerCryptoConfigurationError,
     BorrowerCryptoState,
+    verify_capability_digest,
+)
+from keeper_api.services.borrower_documents import (
+    BorrowerDocumentRejected,
+    BorrowerDocumentStorageError,
+    upload_document,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,6 +119,35 @@ class BorrowerSinRevealResponse(BaseModel):
 
     application_id: str
     sin: str
+
+
+class BorrowerDocumentUploadResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str
+    filename: str
+    size_bytes: int
+    scan_status: str
+
+
+class BorrowerApplicationSubmitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    consent_version: str = Field(..., min_length=1, max_length=128)
+    consent_wording_digest: str = Field(..., min_length=64, max_length=128)
+    borrower_coverage: str = Field(..., pattern="^(primary|co_borrower|both)$")
+    expected_revision: int = Field(..., ge=0)
+
+
+class BorrowerApplicationSubmitResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    application_id: str
+    lifecycle_status: str
+    submitted_at: str
+    retention_due_at: str
+    snapshot_id: str
+    consent_record_id: str
 
 
 @router.post(
@@ -205,6 +242,20 @@ def save_application(
     if not capability:
         raise HTTPException(status_code=404, detail="application not found")
 
+    existing_application = db.get(BorrowerApplication, application_id)
+    if (
+        existing_application is not None
+        and existing_application.lifecycle_status != "draft"
+        and crypto_state is not None
+        and existing_application.capability_digest is not None
+        and verify_capability_digest(
+            capability,
+            existing_application.capability_digest,
+            crypto_state.hmac_key,
+        )
+    ):
+        raise HTTPException(status_code=409, detail="already_submitted")
+
     ctx = verify_borrower_capability(db, crypto_state, application_id, capability)
 
     from keeper_api.schemas.borrower_payload import validate_borrower_draft
@@ -235,6 +286,117 @@ def save_application(
         has_co_borrower=summary["has_co_borrower"],
         last_activity_at=summary["last_activity_at"],
         draft_expires_at=summary["draft_expires_at"],
+    )
+
+
+@router.post(
+    "/{application_id}/documents",
+    response_model=BorrowerDocumentUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
+)
+def upload_borrower_document(
+    application_id: uuid.UUID,
+    request: Request,
+    file: UploadFile = File(),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> BorrowerDocumentUploadResponse:
+    require_borrower_feature_enabled(settings)
+    validate_borrower_origin(request, settings)
+    crypto_state = _get_crypto_state(request)
+
+    capability = extract_capability_from_cookie(request)
+    if not capability:
+        raise HTTPException(status_code=404, detail="application not found")
+
+    ctx = verify_borrower_capability(db, crypto_state, application_id, capability)
+
+    try:
+        document = upload_document(
+            db=db,
+            crypto_state=crypto_state,
+            application_id=application_id,
+            capability_session_id=ctx.capability_session_id,
+            file_stream=file.file,
+            filename=file.filename,
+            mime_type=file.content_type,
+            settings=settings,
+        )
+    except BorrowerDocumentRejected as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+    except BorrowerDocumentStorageError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    finally:
+        file.file.close()
+
+    return BorrowerDocumentUploadResponse(
+        document_id=str(document.id),
+        filename=document.filename,
+        size_bytes=document.size_bytes,
+        scan_status=document.scan_status,
+    )
+
+
+@router.post(
+    "/{application_id}/submit",
+    response_model=BorrowerApplicationSubmitResponse,
+    dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
+)
+def submit_application(
+    application_id: uuid.UUID,
+    body: BorrowerApplicationSubmitRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> BorrowerApplicationSubmitResponse:
+    require_borrower_feature_enabled(settings)
+    validate_borrower_origin(request, settings)
+    crypto_state = _get_crypto_state(request)
+
+    capability = extract_capability_from_cookie(request)
+    if not capability:
+        raise HTTPException(status_code=404, detail="application not found")
+
+    existing_application = db.get(BorrowerApplication, application_id)
+    if (
+        existing_application is not None
+        and existing_application.lifecycle_status != "draft"
+        and crypto_state is not None
+        and existing_application.capability_digest is not None
+        and verify_capability_digest(
+            capability,
+            existing_application.capability_digest,
+            crypto_state.hmac_key,
+        )
+    ):
+        raise HTTPException(status_code=409, detail="already_submitted")
+
+    ctx = verify_borrower_capability(db, crypto_state, application_id, capability)
+    try:
+        application, snapshot, consent = submit_borrower_application(
+            db=db,
+            crypto_state=crypto_state,
+            application_id=application_id,
+            capability_session_id=ctx.capability_session_id,
+            expected_revision=body.expected_revision,
+            consent_version=body.consent_version,
+            consent_wording_digest=body.consent_wording_digest,
+            borrower_coverage=body.borrower_coverage,
+            settings=settings,
+        )
+    except BorrowerSubmissionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+
+    return BorrowerApplicationSubmitResponse(
+        application_id=str(application.id),
+        lifecycle_status=application.lifecycle_status,
+        submitted_at=application.submitted_at.isoformat() if application.submitted_at else "",
+        retention_due_at=application.retention_due_at.isoformat()
+        if application.retention_due_at
+        else "",
+        snapshot_id=str(snapshot.id),
+        consent_record_id=str(consent.id),
     )
 
 

@@ -307,6 +307,36 @@ class BorrowerConsentRecord(IdTimestampsMixin, Base):
     )
 
 
+class BorrowerConsentCatalog(IdTimestampsMixin, Base):
+    __tablename__ = "borrower_consent_catalog"
+    __table_args__ = (
+        UniqueConstraint(
+            "consent_version",
+            "wording_digest",
+            name="uq_borrower_consent_catalog_version_digest",
+        ),
+        Index(
+            "ix_borrower_consent_catalog_active",
+            "consent_version",
+            "is_active",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+
+    consent_version: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    wording_digest: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    wording_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class BorrowerApplicationSnapshot(IdTimestampsMixin, Base):
     __tablename__ = "borrower_application_snapshots"
     __table_args__ = (
@@ -327,9 +357,22 @@ class BorrowerApplicationSnapshot(IdTimestampsMixin, Base):
 
     submission_revision: Mapped[int] = mapped_column(Integer, nullable=False)
 
+    payload_revision: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    schema_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
     key_id: Mapped[str] = mapped_column(String(64), nullable=False)
 
     nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)
+
+    ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+
+    consent_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("borrower_consent_records.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+    )
 
     ciphertext_hash: Mapped[str] = mapped_column(String(128), nullable=False)
 
@@ -338,6 +381,63 @@ class BorrowerApplicationSnapshot(IdTimestampsMixin, Base):
     object_key: Mapped[str] = mapped_column(String(256), nullable=False)
 
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class BorrowerDocument(IdTimestampsMixin, Base):
+    __tablename__ = "borrower_documents"
+    __table_args__ = (
+        CheckConstraint("size_bytes > 0", name="ck_borrower_document_size_positive"),
+        CheckConstraint(
+            "scan_status IN ('clean')",
+            name="ck_borrower_document_scan_status",
+        ),
+        CheckConstraint(
+            "uploaded_by IN ('borrower')",
+            name="ck_borrower_document_uploaded_by",
+        ),
+        CheckConstraint(
+            "octet_length(encryption_nonce) = 12",
+            name="ck_borrower_document_nonce_length",
+        ),
+        Index(
+            "ix_borrower_documents_application_id",
+            "application_id",
+        ),
+        Index(
+            "ix_borrower_documents_capability_session_id",
+            "capability_session_id",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("borrower_applications.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    filename: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    minio_object_key: Mapped[str] = mapped_column(String(256), nullable=False, unique=True)
+
+    encryption_key_id: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    encryption_nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)
+
+    scan_status: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    scan_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    uploaded_by: Mapped[str] = mapped_column(String(32), nullable=False, default="borrower")
+
+    capability_session_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
 
 
 class BorrowerLegalHold(IdTimestampsMixin, Base):
