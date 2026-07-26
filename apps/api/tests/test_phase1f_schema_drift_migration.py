@@ -83,7 +83,7 @@ def test_phase1f_schema_drift_is_one_forward_revision_and_preserves_issued_histo
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260724_0011"]
+    assert script.get_heads() == ["20260726_0012"]
 
     migration = _migration_module()
     assert migration.revision == "20260718_0007"  # type: ignore[attr-defined]
@@ -538,7 +538,7 @@ def test_postgres_fresh_upgrade_reaches_clean_head(temporary_postgres_url: str) 
     try:
         with engine.connect() as connection:
             assert connection.scalar(text("SELECT version_num FROM alembic_version")) == (
-                "20260724_0011"
+                "20260726_0012"
             )
             _assert_head_catalog(connection)
     finally:

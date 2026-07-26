@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -14,8 +15,10 @@ from keeper_api.models.borrower import (
     BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
     BorrowerApplicationPayload,
+    BorrowerApplicationSnapshot,
     BorrowerApplicationStatusHistory,
     BorrowerAssignmentHistory,
+    BorrowerConsentCatalog,
     BorrowerConsentRecord,
 )
 from keeper_api.services.borrower_crypto import (
@@ -28,6 +31,13 @@ from keeper_api.services.borrower_crypto import (
     encrypt_sin,
     generate_capability,
 )
+
+
+class BorrowerSubmissionError(ValueError):
+    def __init__(self, code: str, *, status_code: int = 422) -> None:
+        super().__init__(code)
+        self.code = code
+        self.status_code = status_code
 
 
 def _deep_merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
@@ -47,6 +57,8 @@ class _SafeEncoder(json.JSONEncoder):
     def default(self, o: object) -> Any:
         if isinstance(o, Decimal):
             return str(o)
+        if isinstance(o, date | datetime):
+            return o.isoformat()
         return super().default(o)
 
 
@@ -293,6 +305,183 @@ def get_latest_payload(
         return result
     except BorrowerDecryptionError:
         raise ValueError("failed to decrypt payload") from None
+
+
+def _seven_year_retention(now: datetime) -> datetime:
+    try:
+        return now.replace(year=now.year + 7)
+    except ValueError:
+        return now.replace(month=2, day=28, year=now.year + 7)
+
+
+def _as_aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def submit_borrower_application(
+    db: Session,
+    crypto_state: BorrowerCryptoState | None,
+    application_id: uuid.UUID,
+    capability_session_id: uuid.UUID,
+    expected_revision: int,
+    consent_version: str,
+    consent_wording_digest: str,
+    borrower_coverage: str,
+    settings: Settings,
+) -> tuple[BorrowerApplication, BorrowerApplicationSnapshot, BorrowerConsentRecord]:
+    if crypto_state is None:
+        raise BorrowerSubmissionError("borrower_cryptography_unavailable", status_code=503)
+
+    application = db.get(BorrowerApplication, application_id)
+    if application is None:
+        raise BorrowerSubmissionError("application_not_found", status_code=404)
+    if application.capability_session_id != capability_session_id:
+        raise BorrowerSubmissionError("application_not_found", status_code=404)
+    if application.lifecycle_status != BorrowerApplicationLifecycleStatus.DRAFT.value:
+        raise BorrowerSubmissionError("already_submitted", status_code=409)
+    if application.revision != expected_revision:
+        raise BorrowerSubmissionError("stale_revision", status_code=409)
+    if application.payload_revision != expected_revision or application.payload_revision <= 0:
+        raise BorrowerSubmissionError("missing_payload", status_code=422)
+
+    payload_row = db.scalar(
+        select(BorrowerApplicationPayload).where(
+            BorrowerApplicationPayload.application_id == application_id,
+            BorrowerApplicationPayload.revision == application.payload_revision,
+        )
+    )
+    if payload_row is None:
+        raise BorrowerSubmissionError("missing_payload", status_code=422)
+
+    payload_data = get_latest_payload(
+        db, crypto_state, application_id, application.payload_revision
+    )
+    if payload_data is None:
+        raise BorrowerSubmissionError("missing_payload", status_code=422)
+
+    from keeper_api.schemas.borrower_payload import validate_borrower_payload
+
+    try:
+        validated_payload = validate_borrower_payload(payload_data)
+    except Exception as exc:
+        raise BorrowerSubmissionError("payload_incomplete", status_code=422) from exc
+
+    catalog_entry = db.scalar(
+        select(BorrowerConsentCatalog).where(
+            BorrowerConsentCatalog.consent_version == consent_version,
+            BorrowerConsentCatalog.wording_digest == consent_wording_digest,
+            BorrowerConsentCatalog.is_active.is_(True),
+        )
+    )
+    if catalog_entry is None:
+        raise BorrowerSubmissionError("invalid_consent", status_code=422)
+
+    now = datetime.now(UTC)
+    effective_from = _as_aware_utc(catalog_entry.effective_from)
+    effective_to = (
+        _as_aware_utc(catalog_entry.effective_to)
+        if catalog_entry.effective_to is not None
+        else None
+    )
+    if effective_from > now or (effective_to is not None and effective_to <= now):
+        raise BorrowerSubmissionError("invalid_consent", status_code=422)
+
+    has_co_borrower = validated_payload.co_borrower is not None
+    borrower_count = 2 if has_co_borrower else 1
+    if has_co_borrower and borrower_coverage != "both":
+        raise BorrowerSubmissionError("invalid_borrower_coverage", status_code=422)
+    if not has_co_borrower and borrower_coverage != "primary":
+        raise BorrowerSubmissionError("invalid_borrower_coverage", status_code=422)
+
+    payload_for_snapshot = validated_payload.model_dump(mode="json", exclude_none=True)
+    snapshot_plaintext = json.dumps(
+        payload_for_snapshot,
+        sort_keys=True,
+        separators=(",", ":"),
+        cls=_SafeEncoder,
+    ).encode("utf-8")
+    envelope = encrypt_payload(
+        state=crypto_state,
+        plaintext=snapshot_plaintext,
+        application_id=str(application_id),
+        purpose="borrower_submission_snapshot",
+        schema_version=payload_row.schema_version,
+        payload_revision=payload_row.revision,
+    )
+
+    from keeper_api.services.borrower_documents import (
+        delete_borrower_object,
+        put_encrypted_borrower_object,
+    )
+
+    stored = put_encrypted_borrower_object(
+        settings,
+        prefix=f"snapshots/{application_id}",
+        content=envelope.ciphertext,
+        content_type="application/octet-stream",
+    )
+    try:
+        consent = BorrowerConsentRecord(
+            application_id=application_id,
+            submission_revision=application.revision,
+            consent_version=consent_version,
+            wording_digest=consent_wording_digest,
+            borrower_coverage=borrower_coverage,
+            borrower_count=borrower_count,
+            capture_source="borrower_web",
+            capability_session_id=capability_session_id,
+            acknowledged_at=now,
+        )
+        db.add(consent)
+        db.flush()
+
+        snapshot = BorrowerApplicationSnapshot(
+            application_id=application_id,
+            submission_revision=application.revision,
+            payload_revision=payload_row.revision,
+            schema_version=payload_row.schema_version,
+            key_id=envelope.key_id,
+            nonce=envelope.nonce,
+            ciphertext=envelope.ciphertext,
+            consent_record_id=consent.id,
+            ciphertext_hash=hashlib.sha256(envelope.ciphertext).hexdigest(),
+            plaintext_hash=hashlib.sha256(snapshot_plaintext).hexdigest(),
+            object_key=stored.object_key,
+            size_bytes=len(snapshot_plaintext),
+        )
+        db.add(snapshot)
+
+        application.lifecycle_status = BorrowerApplicationLifecycleStatus.SUBMITTED.value
+        application.submitted_at = now
+        application.retention_due_at = _seven_year_retention(now)
+        application.capability_revoked_at = now
+
+        db.add(
+            BorrowerApplicationStatusHistory(
+                application_id=application_id,
+                from_status=BorrowerApplicationLifecycleStatus.DRAFT.value,
+                to_status=BorrowerApplicationLifecycleStatus.SUBMITTED.value,
+                actor_user_id=None,
+                actor_source="public",
+                reason_category="submission",
+                reason_detail=None,
+                revision=application.revision,
+                capability_session_id=capability_session_id,
+            )
+        )
+        db.flush()
+        db.commit()
+        db.refresh(application)
+        db.refresh(snapshot)
+        db.refresh(consent)
+    except Exception:
+        db.rollback()
+        delete_borrower_object(settings, stored.object_key)
+        raise
+
+    return application, snapshot, consent
 
 
 def get_application_summary(

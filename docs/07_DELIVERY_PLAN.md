@@ -141,15 +141,15 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 
 - **Source implementation completed on `feat/borrower-secure-foundation`; owner acceptance remains separate.**
 - Borrower models, forward migration `20260724_0011`, AES-256-GCM key-ID boundary, keyed accountless capability, typed encrypted drafts, lifecycle and submission-evidence primitives, exact assignment/admin AAL2 authorization, generated OpenAPI/contracts, and adversarial tests.
-- No public submit route is mounted. Final submission, borrower document bytes, the Next.js flow, production consent, deployment, and genuine browser/operational evidence remain pending in Phases C–F.
+- Final-submission source, production consent, deployment, and genuine browser/operational evidence remain pending in Phases C–F.
 
 ### Phase C — Keeper-native form
 
-- Accessible Next.js flow for one primary and at most one co-borrower; no local storage, typed signature, marketing consent, or external-provider redirect.
+- Accessible Next.js flow for one primary and at most one co-borrower; no local storage, typed signature, marketing consent, or external-provider redirect. Source implementation and deterministic tests are complete; genuine-browser and acceptance evidence remain pending.
 
 ### Phase D — Documents and submission
 
-- Strict validation, fail-closed ClamAV, encryption, private borrower MinIO namespace, immutable snapshots, and atomic/idempotent submission.
+- D.1 source implementation is complete: strict validation, fail-closed ClamAV, encryption, private borrower object persistence, immutable snapshots, consent binding, capability revocation, and submission tests. Production consent wording, object-store/database failure-injection evidence, genuine-browser evidence, and operational acceptance remain pending.
 
 ### Phase E — Agent and administrator review
 
