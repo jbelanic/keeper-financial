@@ -66,6 +66,21 @@ export type LiabilityState = {
   description: string;
 };
 
+export type SubjectPropertyStyle =
+  | ""
+  | "detached"
+  | "semi_detached"
+  | "townhouse_row"
+  | "apartment"
+  | "other";
+
+export type SubjectPropertyOccupancy =
+  | ""
+  | "owner_occupied"
+  | "tenant"
+  | "vacant"
+  | "other";
+
 export type SubjectPropertyState = {
   identified: boolean;
   address: string;
@@ -73,8 +88,8 @@ export type SubjectPropertyState = {
   province: string;
   postal_code: string;
   property_type: string;
-  property_style: string;
-  occupancy: string;
+  property_style: SubjectPropertyStyle;
+  occupancy: SubjectPropertyOccupancy;
   year_built: string;
   livable_area_sqft: string;
   units: string;

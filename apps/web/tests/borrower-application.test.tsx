@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BorrowerApplicationForm } from "@/app/(borrower)/mortgage-application/borrower-application-form";
 import { BorrowerDetailsSection } from "@/app/(borrower)/mortgage-application/components/borrower-details-section";
 import { ConsentSection } from "@/app/(borrower)/mortgage-application/components/consent-section";
+import { SubjectPropertySection } from "@/app/(borrower)/mortgage-application/components/subject-property-section";
 import { emptyBorrower } from "@/app/(borrower)/mortgage-application/components/types";
 import { BorrowerApplicationError } from "@/lib/borrower-application-api";
 
@@ -160,6 +161,56 @@ describe("accountless borrower application form", () => {
     expect(document.body.textContent).toContain("not a signature");
     expect(document.body.textContent).not.toMatch(/typed name/i);
     expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  });
+
+  it("renders subject-property selects with the API enum vocabularies only", () => {
+    render(
+      <SubjectPropertySection
+        value={{
+          identified: true,
+          address: "",
+          city: "",
+          province: "",
+          postal_code: "",
+          property_type: "",
+          property_style: "detached",
+          occupancy: "owner_occupied",
+          year_built: "",
+          livable_area_sqft: "",
+          units: "",
+          monthly_property_tax: "",
+          monthly_heating_cost: "",
+          monthly_condo_fee: "",
+          lot_details: "",
+          garage_details: "",
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const occupancy = screen.getByLabelText("Occupancy (required)");
+    expect(occupancy.tagName).toBe("SELECT");
+    expect(
+      Array.from(occupancy.querySelectorAll("option")).map(
+        (option) => option.value,
+      ),
+    ).toEqual(["owner_occupied", "tenant", "vacant", "other"]);
+    expect(occupancy).not.toHaveTextContent("Second home");
+    expect(occupancy).not.toHaveTextContent("second_home");
+
+    const propertyStyle = screen.getByLabelText("Property style (required)");
+    expect(propertyStyle.tagName).toBe("SELECT");
+    expect(
+      Array.from(propertyStyle.querySelectorAll("option")).map(
+        (option) => option.value,
+      ),
+    ).toEqual([
+      "detached",
+      "semi_detached",
+      "townhouse_row",
+      "apartment",
+      "other",
+    ]);
   });
 
   it("has no browser-persistence, analytics, console, or submission code path for answers", () => {
