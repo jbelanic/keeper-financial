@@ -2,7 +2,7 @@
 
 - **Decision date:** 2026-07-24
 - **Status:** owner-approved product, architecture, security, privacy, and lifecycle requirements
-- **Implementation status:** Phase B secure foundation, Phase C borrower-web source, Phase D.1 borrower document upload/final submission, and Phase E bounded internal review source are implemented as source evidence. Phase E adds forward migration `20260726_0013` for borrower-document decryption provenance. The seeded consent wording remains a conspicuous placeholder and is not approved for real-borrower use. Genuine-browser, operational, legal/privacy, accessibility, pilot, and Phases F–G evidence remain pending.
+- **Implementation status:** Phase B secure foundation, Phase C borrower-web source, Phase D.1 borrower document upload/final submission, and Phase E bounded internal review source are implemented as source evidence. Phase E and its corrective hardening add forward migrations `20260726_0013` and `20260726_0014` for borrower-document decryption provenance and fail-fast legacy-data protection. The seeded consent wording remains a conspicuous placeholder and is not approved for real-borrower use. Genuine-browser, operational, legal/privacy, accessibility, pilot, and Phases F–G evidence remain pending.
 - **Phase B branch base:** `1acf8b6f409284b9dd386cfe6403fd7c266a975d`
 - **Legacy reference:** `jbelanic/MortgageApp` at `251077177315ade4a94d12eb62df750684ed2bb7`
 

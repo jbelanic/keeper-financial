@@ -20,6 +20,10 @@ Phase E adds the internal borrower review surface for already submitted applicat
 
 The minimal admin UI at `/admin/borrower-applications` provides queue, assignment/reassignment, masked detail, document metadata/download, and explicit reveal controls.
 
+### Post-merge corrective review note — 2026-07-26
+
+The delayed independent review identified two medium follow-up findings after the Phase E merge: assignment targets did not require a verified Supabase identity, and legacy borrower-document migration behavior needed an explicit provenance guard. A bounded corrective slice on `feat/borrower-phase-f-readiness-lifecycle` addresses those findings with forward migration `20260726_0014`, verified-identity assignment validation, and bounded encrypted-object reads. The Phase E merge history is preserved; this note does not change the original checkpoint conclusion.
+
 ## 2. Migration and contracts
 
 Forward migration `20260726_0013_borrower_document_payload_revision.py` adds nullable `borrower_documents.encryption_payload_revision`. New uploads populate it. Downloads fail closed when the value is missing because the D.1 encryption AAD was bound to the application revision at upload time.

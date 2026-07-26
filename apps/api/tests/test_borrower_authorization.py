@@ -18,7 +18,7 @@ from keeper_api.models.borrower import (
     BorrowerApplicationLifecycleStatus,
     BorrowerApplicationSnapshot,
 )
-from keeper_api.models.domain import Candidate, Role, User, UserRole
+from keeper_api.models.domain import Candidate, Role, User, UserIdentity, UserRole
 from keeper_api.models.statuses import CandidateStatus
 from keeper_api.services.auth import Principal
 from keeper_api.services.borrower_applications import (
@@ -721,6 +721,15 @@ class TestValidateAssignmentTarget:
         db_session.add(user)
         db_session.flush()
 
+        db_session.add(
+            UserIdentity(
+                user_id=user.id,
+                provider="supabase",
+                provider_subject=str(uuid.uuid4()),
+                verified_at=datetime.now(UTC),
+            )
+        )
+
         role = Role(
             id=uuid.uuid4(),
             code="agent",
@@ -743,6 +752,29 @@ class TestValidateAssignmentTarget:
         db_session.flush()
 
         validate_assignment_target(db_session, user.id)
+
+    def test_invalid_assignment_target_without_verified_provider_identity(
+        self, db_session: Session
+    ) -> None:
+        user = User(
+            id=uuid.uuid4(),
+            email="agent@test.com",
+            display_name="Test Agent",
+            is_active=True,
+        )
+        db_session.add(user)
+        db_session.flush()
+
+        role = Role(id=uuid.uuid4(), code="agent", description="Agent role")
+        db_session.add(role)
+        db_session.flush()
+        db_session.add(UserRole(user_id=user.id, role_id=role.id))
+        db_session.add(Candidate(user_id=user.id, status=CandidateStatus.ACTIVE.value))
+        db_session.flush()
+
+        with pytest.raises(HTTPException) as exc_info:
+            validate_assignment_target(db_session, user.id)
+        assert exc_info.value.status_code == 422
 
     def test_invalid_assignment_target_inactive_user(self, db_session: Session) -> None:
         user = User(

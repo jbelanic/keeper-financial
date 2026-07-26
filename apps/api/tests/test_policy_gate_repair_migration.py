@@ -35,7 +35,7 @@ def test_policy_gate_repair_is_one_forward_data_revision() -> None:
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260726_0013"]
+    assert script.get_heads() == ["20260726_0014"]
 
     migration = _migration_module()
     assert migration.revision == "20260722_0009"  # type: ignore[attr-defined]
