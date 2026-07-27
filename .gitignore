@@ -29,6 +29,8 @@ __pycache__/
 /storage/local-documenso-tls/
 storage/dev_uploads/*
 !storage/dev_uploads/.gitkeep
+/storage/local-secrets/
+compose.override.yaml
 /start-hermes.sh
 
 # Editors and operating systems
