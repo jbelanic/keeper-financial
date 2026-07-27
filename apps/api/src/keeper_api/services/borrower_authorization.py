@@ -113,6 +113,37 @@ def verify_borrower_capability(
     )
 
 
+def require_agent_role_access(
+    principal: Principal,
+    db: Session,
+    settings: Settings,
+) -> Principal:
+    """Enforce agent identity gates without a specific application.
+
+    Use this for agent-collection endpoints (e.g. the assigned list) where the
+    exact assigned-application check is performed per row/item instead.
+    """
+    if not principal.is_active or principal.verified_at is None:
+        raise HTTPException(status_code=403, detail="active verified access is required")
+
+    if principal.aal != "aal2":
+        raise HTTPException(
+            status_code=403, detail="MFA is required for borrower application access"
+        )
+
+    if "agent" not in principal.roles:
+        raise HTTPException(status_code=403, detail="agent access is required")
+
+    candidate = db.scalar(select(Candidate).where(Candidate.user_id == principal.user_id))
+    if candidate is None:
+        raise HTTPException(status_code=403, detail="agent access is required")
+
+    if candidate.status not in (CandidateStatus.ACTIVE,):
+        raise HTTPException(status_code=403, detail="agent access is unavailable")
+
+    return principal
+
+
 def require_internal_agent_access(
     principal: Principal,
     application_id: uuid.UUID,

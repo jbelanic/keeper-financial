@@ -5729,6 +5729,144 @@
         }
       }
     },
+    "/api/v1/borrower-applications/agent/assigned": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "List Assigned Agent Applications",
+        "operationId": "list_assigned_agent_applications_api_v1_borrower_applications_agent_assigned_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerReviewQueueResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/borrower-applications/{application_id}/agent": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Get Agent Application",
+        "operationId": "get_agent_application_api_v1_borrower_applications__application_id__agent_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerAgentProjection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/borrower-applications/{application_id}/documents/{document_id}/download": {
       "get": {
         "tags": [
@@ -7186,6 +7324,218 @@
           "file"
         ],
         "title": "Body_upload_document_api_v1_upload_document_post"
+      },
+      "BorrowerAgentInfo": {
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "date_of_birth": {
+            "type": "string",
+            "title": "Date Of Birth"
+          },
+          "sin": {
+            "type": "string",
+            "title": "Sin"
+          },
+          "marital_status": {
+            "type": "string",
+            "title": "Marital Status"
+          },
+          "number_of_dependants": {
+            "type": "integer",
+            "title": "Number Of Dependants"
+          },
+          "current_address": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Current Address"
+          },
+          "employment": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Employment"
+          },
+          "has_sin": {
+            "type": "boolean",
+            "title": "Has Sin",
+            "default": true
+          },
+          "relationship_to_primary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship To Primary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "first_name",
+          "last_name",
+          "email",
+          "phone",
+          "date_of_birth",
+          "sin",
+          "marital_status",
+          "number_of_dependants",
+          "current_address",
+          "employment"
+        ],
+        "title": "BorrowerAgentInfo",
+        "description": "Full borrower detail for the exact assigned agent (per docs/35)."
+      },
+      "BorrowerAgentProjection": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "has_sin": {
+            "type": "boolean",
+            "title": "Has Sin"
+          },
+          "has_co_borrower": {
+            "type": "boolean",
+            "title": "Has Co Borrower"
+          },
+          "primary_borrower": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BorrowerAgentInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "co_borrower": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BorrowerAgentInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mortgage_request": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mortgage Request"
+          },
+          "subject_property": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Property"
+          },
+          "other_properties": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Other Properties"
+          },
+          "assets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Assets"
+          },
+          "liabilities": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Liabilities"
+          },
+          "additional_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Notes"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "title": "Last Activity At"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "lifecycle_status",
+          "revision",
+          "has_sin",
+          "has_co_borrower",
+          "primary_borrower",
+          "last_activity_at"
+        ],
+        "title": "BorrowerAgentProjection",
+        "description": "Full submitted-application projection for the exact assigned agent.\n\nAuthorized only by require_internal_agent_access (exact assigned_agent_id).\nReturns unmasked SIN and full financial detail needed to open the deal in\nan external origination system. See docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md."
       },
       "BorrowerApplicationDraftResponse": {
         "properties": {

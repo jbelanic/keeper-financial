@@ -1,3 +1,3 @@
 export type { components, operations, paths } from "./generated";
 
-export type PortalArea = "candidate" | "admin";
+export type PortalArea = "candidate" | "admin" | "agent";

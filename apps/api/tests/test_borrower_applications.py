@@ -2576,3 +2576,226 @@ class TestBorrowerPhaseDRouteIntegration:
         )
         assert second.status_code == 200, second.text
         assert second.json()["revision"] == 2
+
+    def _submit_full_application_with_financials(self, client: TestClient) -> str:
+        application_id = self._start(client)
+        payload = _valid_submit_payload()
+        payload["subject_property"] = {
+            "address": "123 Main St",
+            "city": "Toronto",
+            "province": "ON",
+            "postal_code": "M5V 2T6",
+            "property_type": "single_family",
+            "property_style": "detached",
+            "occupancy": "owner_occupied",
+        }
+        payload["assets"] = [
+            {"asset_type": "chequing", "value": "25000.00", "description": "Chequing"}
+        ]
+        payload["liabilities"] = [
+            {
+                "liability_type": "credit_card",
+                "current_balance": "4000.00",
+                "payment_amount": "200.00",
+                "payment_frequency": "monthly",
+            }
+        ]
+        payload["other_properties"] = []
+        payload["additional_notes"] = "Synthetic full-data note"
+        save = client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=self._headers(),
+            json={"expected_revision": 0, "payload": payload},
+        )
+        assert save.status_code == 200, save.text
+        resp = client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": client._keeper_consent_digest,
+                "borrower_coverage": "primary",
+                "expected_revision": save.json()["revision"],
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        return application_id
+
+    def test_agent_full_projection_returns_unmasked_sin_and_financials(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._submit_full_application_with_financials(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            agent = _create_review_user(
+                session,
+                subject="agent-full",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = agent_id
+            session.commit()
+
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/agent",
+            headers=self._auth_headers("agent-full"),
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["primary_borrower"]["sin"] == "046454286"
+        assert body["subject_property"]["city"] == "Toronto"
+        assert body["assets"][0]["value"] == "25000.00"
+        assert body["liabilities"][0]["current_balance"] == "4000.00"
+        assert body["additional_notes"] == "Synthetic full-data note"
+
+        with session_factory() as session:
+            audit = (
+                session.query(AuditEvent)
+                .filter(AuditEvent.event_type == "borrower_application_agent_viewed")
+                .one()
+            )
+            assert audit.safe_metadata["reviewer_role"] == "agent"
+
+    def test_agent_full_projection_denied_for_wrong_agent(self, route_client: TestClient) -> None:
+        application_id = self._submit_full_application_with_financials(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(
+                session,
+                subject="agent-owner",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            wrong = _create_review_user(
+                session,
+                subject="agent-intruder",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = wrong.id
+            session.commit()
+
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/agent",
+            headers=self._auth_headers("agent-owner"),
+        )
+        assert response.status_code == 404
+
+    def test_admin_internal_projection_remains_masked_with_full_data(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._submit_full_application_with_financials(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-masked", role_code="brokerage_admin")
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = _create_review_user(
+                session,
+                subject="agent-masked",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            ).id
+            session.commit()
+
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/internal",
+            headers=self._auth_headers("admin-masked"),
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["primary_borrower"]["sin"]["display"] == "*** *** 286"
+        assert "046454286" not in json.dumps(body)
+        assert body.get("assets") is None
+        assert body.get("liabilities") is None
+        assert body.get("subject_property") is None
+
+    def test_agent_assigned_list_and_email_notification(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from keeper_api.services import borrower_notifications
+
+        sent: list[dict[str, str]] = []
+
+        def fake_send(*, settings, agent_name, agent_email, application_id):
+            sent.append(
+                {
+                    "email": agent_email,
+                    "name": agent_name,
+                    "application_id": application_id,
+                }
+            )
+            return True
+
+        monkeypatch.setattr(borrower_notifications, "send_assignment_email", fake_send)
+
+        application_id = self._submit_full_application(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-notify", role_code="brokerage_admin")
+            agent = _create_review_user(
+                session,
+                subject="agent-notify",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+
+        assign = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/assignment",
+            headers=self._auth_headers("admin-notify"),
+            json={
+                "agent_user_id": str(agent_id),
+                "reason_category": "initial_assignment",
+            },
+        )
+        assert assign.status_code == 200, assign.text
+        assert len(sent) == 1
+        assert sent[0]["email"] == "agent-notify@example.test"
+        assert sent[0]["application_id"] == application_id
+
+        list_resp = route_client.get(
+            "/api/v1/borrower-applications/agent/assigned",
+            headers=self._auth_headers("agent-notify"),
+        )
+        assert list_resp.status_code == 200, list_resp.text
+        items = list_resp.json()["items"]
+        assert len(items) == 1
+        assert items[0]["application_id"] == application_id
+
+    def test_assignment_email_failure_is_non_fatal(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from keeper_api.services import borrower_notifications
+
+        def fake_send(*, settings, agent_name, agent_email, application_id):
+            raise RuntimeError("smtp down")
+
+        monkeypatch.setattr(borrower_notifications, "send_assignment_email", fake_send)
+
+        application_id = self._submit_full_application(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-emailfail", role_code="brokerage_admin")
+            agent = _create_review_user(
+                session,
+                subject="agent-emailfail",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+
+        assign = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/assignment",
+            headers=self._auth_headers("admin-emailfail"),
+            json={
+                "agent_user_id": str(agent_id),
+                "reason_category": "initial_assignment",
+            },
+        )
+        assert assign.status_code == 200, assign.text
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert application.assigned_agent_id == agent_id

@@ -182,7 +182,7 @@ export function PortalShell({
   links,
   children,
 }: {
-  area: "Candidate" | "Administration";
+  area: "Candidate" | "Administration" | "Agent";
   links: Array<[string, string]>;
   children: ReactNode;
 }) {

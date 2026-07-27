@@ -1085,6 +1085,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/borrower-applications/agent/assigned": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Assigned Agent Applications */
+    get: operations["list_assigned_agent_applications_api_v1_borrower_applications_agent_assigned_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/borrower-applications/{application_id}/agent": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Agent Application */
+    get: operations["get_agent_application_api_v1_borrower_applications__application_id__agent_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/borrower-applications/{application_id}/documents/{document_id}/download": {
     parameters: {
       query?: never;
@@ -1524,6 +1558,91 @@ export interface components {
     Body_upload_document_api_v1_upload_document_post: {
       /** File */
       file: string;
+    };
+    /**
+     * BorrowerAgentInfo
+     * @description Full borrower detail for the exact assigned agent (per docs/35).
+     */
+    BorrowerAgentInfo: {
+      /** First Name */
+      first_name: string;
+      /** Last Name */
+      last_name: string;
+      /** Email */
+      email: string;
+      /** Phone */
+      phone: string;
+      /** Date Of Birth */
+      date_of_birth: string;
+      /** Sin */
+      sin: string;
+      /** Marital Status */
+      marital_status: string;
+      /** Number Of Dependants */
+      number_of_dependants: number;
+      /** Current Address */
+      current_address: {
+        [key: string]: unknown;
+      };
+      /** Employment */
+      employment: {
+        [key: string]: unknown;
+      }[];
+      /**
+       * Has Sin
+       * @default true
+       */
+      has_sin: boolean;
+      /** Relationship To Primary */
+      relationship_to_primary?: string | null;
+    };
+    /**
+     * BorrowerAgentProjection
+     * @description Full submitted-application projection for the exact assigned agent.
+     *
+     *     Authorized only by require_internal_agent_access (exact assigned_agent_id).
+     *     Returns unmasked SIN and full financial detail needed to open the deal in
+     *     an external origination system. See docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md.
+     */
+    BorrowerAgentProjection: {
+      /** Application Id */
+      application_id: string;
+      /** Lifecycle Status */
+      lifecycle_status: string;
+      /** Revision */
+      revision: number;
+      /** Has Sin */
+      has_sin: boolean;
+      /** Has Co Borrower */
+      has_co_borrower: boolean;
+      primary_borrower: components["schemas"]["BorrowerAgentInfo"] | null;
+      co_borrower?: components["schemas"]["BorrowerAgentInfo"] | null;
+      /** Mortgage Request */
+      mortgage_request?: {
+        [key: string]: unknown;
+      } | null;
+      /** Subject Property */
+      subject_property?: {
+        [key: string]: unknown;
+      } | null;
+      /** Other Properties */
+      other_properties?: {
+        [key: string]: unknown;
+      }[];
+      /** Assets */
+      assets?: {
+        [key: string]: unknown;
+      }[];
+      /** Liabilities */
+      liabilities?: {
+        [key: string]: unknown;
+      }[];
+      /** Additional Notes */
+      additional_notes?: string | null;
+      /** Last Activity At */
+      last_activity_at: string;
+      /** Submitted At */
+      submitted_at?: string | null;
     };
     /** BorrowerApplicationDraftResponse */
     BorrowerApplicationDraftResponse: {
@@ -6663,6 +6782,72 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BorrowerInternalProjection"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_assigned_agent_applications_api_v1_borrower_applications_agent_assigned_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerReviewQueueResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_agent_application_api_v1_borrower_applications__application_id__agent_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerAgentProjection"];
         };
       };
       /** @description Validation Error */
