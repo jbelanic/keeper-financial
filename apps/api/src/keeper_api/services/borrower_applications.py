@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -10,7 +11,7 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from keeper_api.core.config import Settings
+from keeper_api.core.config import Settings, get_settings
 from keeper_api.models.borrower import (
     BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
@@ -35,6 +36,8 @@ from keeper_api.services.borrower_crypto import (
     encrypt_sin,
     generate_capability,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class BorrowerSubmissionError(ValueError):
@@ -843,6 +846,38 @@ def list_admin_review_queue(db: Session) -> list[dict[str, Any]]:
     return rows
 
 
+def list_agent_assigned_queue(db: Session, agent_user_id: uuid.UUID) -> list[dict[str, Any]]:
+    statuses = (
+        BorrowerApplicationLifecycleStatus.SUBMITTED.value,
+        BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
+    )
+    applications = db.scalars(
+        select(BorrowerApplication)
+        .where(BorrowerApplication.lifecycle_status.in_(statuses))
+        .where(BorrowerApplication.assigned_agent_id == agent_user_id)
+        .order_by(BorrowerApplication.submitted_at.asc(), BorrowerApplication.id.asc())
+    ).all()
+    rows: list[dict[str, Any]] = []
+    for application in applications:
+        if not has_submission_evidence(db, application.id):
+            continue
+        rows.append(
+            {
+                "application_id": str(application.id),
+                "lifecycle_status": application.lifecycle_status,
+                "submitted_at": application.submitted_at.isoformat()
+                if application.submitted_at
+                else None,
+                "assigned_agent_id": str(application.assigned_agent_id)
+                if application.assigned_agent_id
+                else None,
+                "assigned_agent_name": None,
+                "assigned_agent_email": None,
+            }
+        )
+    return rows
+
+
 def assign_submitted_application(
     db: Session,
     application_id: uuid.UUID,
@@ -959,6 +994,23 @@ def assign_submitted_application(
     )
     db.commit()
     db.refresh(application)
+
+    agent_user = db.get(User, agent_user_id)
+    if agent_user is not None:
+        from keeper_api.services.borrower_notifications import send_assignment_email
+
+        try:
+            send_assignment_email(
+                settings=get_settings(),
+                agent_name=agent_user.display_name,
+                agent_email=agent_user.email,
+                application_id=str(application.id),
+            )
+        except Exception:  # mail must not fail the assignment
+            logger.exception(
+                "Failed to send assignment email for %s; assignment continues",
+                application.id,
+            )
     return application
 
 
@@ -1041,6 +1093,86 @@ def get_internal_projection(
             "has_sin": bool(co_sin_val),
             "relationship_to_primary": co.get("relationship_to_primary", ""),
         }
+
+    return result
+
+
+def _agent_borrower_info(raw: dict[str, Any] | None) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    sin_val = raw.get("sin", "")
+    return {
+        "first_name": raw.get("first_name", ""),
+        "last_name": raw.get("last_name", ""),
+        "email": raw.get("email", ""),
+        "phone": raw.get("phone", ""),
+        "date_of_birth": str(raw.get("date_of_birth", "")),
+        "sin": sin_val if sin_val else "",
+        "marital_status": raw.get("marital_status", ""),
+        "number_of_dependants": raw.get("number_of_dependants", 0),
+        "current_address": raw.get("current_address", {}),
+        "employment": raw.get("employment", []),
+        "has_sin": bool(sin_val),
+        "relationship_to_primary": raw.get("relationship_to_primary"),
+    }
+
+
+def get_agent_projection(
+    db: Session,
+    crypto_state: BorrowerCryptoState | None,
+    application_id: uuid.UUID,
+) -> dict[str, Any]:
+    """Full submitted-application projection for the exact assigned agent.
+
+    Callers MUST enforce require_internal_agent_access (exact assigned_agent_id,
+    AAL2, active verified agent) before calling this. Returns unmasked SIN and
+    full financial detail per docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md.
+    """
+    application = db.get(BorrowerApplication, application_id)
+    if application is None:
+        raise ValueError("application not found")
+
+    if application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value:
+        raise ValueError("application not found")
+
+    if not has_submission_evidence(db, application_id):
+        raise ValueError("application not found")
+
+    result: dict[str, Any] = {
+        "application_id": str(application.id),
+        "lifecycle_status": application.lifecycle_status,
+        "revision": application.revision,
+        "has_sin": False,
+        "has_co_borrower": False,
+        "primary_borrower": None,
+        "co_borrower": None,
+        "mortgage_request": None,
+        "subject_property": None,
+        "other_properties": [],
+        "assets": [],
+        "liabilities": [],
+        "additional_notes": None,
+        "last_activity_at": application.last_activity_at.isoformat(),
+        "submitted_at": application.submitted_at.isoformat() if application.submitted_at else None,
+    }
+
+    if application.payload_revision == 0 or crypto_state is None:
+        return result
+
+    payload = get_latest_payload(db, crypto_state, application.id, application.payload_revision)
+    if payload is None:
+        return result
+
+    result["has_sin"] = bool(payload.get("primary_borrower", {}).get("sin"))
+    result["has_co_borrower"] = bool(payload.get("co_borrower"))
+    result["mortgage_request"] = payload.get("mortgage_request")
+    result["subject_property"] = payload.get("subject_property")
+    result["other_properties"] = payload.get("other_properties", []) or []
+    result["assets"] = payload.get("assets", []) or []
+    result["liabilities"] = payload.get("liabilities", []) or []
+    result["additional_notes"] = payload.get("additional_notes")
+    result["primary_borrower"] = _agent_borrower_info(payload.get("primary_borrower"))
+    result["co_borrower"] = _agent_borrower_info(payload.get("co_borrower"))
 
     return result
 

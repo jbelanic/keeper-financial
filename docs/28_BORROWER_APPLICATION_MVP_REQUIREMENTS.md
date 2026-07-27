@@ -61,6 +61,8 @@ A borrower can update only the current draft. An exact-capability, exact-host/or
 
 An internal agent must have an active Keeper user, verified Supabase identity, current `agent` role/relationship, and AAL2. The agent can access only applications assigned to that exact user. Publication of an agent profile is not itself authorization to view applications.
 
+The exact assigned agent reads the full application through the dedicated `GET /api/v1/borrower-applications/{id}/agent` endpoint (and their assigned queue at `GET .../agent/assigned`). Approved on 2026-07-27 (Scope B, `docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md`), this endpoint returns the **unmasked SIN** and the **full financial payload** — `subject_property`, `other_properties`, `assets`, `liabilities`, and `additional_notes` — needed for the agent's Filogix credit-assessment workflow. It is distinct from the masked `BorrowerInternalProjection` used by administrators and the generic internal review path, which continues to expose only a display-masked SIN and intentionally withholds the full financial fields. The agent view is guarded server-side by exact assignment, active-agent status, AAL2, and a safe audit record (`borrower_application_agent_viewed`); any other agent, non-assigned user, or anonymous caller receives 404. Outside the agent endpoint and web surface, borrower data stays masked everywhere.
+
 ### 3.3 Brokerage administrator
 
 A brokerage administrator requires the existing active `brokerage_admin` authorization and AAL2. Administrators can access the application queue, assign or reassign applications with a reason, manage legal holds, and perform other expressly defined operations. Each sensitive read or mutation requires server-side authorization and safe audit evidence.

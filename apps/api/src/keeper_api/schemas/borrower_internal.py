@@ -44,6 +44,52 @@ class BorrowerInternalProjection(BaseModel):
     submitted_at: str | None = None
 
 
+class BorrowerAgentInfo(BaseModel):
+    """Full borrower detail for the exact assigned agent (per docs/35)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    first_name: str
+    last_name: str
+    email: str
+    phone: str
+    date_of_birth: str
+    sin: str
+    marital_status: str
+    number_of_dependants: int
+    current_address: dict[str, Any]
+    employment: list[dict[str, Any]]
+    has_sin: bool = True
+    relationship_to_primary: str | None = None
+
+
+class BorrowerAgentProjection(BaseModel):
+    """Full submitted-application projection for the exact assigned agent.
+
+    Authorized only by require_internal_agent_access (exact assigned_agent_id).
+    Returns unmasked SIN and full financial detail needed to open the deal in
+    an external origination system. See docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    application_id: str
+    lifecycle_status: str
+    revision: int
+    has_sin: bool
+    has_co_borrower: bool
+    primary_borrower: BorrowerAgentInfo | None
+    co_borrower: BorrowerAgentInfo | None = None
+    mortgage_request: dict[str, Any] | None = None
+    subject_property: dict[str, Any] | None = None
+    other_properties: list[dict[str, Any]] = Field(default_factory=list)
+    assets: list[dict[str, Any]] = Field(default_factory=list)
+    liabilities: list[dict[str, Any]] = Field(default_factory=list)
+    additional_notes: str | None = None
+    last_activity_at: str
+    submitted_at: str | None = None
+
+
 class SinRevealAuditEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

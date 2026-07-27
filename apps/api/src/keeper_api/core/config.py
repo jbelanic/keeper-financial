@@ -96,6 +96,13 @@ class Settings(BaseSettings):
     borrower_rate_limit_tracked_clients: int = Field(default=10_000, ge=100, le=100_000)
     borrower_max_document_bytes: int = Field(default=25 * 1024 * 1024, ge=1, le=25 * 1024 * 1024)
     borrower_max_document_count: int = Field(default=25, ge=1, le=25)
+
+    smtp_enabled: bool = False
+    smtp_host: str = "127.0.0.1"
+    smtp_port: int = Field(default=54324, ge=1, le=65535)
+    smtp_from: str = "no-reply@keeperfinancial.ca"
+    smtp_use_tls: bool = False
+    smtp_notification_subject: str = "A borrower application has been assigned to you"
     borrower_max_total_document_bytes: int = Field(
         default=250 * 1024 * 1024, ge=1, le=250 * 1024 * 1024
     )
