@@ -112,7 +112,19 @@ submission, generated-contract, and borrower-web contract. Phase F retention
 jobs, legal-hold operations, ingress, backup/restore, deployment, monitoring,
 and operational evidence remain unimplemented and awaiting separate approval.
 
-On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
+On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
+
+On 2026-07-27 the owner approved (a) the assigned-agent full-data retrieval
+boundary (Scope B) and (b) stopping the local Supabase stack. Scope B lets the
+exact assigned active AAL2 mortgage agent read the unmasked SIN and the full
+financial payload (assets, liabilities, subject property, other properties,
+additional notes) for their assigned submitted/under-review application, while
+the admin/internal `BorrowerInternalProjection` remains masked (display-only
+SIN) and withholds those full financial fields. The privacy-boundary decision
+and the agent-only authorization model are recorded in
+`docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md`; the consolidated implementation
+plan is `docs/36_AGENT_RETRIEVAL_MINIMAL_PLAN.md`. Outside the agent web surface
+the borrower data stays masked everywhere.
 
 ## 11. Phase 1 release condition
 

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/access", response_model=AccessResponse)
 def portal_access(
-    area: Literal["candidate", "admin"],
+    area: Literal["candidate", "admin", "agent"],
     principal: Principal = Depends(get_current_principal),
     settings: Settings = Depends(get_settings),
 ) -> AccessResponse:

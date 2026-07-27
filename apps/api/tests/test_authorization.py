@@ -51,6 +51,33 @@ def test_authorized_admin_can_access_admin_area(client: TestClient, db: Session)
     assert response.status_code == 200
 
 
+def test_authorized_agent_can_access_agent_area(client: TestClient, db: Session) -> None:
+    create_user(db, subject="agent", role_code="agent")
+    response = client.get(
+        "/api/v1/auth/access?area=agent",
+        headers={"X-Dev-Auth-Sub": "agent", "X-Dev-Auth-AAL": "aal2"},
+    )
+    assert response.status_code == 200
+
+
+def test_admin_cannot_access_agent_area(client: TestClient, db: Session) -> None:
+    create_user(db, subject="admin", role_code="brokerage_admin")
+    response = client.get(
+        "/api/v1/auth/access?area=agent",
+        headers={"X-Dev-Auth-Sub": "admin", "X-Dev-Auth-AAL": "aal2"},
+    )
+    assert response.status_code == 403
+
+
+def test_candidate_cannot_access_agent_area(client: TestClient, db: Session) -> None:
+    create_user(db, subject="candidate", role_code="candidate", candidate_status="under_review")
+    response = client.get(
+        "/api/v1/auth/access?area=agent",
+        headers={"X-Dev-Auth-Sub": "candidate", "X-Dev-Auth-AAL": "aal2"},
+    )
+    assert response.status_code == 403
+
+
 def test_linked_admin_requires_aal2_for_access_and_protected_routes(
     client: TestClient, db: Session, settings: Settings
 ) -> None:

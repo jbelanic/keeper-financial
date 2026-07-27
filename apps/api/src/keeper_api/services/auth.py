@@ -21,7 +21,7 @@ from keeper_api.db.session import get_db
 from keeper_api.models.domain import Candidate, Role, User, UserIdentity, UserRole
 from keeper_api.models.statuses import CandidateStatus
 
-PortalArea = Literal["candidate", "admin"]
+PortalArea = Literal["candidate", "admin", "agent"]
 security = HTTPBearer(auto_error=False)
 _PROVIDER_EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 _MAX_PROVIDER_USER_BYTES = 64 * 1024
@@ -230,6 +230,15 @@ def authorize_portal(principal: Principal, area: PortalArea, settings: Settings)
         if principal.candidate_status in denied:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="candidate access is unavailable"
+            )
+    elif area == "agent":
+        if "agent" not in principal.roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="agent access is required"
+            )
+        if principal.aal != "aal2":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="agent MFA is required"
             )
     else:
         if "brokerage_admin" not in principal.roles:

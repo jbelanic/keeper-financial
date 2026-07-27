@@ -10,6 +10,11 @@ export type BorrowerReviewQueueResponse =
 export type BorrowerInternalProjection =
   components["schemas"]["BorrowerInternalProjection"];
 
+export type BorrowerAgentProjection =
+  components["schemas"]["BorrowerAgentProjection"];
+
+export type BorrowerAgentInfo = components["schemas"]["BorrowerAgentInfo"];
+
 export type BorrowerDocumentMetadata =
   components["schemas"]["BorrowerDocumentMetadata"];
 export type BorrowerDocumentListResponse =
@@ -22,4 +27,10 @@ export async function getBorrowerReviewBootstrap() {
     ),
     portalServerJson<EligibleAgent[]>("/api/v1/admin/eligible-agents"),
   ]);
+}
+
+export async function getAgentAssignedBootstrap() {
+  return portalServerJson<BorrowerReviewQueueResponse>(
+    "/api/v1/borrower-applications/agent/assigned",
+  );
 }

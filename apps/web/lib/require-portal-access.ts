@@ -27,6 +27,11 @@ export async function requirePortalAccess(area: PortalArea): Promise<void> {
   if (needsMfa) {
     redirect("/auth/mfa?returnTo=/admin");
   }
-  const error = authenticated && area === "admin" ? "&error=admin-access" : "";
-  redirect(`/auth/sign-in?returnTo=/${area}${error}`);
+  const areaError =
+    authenticated && area === "admin"
+      ? "&error=admin-access"
+      : authenticated && area === "agent"
+        ? "&error=agent-access"
+        : "";
+  redirect(`/auth/sign-in?returnTo=/${area}${areaError}`);
 }
