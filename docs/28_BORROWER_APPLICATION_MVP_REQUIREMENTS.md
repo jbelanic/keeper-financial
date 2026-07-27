@@ -164,7 +164,29 @@ Immediately before submission, the controlling borrower must actively accept one
 
 The consent is not an electronic signature and includes no marketing consent. A preselected checkbox, bundled optional marketing, typed-name signature, or client-supplied consent version is prohibited.
 
-The exact production wording is not approved by this engineering decision. Local implementation may use conspicuously synthetic draft wording, but real-data submission must remain disabled until the owner supplies or approves exact wording and immutable version after appropriate professional review.
+### Approved borrower/mortgage-applicant privacy and credit-use disclosure
+
+**Immutable version:** `borrower-privacy-credit-disclosure-2026-07-27-v1` (owner-approved 2026-07-27). A new immutable version is required for any wording change; existing submission records keep the version they acknowledged.
+
+> **Mortgage Applicant Privacy Disclosure**
+>
+> Keeper Financial Inc. collects applicant information to create and administer your account, receive and review mortgage applications for the mortgage products you select, communicate with you about those applications, protect the portal, maintain application and access records, and operate the mortgage application process.
+>
+> We collect your verified account email and authentication/security metadata; the contact details you provide; the mortgage product and application details you select; your mortgage request, applicant identity and contact information, date of birth, Social Insurance Number, marital status, dependants, address history, employment and income, subject and other property details, assets and liabilities, notes, and any supporting documents you choose to upload with their file metadata; privacy acknowledgements; and application status, applicant-visible communications, history, and audit records. The Social Insurance Number and financial information are collected only as necessary to assess your mortgage request and are protected with application-level encryption; they are not shown in full to reviewers by default and are disclosed only to authorized brokerage administrators and the assigned mortgage agent reviewing your application.
+>
+> You can access your own applicant record. Within Keeper Financial, access is limited to authorized brokerage administrators and mortgage-application reviewers who need the information for the mortgage application process, security, support, or records administration. Internal notes are not shown to applicants. Service providers that host or support identity, application, database, private file-storage, security, monitoring, or communications functions may process information only to provide those services under Keeper Financial's direction and applicable safeguards. Applicant information is not provided to service providers for their own independent marketing.
+>
+> Submitted applications, supporting documents, acknowledgement records, and security/audit records are retained under Keeper Financial's approved, policy-controlled retention categories for only as long as reasonably needed for the mortgage application process, records administration, security, dispute handling, and applicable obligations, including a seven-year retention period for submitted applications. Retention may differ for abandoned drafts, withdrawn applications, documents, and security or audit records. Records are deleted or de-identified when the applicable approved policy permits, subject to a documented legal or security hold. This notice does not promise an unsupported fixed legal retention period.
+>
+> Required fields are needed to identify and contact you, assess your mortgage request, associate the application with the selected product, review the application, and record that this disclosure was shown. If you omit required information or do not acknowledge this disclosure, you may save a draft but cannot submit the application. Optional answers and optional documents may be omitted without preventing submission, although reviewers will not have information you choose not to provide.
+>
+> For privacy questions or requests, contact **support@keeperfinancial.ca**. Do not email sensitive documents; use the authenticated portal for permitted uploads.
+>
+> **Version:** `borrower-privacy-credit-disclosure-2026-07-27-v1`
+
+The disclosure must be displayed before submission and remain available from the borrower portal. Submission records the immutable version and timestamp; the client cannot select or override either. This disclosure is distinct from the Phase 1C candidate privacy disclosure in `docs/19`; recruitment/candidate scope and borrower scope coexist.
+
+The exact production wording was approved by the owner on 2026-07-27, resolving the prior placeholder. Real-data borrower submission remains disabled until the separate owner release/deploy approval and secure-deployment evidence exist; approved wording alone does not enable submission.
 
 ## 7. Documents
 
