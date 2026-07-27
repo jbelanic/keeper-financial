@@ -4,13 +4,13 @@
 - **Original date:** 2026-07-19
 - **Borrower-boundary update:** 2026-07-24
 - **Source branch:** `main`
-- **Source baseline for this update:** `5f8a41f34bb3586c59d613848fafc9435a86b50d`, merged through PR #9
-- **Current Alembic head:** `20260722_0010`; Section 4.3 preserves the historical `20260719_0008` stop boundaries
+- **Source baseline for current reconciliation:** `2d29a0af97c1198007482154fc270cdac91f5ba6`, merged through PR #18
+- **Current source Alembic head after bounded Phase D.2:** `20260726_0015`; Section 4.3 preserves the historical `20260719_0008` stop boundaries
 - **Authority:** `AGENTS.md`, `docs/00_PROJECT_SOURCE_OF_TRUTH.md`, approved decisions in `docs/09_DECISIONS_ASSUMPTIONS_AND_OPEN_QUESTIONS.md`, and the current architecture, security, lifecycle, delivery, API/data, test, limitations, and implementation-evidence documents
 
 ## 1. Purpose and approval boundary
 
-This document defines the evidence, decisions, procedures, stop conditions, recovery boundaries, and release gates required before a controlled pilot or production operation may be approved. It is planning and evidence definition only. The 2026-07-24 owner decision expands the future release boundary to the Keeper-native borrower application in `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`; it does not mark that application implemented or ready for real data.
+This document defines the evidence, decisions, procedures, stop conditions, recovery boundaries, and release gates required before a controlled pilot or production operation may be approved. It is planning and evidence definition only. Borrower Phases B–E now have bounded source implementation checkpoints, including Phase D.2 contract closure; they are not operational evidence or readiness for real data. PR #18 did not complete Phase F.
 
 This plan does **not itself** authorize:
 

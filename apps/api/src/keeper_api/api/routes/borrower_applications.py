@@ -5,14 +5,27 @@ import uuid
 from typing import Any, Literal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.datastructures import UploadFile
 
 from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
-from keeper_api.models.borrower import BorrowerApplication
+from keeper_api.models.borrower import (
+    BorrowerApplication,
+    BorrowerApplicationSnapshot,
+    BorrowerConsentRecord,
+)
 from keeper_api.schemas.borrower_internal import BorrowerInternalProjection
 from keeper_api.services.audit import AuditService
 from keeper_api.services.auth import Principal, get_current_principal
@@ -20,7 +33,9 @@ from keeper_api.services.borrower_applications import (
     BorrowerSubmissionError,
     assign_submitted_application,
     get_application_summary,
+    get_current_borrower_consent,
     get_internal_projection,
+    get_latest_payload,
     list_admin_review_queue,
     reveal_sin,
     save_draft_payload,
@@ -43,6 +58,7 @@ from keeper_api.services.borrower_crypto import (
 from keeper_api.services.borrower_documents import (
     BorrowerDocumentRejected,
     BorrowerDocumentStorageError,
+    delete_draft_document,
     download_document,
     list_document_metadata,
     upload_document,
@@ -65,6 +81,46 @@ _SIN_REVEAL_REASONS = {
 
 
 router = APIRouter(prefix="/borrower-applications", tags=["borrower-applications"])
+
+
+def _record_borrower_failure(
+    db: Session,
+    *,
+    event_type: str,
+    application_id: uuid.UUID,
+    request_id: str | None,
+    reason: str,
+) -> None:
+    try:
+        db.rollback()
+        AuditService(db).record(
+            event_type,
+            "borrower_application",
+            application_id,
+            request_id=request_id,
+            safe_metadata={"result": "failure", "reason": reason},
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning(
+            "borrower failure audit unavailable",
+            extra={
+                "event": event_type,
+                "application_id": str(application_id),
+                "result": "audit_unavailable",
+            },
+        )
+
+
+def _clear_borrower_capability_cookie(response: Response, settings: Settings) -> None:
+    response.delete_cookie(
+        key=_BORROWER_COOKIE_NAME,
+        path="/",
+        httponly=True,
+        secure=True,
+        samesite="strict",
+    )
 
 
 def _get_crypto_state(request: Request) -> BorrowerCryptoState | None:
@@ -121,6 +177,10 @@ class BorrowerApplicationSaveResponse(BaseModel):
     draft_expires_at: str | None
 
 
+class BorrowerApplicationDraftResponse(BorrowerApplicationSaveResponse):
+    payload: dict[str, Any] | None
+
+
 class BorrowerSinRevealRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -144,8 +204,12 @@ class BorrowerDocumentUploadResponse(BaseModel):
 
     document_id: str
     filename: str
+    category: str
+    description: str | None
+    mime_type: str
     size_bytes: int
     scan_status: str
+    uploaded_at: str
 
 
 class BorrowerApplicationSubmitRequest(BaseModel):
@@ -166,6 +230,14 @@ class BorrowerApplicationSubmitResponse(BaseModel):
     retention_due_at: str
     snapshot_id: str
     consent_record_id: str
+
+
+class BorrowerConsentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    consent_version: str
+    wording_digest: str
+    wording_text: str
 
 
 class BorrowerReviewQueueItem(BaseModel):
@@ -208,6 +280,8 @@ class BorrowerDocumentMetadata(BaseModel):
 
     document_id: str
     filename: str
+    category: str
+    description: str | None
     mime_type: str
     size_bytes: int
     scan_status: str
@@ -219,6 +293,19 @@ class BorrowerDocumentListResponse(BaseModel):
 
     items: list[BorrowerDocumentMetadata]
     total: int
+
+
+def _document_metadata(document: Any) -> BorrowerDocumentMetadata:
+    return BorrowerDocumentMetadata(
+        document_id=str(document.id),
+        filename=document.filename,
+        category=document.category,
+        description=document.description,
+        mime_type=document.mime_type,
+        size_bytes=document.size_bytes,
+        scan_status=document.scan_status,
+        uploaded_at=document.created_at.isoformat(),
+    )
 
 
 @router.get(
@@ -263,7 +350,7 @@ def start_application(
         key=_BORROWER_COOKIE_NAME,
         value=capability,
         httponly=True,
-        secure=settings.app_env == "production",
+        secure=True,
         samesite="strict",
         path="/",
         max_age=30 * 24 * 60 * 60,
@@ -278,7 +365,7 @@ def start_application(
 
 @router.get(
     "/{application_id}",
-    response_model=BorrowerApplicationSaveResponse,
+    response_model=BorrowerApplicationDraftResponse,
     dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
 )
 def get_application(
@@ -286,7 +373,7 @@ def get_application(
     request: Request,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-) -> BorrowerApplicationSaveResponse:
+) -> BorrowerApplicationDraftResponse:
     require_borrower_feature_enabled(settings)
     validate_borrower_origin(request, settings)
     crypto_state = _get_crypto_state(request)
@@ -303,7 +390,27 @@ def get_application(
 
     summary = get_application_summary(db, application)
 
-    return BorrowerApplicationSaveResponse(
+    try:
+        payload = (
+            get_latest_payload(
+                db,
+                crypto_state,
+                application.id,
+                application.payload_revision,
+            )
+            if application.payload_revision > 0
+            else None
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="draft unavailable") from exc
+
+    if payload is not None:
+        for borrower_key in ("primary_borrower", "co_borrower"):
+            borrower = payload.get(borrower_key)
+            if isinstance(borrower, dict):
+                borrower.pop("sin", None)
+
+    return BorrowerApplicationDraftResponse(
         application_id=summary["id"],
         revision=summary["revision"],
         lifecycle_status=summary["lifecycle_status"],
@@ -311,6 +418,7 @@ def get_application(
         has_co_borrower=summary["has_co_borrower"],
         last_activity_at=summary["last_activity_at"],
         draft_expires_at=summary["draft_expires_at"],
+        payload=payload,
     )
 
 
@@ -355,7 +463,12 @@ def save_application(
     try:
         validated_payload = validate_borrower_draft(body.payload)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+        errors = exc.errors(
+            include_context=False,
+            include_input=False,
+            include_url=False,
+        )
+        raise HTTPException(status_code=422, detail=errors) from exc
     payload_dict = validated_payload.model_dump(mode="python", exclude_none=True)
 
     application = save_draft_payload(
@@ -386,11 +499,29 @@ def save_application(
     response_model=BorrowerDocumentUploadResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["file", "category"],
+                        "properties": {
+                            "file": {"type": "string", "format": "binary"},
+                            "category": {"type": "string"},
+                            "description": {"type": "string", "nullable": True},
+                        },
+                        "additionalProperties": False,
+                    }
+                }
+            },
+        }
+    },
 )
-def upload_borrower_document(
+async def upload_borrower_document(
     application_id: uuid.UUID,
     request: Request,
-    file: UploadFile = File(),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> BorrowerDocumentUploadResponse:
@@ -403,30 +534,183 @@ def upload_borrower_document(
         raise HTTPException(status_code=404, detail="application not found")
 
     ctx = verify_borrower_capability(db, crypto_state, application_id, capability)
-
+    file: UploadFile | None = None
     try:
+        try:
+            form = await request.form()
+        except Exception as exc:
+            raise BorrowerDocumentRejected("malformed_multipart") from exc
+        entries = list(form.multi_items())
+        field_names = [name for name, _value in entries]
+        if set(field_names) - {"file", "category", "description"}:
+            raise BorrowerDocumentRejected("unexpected_upload_field")
+        if (
+            field_names.count("file") != 1
+            or field_names.count("category") != 1
+            or field_names.count("description") > 1
+        ):
+            raise BorrowerDocumentRejected("invalid_upload_fields")
+        file_value = form.get("file")
+        category = form.get("category")
+        description = form.get("description")
+        if not isinstance(file_value, UploadFile) or not isinstance(category, str):
+            raise BorrowerDocumentRejected("invalid_upload_fields")
+        if description is not None and not isinstance(description, str):
+            raise BorrowerDocumentRejected("invalid_upload_fields")
+        file = file_value
         document = upload_document(
             db=db,
             crypto_state=crypto_state,
             application_id=application_id,
             capability_session_id=ctx.capability_session_id,
-            file_stream=file.file,
-            filename=file.filename,
-            mime_type=file.content_type,
+            file_stream=file_value.file,
+            filename=file_value.filename,
+            mime_type=file_value.content_type,
+            category=category,
+            description=description,
             settings=settings,
+            request_id=getattr(request.state, "request_id", None),
         )
     except BorrowerDocumentRejected as exc:
+        _record_borrower_failure(
+            db,
+            event_type="borrower_document_upload_result",
+            application_id=application_id,
+            request_id=getattr(request.state, "request_id", None),
+            reason=exc.code,
+        )
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
     except BorrowerDocumentStorageError as exc:
+        _record_borrower_failure(
+            db,
+            event_type="borrower_document_upload_result",
+            application_id=application_id,
+            request_id=getattr(request.state, "request_id", None),
+            reason=str(exc),
+        )
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     finally:
-        file.file.close()
+        if file is not None:
+            file.file.close()
 
     return BorrowerDocumentUploadResponse(
         document_id=str(document.id),
         filename=document.filename,
+        category=document.category,
+        description=document.description,
+        mime_type=document.mime_type,
         size_bytes=document.size_bytes,
         scan_status=document.scan_status,
+        uploaded_at=document.created_at.isoformat(),
+    )
+
+
+@router.get(
+    "/{application_id}/draft-documents",
+    response_model=BorrowerDocumentListResponse,
+    dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
+)
+def list_draft_documents(
+    application_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    require_borrower_feature_enabled(settings)
+    validate_borrower_origin(request, settings)
+    capability = extract_capability_from_cookie(request)
+    if not capability:
+        raise HTTPException(status_code=404, detail="application not found")
+    verify_borrower_capability(db, _get_crypto_state(request), application_id, capability)
+    documents = list_document_metadata(db, application_id)
+    response = BorrowerDocumentListResponse(
+        items=[_document_metadata(item) for item in documents],
+        total=len(documents),
+    )
+    return Response(
+        content=response.model_dump_json(),
+        media_type="application/json",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.delete(
+    "/{application_id}/draft-documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
+)
+def delete_draft_document_route(
+    application_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    require_borrower_feature_enabled(settings)
+    validate_borrower_origin(request, settings)
+    capability = extract_capability_from_cookie(request)
+    if not capability:
+        raise HTTPException(status_code=404, detail="application not found")
+    ctx = verify_borrower_capability(db, _get_crypto_state(request), application_id, capability)
+    try:
+        delete_draft_document(
+            db,
+            application_id,
+            ctx.capability_session_id,
+            document_id,
+            settings,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except BorrowerDocumentRejected as exc:
+        _record_borrower_failure(
+            db,
+            event_type="borrower_document_removal_result",
+            application_id=application_id,
+            request_id=getattr(request.state, "request_id", None),
+            reason=exc.code,
+        )
+        raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
+    except BorrowerDocumentStorageError as exc:
+        _record_borrower_failure(
+            db,
+            event_type="borrower_document_removal_result",
+            application_id=application_id,
+            request_id=getattr(request.state, "request_id", None),
+            reason=str(exc),
+        )
+        raise HTTPException(status_code=503, detail="storage_unavailable") from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
+
+
+@router.get(
+    "/{application_id}/consent",
+    response_model=BorrowerConsentResponse,
+    dependencies=[Depends(_BORROWER_CAPABILITY_COOKIE)],
+)
+def get_active_borrower_consent(
+    application_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    require_borrower_feature_enabled(settings)
+    validate_borrower_origin(request, settings)
+    capability = extract_capability_from_cookie(request)
+    if not capability:
+        raise HTTPException(status_code=404, detail="application not found")
+    verify_borrower_capability(db, _get_crypto_state(request), application_id, capability)
+    consent = get_current_borrower_consent(db)
+    if consent is None:
+        raise HTTPException(status_code=503, detail="consent_unavailable")
+    payload = BorrowerConsentResponse(
+        consent_version=consent.consent_version,
+        wording_digest=consent.wording_digest,
+        wording_text=consent.wording_text,
+    )
+    return Response(
+        content=payload.model_dump_json(),
+        media_type="application/json",
+        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -439,6 +723,7 @@ def submit_application(
     application_id: uuid.UUID,
     body: BorrowerApplicationSubmitRequest,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> BorrowerApplicationSubmitResponse:
@@ -462,6 +747,37 @@ def submit_application(
             crypto_state.hmac_key,
         )
     ):
+        consent = db.scalar(
+            select(BorrowerConsentRecord).where(
+                BorrowerConsentRecord.application_id == application_id
+            )
+        )
+        snapshot = db.scalar(
+            select(BorrowerApplicationSnapshot).where(
+                BorrowerApplicationSnapshot.application_id == application_id
+            )
+        )
+        if (
+            consent is not None
+            and snapshot is not None
+            and consent.capability_session_id == existing_application.capability_session_id
+            and consent.submission_revision == body.expected_revision
+            and consent.consent_version == body.consent_version
+            and consent.wording_digest == body.consent_wording_digest
+            and consent.borrower_coverage == body.borrower_coverage
+            and existing_application.submitted_at is not None
+            and existing_application.retention_due_at is not None
+        ):
+            result = BorrowerApplicationSubmitResponse(
+                application_id=str(existing_application.id),
+                lifecycle_status="submitted",
+                submitted_at=existing_application.submitted_at.isoformat(),
+                retention_due_at=existing_application.retention_due_at.isoformat(),
+                snapshot_id=str(snapshot.id),
+                consent_record_id=str(consent.id),
+            )
+            _clear_borrower_capability_cookie(response, settings)
+            return result
         raise HTTPException(status_code=409, detail="already_submitted")
 
     ctx = verify_borrower_capability(db, crypto_state, application_id, capability)
@@ -478,11 +794,18 @@ def submit_application(
             settings=settings,
         )
     except BorrowerSubmissionError as exc:
+        _record_borrower_failure(
+            db,
+            event_type="borrower_application_submission_result",
+            application_id=application_id,
+            request_id=getattr(request.state, "request_id", None),
+            reason=exc.code,
+        )
         raise HTTPException(status_code=exc.status_code, detail=exc.code) from exc
 
-    return BorrowerApplicationSubmitResponse(
+    result = BorrowerApplicationSubmitResponse(
         application_id=str(application.id),
-        lifecycle_status=application.lifecycle_status,
+        lifecycle_status="submitted",
         submitted_at=application.submitted_at.isoformat() if application.submitted_at else "",
         retention_due_at=application.retention_due_at.isoformat()
         if application.retention_due_at
@@ -490,6 +813,8 @@ def submit_application(
         snapshot_id=str(snapshot.id),
         consent_record_id=str(consent.id),
     )
+    _clear_borrower_capability_cookie(response, settings)
+    return result
 
 
 @router.post(
@@ -579,6 +904,8 @@ def list_borrower_documents_for_review(
         BorrowerDocumentMetadata(
             document_id=str(document.id),
             filename=document.filename,
+            category=document.category,
+            description=document.description,
             mime_type=document.mime_type,
             size_bytes=document.size_bytes,
             scan_status=document.scan_status,

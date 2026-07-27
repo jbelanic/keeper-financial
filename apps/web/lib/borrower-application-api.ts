@@ -4,7 +4,32 @@ export type BorrowerDraftStart =
   components["schemas"]["BorrowerApplicationStartResponse"];
 export type BorrowerDraft =
   components["schemas"]["BorrowerApplicationSaveResponse"];
+export type BorrowerRecoveredDraft =
+  components["schemas"]["BorrowerApplicationDraftResponse"];
 export type BorrowerDraftPayload = Record<string, unknown>;
+export type BorrowerConsent = {
+  consent_version: string;
+  wording_digest: string;
+  wording_text: string;
+};
+export type BorrowerDocument = {
+  document_id: string;
+  filename: string;
+  category: string;
+  description: string | null;
+  mime_type: string;
+  size_bytes: number;
+  scan_status: string;
+  uploaded_at: string;
+};
+export type BorrowerSubmission = {
+  application_id: string;
+  lifecycle_status: string;
+  submitted_at: string;
+  retention_due_at: string;
+  snapshot_id: string;
+  consent_record_id: string;
+};
 
 const API_ROOT = "/api/v1/borrower-applications";
 const APPLICATION_ID_KEY = "keeper.borrower.application-id";
@@ -18,6 +43,7 @@ export class BorrowerApplicationError extends Error {
   constructor(
     public readonly status: number,
     public readonly issues: BorrowerValidationIssue[] = [],
+    public readonly code: string | null = null,
   ) {
     super(`borrower application request failed (${status})`);
   }
@@ -43,6 +69,13 @@ async function responseError(
   }
   try {
     const payload = (await response.json()) as { detail?: unknown };
+    if (
+      typeof payload.detail === "string" &&
+      payload.detail.length <= 80 &&
+      /^[a-z_]+$/.test(payload.detail)
+    ) {
+      return new BorrowerApplicationError(response.status, [], payload.detail);
+    }
     if (!Array.isArray(payload.detail)) {
       return new BorrowerApplicationError(response.status);
     }
@@ -78,6 +111,7 @@ async function borrowerJson<T>(
     cache: "no-store",
   });
   if (!response.ok) throw await responseError(response);
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -87,10 +121,13 @@ export async function startBorrowerDraft(): Promise<BorrowerDraftStart> {
 
 export async function getBorrowerDraft(
   applicationId: string,
-): Promise<BorrowerDraft> {
-  return borrowerJson<BorrowerDraft>(`/${encodeURIComponent(applicationId)}`, {
-    method: "GET",
-  });
+): Promise<BorrowerRecoveredDraft> {
+  return borrowerJson<BorrowerRecoveredDraft>(
+    `/${encodeURIComponent(applicationId)}`,
+    {
+      method: "GET",
+    },
+  );
 }
 
 export async function patchBorrowerDraft(
@@ -105,6 +142,77 @@ export async function patchBorrowerDraft(
       payload,
     }),
   });
+}
+
+export async function getBorrowerConsent(
+  applicationId: string,
+): Promise<BorrowerConsent> {
+  return borrowerJson<BorrowerConsent>(
+    `/${encodeURIComponent(applicationId)}/consent`,
+  );
+}
+
+export async function listBorrowerDocuments(
+  applicationId: string,
+): Promise<BorrowerDocument[]> {
+  const response = await borrowerJson<{ items: BorrowerDocument[] }>(
+    `/${encodeURIComponent(applicationId)}/draft-documents`,
+  );
+  return response.items;
+}
+
+export async function uploadBorrowerDocument(
+  applicationId: string,
+  file: File,
+  category: string,
+  description?: string,
+): Promise<BorrowerDocument> {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("category", category);
+  if (description) body.set("description", description);
+  const response = await fetch(
+    `${API_ROOT}/${encodeURIComponent(applicationId)}/documents`,
+    {
+      method: "POST",
+      body,
+      headers: { "X-Keeper-Borrower-CSRF": "1" },
+      credentials: "include",
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw await responseError(response);
+  return (await response.json()) as BorrowerDocument;
+}
+
+export async function removeBorrowerDocument(
+  applicationId: string,
+  documentId: string,
+): Promise<void> {
+  await borrowerJson<void>(
+    `/${encodeURIComponent(applicationId)}/draft-documents/${encodeURIComponent(documentId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function submitBorrowerApplication(
+  applicationId: string,
+  expectedRevision: number,
+  consent: BorrowerConsent,
+  borrowerCoverage: "primary" | "both",
+): Promise<BorrowerSubmission> {
+  return borrowerJson<BorrowerSubmission>(
+    `/${encodeURIComponent(applicationId)}/submit`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        consent_version: consent.consent_version,
+        consent_wording_digest: consent.wording_digest,
+        borrower_coverage: borrowerCoverage,
+        expected_revision: expectedRevision,
+      }),
+    },
+  );
 }
 
 export function readBorrowerApplicationId(): string | null {
@@ -124,7 +232,7 @@ export function forgetBorrowerApplicationId(): void {
 }
 
 export async function recoverOrStartBorrowerDraft(): Promise<{
-  draft: BorrowerDraft | BorrowerDraftStart;
+  draft: BorrowerRecoveredDraft | BorrowerDraftStart;
   recovered: boolean;
 }> {
   const applicationId = readBorrowerApplicationId();

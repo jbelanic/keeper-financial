@@ -71,15 +71,17 @@
 
 Production disables OpenAPI. Local and controlled non-production expose `/openapi.json` and `/docs`.
 
-### Borrower routes through Phase D.1
+### Borrower routes through Phase D.2
 
 The generated borrower contract mounts:
 
 - `POST /api/v1/borrower-applications/start` — exact-host/origin/CSRF guarded draft start and secure capability cookie;
-- `GET /api/v1/borrower-applications/{application_id}` — exact-draft capability read;
+- `GET /api/v1/borrower-applications/{application_id}` — exact-draft capability read returning the current saved non-SIN payload for same-browser in-memory rehydration with private/no-store controls; primary and co-borrower SIN values are always omitted;
 - `PATCH /api/v1/borrower-applications/{application_id}` — exact-draft capability and optimistic typed encrypted save;
-- `POST /api/v1/borrower-applications/{application_id}/documents` — exact-draft capability, origin, and CSRF guarded multipart upload. The API permits PDF, PNG, JPEG, DOC, and DOCX within the D.1 10 MiB request limit, requires declared MIME/extension/libmagic/format structure agreement, fails closed on ClamAV unavailability or malware detection, encrypts accepted bytes with the borrower keyring before private MinIO/local-object persistence, and records metadata only in `borrower_documents`;
-- `POST /api/v1/borrower-applications/{application_id}/submit` — exact-draft capability, origin, and CSRF guarded final submission. It requires an active consent-catalog entry matching the supplied version and SHA-256 wording digest, validates the expected revision, validates co-borrower coverage, writes a consent record, writes an immutable encrypted snapshot bound to that consent, transitions the application to `submitted`, sets seven-year retention, and revokes the borrower capability;
+- `POST /api/v1/borrower-applications/{application_id}/documents` — pre-parser bounded exact-host/origin/CSRF/capability-cookie guarded multipart upload. Capability verification occurs before multipart parsing. The API permits PDF, PNG, JPEG, DOC, and DOCX up to 25 MiB each, enforces 25 current documents and 250 MiB aggregate plaintext, requires approved category metadata and a bounded description only for `Other`, validates declared MIME/extension/libmagic/format structure agreement, fails closed on ClamAV or private-storage unavailability, encrypts accepted bytes before persistence under opaque object keys, and records safe success/failure result evidence;
+- `GET /api/v1/borrower-applications/{application_id}/draft-documents` and `DELETE /api/v1/borrower-applications/{application_id}/draft-documents/{document_id}` — no-store exact-draft metadata listing and explicit removal. Failed removal preserves a retryable pending marker and blocks submission until reconciliation completes;
+- `GET /api/v1/borrower-applications/{application_id}/consent` — returns only the newest active consent whose effective interval contains the server time, with no-store response controls;
+- `POST /api/v1/borrower-applications/{application_id}/submit` — exact-draft capability, origin, and CSRF guarded final submission. It independently selects that same newest effective consent and requires the supplied version and SHA-256 wording digest to match. Real-data enablement additionally requires the catalog row's explicit owner-approval marker. Submission validates the expected revision and co-borrower coverage, writes exact consent evidence and an immutable encrypted snapshot atomically, transitions to `submitted`, sets seven-year retention, revokes the capability, and returns the original committed result for an identical capability retry;
 - `GET /api/v1/borrower-applications/{application_id}/internal` — exact assigned-agent or administrator AAL2 internal projection, gated on durable submission evidence;
 - `POST /api/v1/borrower-applications/{application_id}/sin/reveal` — dedicated administrator/AAL2 reveal with bounded reason and safe audit.
 
@@ -174,9 +176,9 @@ The authoritative live environment is the local Linux Docker Compose stack. Appl
 | `ConsentRecord`                                                                                | Server-versioned service or optional marketing evidence, grant time, optional withdrawal time, and trusted capture source.                                                                                                                             |
 | `AuditEvent`                                                                                   | Append-oriented safe lead creation, marketing grant/withdrawal, lifecycle, publication, and document event metadata.                                                                                                                                   |
 
-Phase B adds `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, `BorrowerLegalHold`, and `BorrowerSinRevealAudit`, with existing `AuditEvent` used only for safe high-risk metadata. Phase D.1 adds `BorrowerDocument` and `BorrowerConsentCatalog`, and extends submitted snapshots with payload revision, schema version, ciphertext, and exact consent-record binding. Phase E adds forward migration `20260726_0013`, which records the borrower-document encryption payload revision needed to decrypt document ciphertext with the same purpose/application/revision AAD used at upload time. PostgreSQL stores encrypted payloads and authoritative metadata; private object storage holds encrypted borrower document bytes and submitted snapshot bytes.
+Phase B adds `BorrowerApplication`, `BorrowerApplicationPayload`, `BorrowerConsentRecord`, `BorrowerApplicationSnapshot`, `BorrowerApplicationStatusHistory`, `BorrowerAssignmentHistory`, `BorrowerLegalHold`, and `BorrowerSinRevealAudit`, with existing `AuditEvent` used only for safe high-risk metadata. Phase D.1 adds `BorrowerDocument` and `BorrowerConsentCatalog`, and extends submitted snapshots with payload revision, schema version, ciphertext, and exact consent-record binding. Phase D.2 adds document category/description and retryable removal state, constrains scan-state combinations, and adds the fail-closed `BorrowerConsentCatalog.real_data_approved` release marker. Phase E adds forward migration `20260726_0013`, which records the borrower-document encryption payload revision needed to decrypt document ciphertext with the same purpose/application/revision AAD used at upload time. PostgreSQL stores encrypted payloads and authoritative metadata; private object storage holds encrypted borrower document bytes and submitted snapshot bytes.
 
-UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. Migration `20260724_0011` creates the Phase B borrower tables and indexes from `20260722_0010`; migration `20260726_0012` adds borrower documents, the consent catalog, and D.1 snapshot-binding columns. The chain has one head. Mortgage deal, credit-bureau, automated underwriting, lender submission, deal-compliance, full CRM, commission, and payroll models remain excluded.
+UUIDs are primary keys. PostgreSQL check constraints reinforce service statuses. Service code—not client input or database constraints alone—owns valid transitions. Migration `20260724_0011` creates the Phase B borrower tables and indexes from `20260722_0010`; migration `20260726_0012` adds borrower documents, the consent catalog, and D.1 snapshot-binding columns; unissued migration `20260726_0015` adds the D.2 document and consent-release constraints while refusing to invent categories for existing borrower-document rows. The source chain has one verified `20260726_0015` head; a disposable PostgreSQL upgrade and model-drift check remain required. Mortgage deal, credit-bureau, automated underwriting, lender submission, deal-compliance, full CRM, commission, and payroll models remain excluded.
 
 Migration `20260715_0003` brings the schema into conformance with `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`: posting and immutable source provenance are mandatory, attempt/application lifecycle is distinct, the questionnaire/disclosure are version-controlled, and every new candidate document has explicit application/category linkage. The migration refuses to invent provenance or linkage for incompatible legacy rows.
 
@@ -204,6 +206,17 @@ Forward data migration `20260722_0009` repairs only active, ownership-consistent
 Forward data migration `20260722_0010` configures the existing `agent` role required by explicit onboarding completion. It inserts only the role definition with conflict-safe semantics and creates no user-role grant. Its downgrade is intentionally a no-op because authorized completion may grant the role after upgrade and deleting it would destroy valid authorization relationships.
 
 ## Contract generation
+
+Phase D.2 adds public exact-capability routes for active consent,
+draft-document metadata/removal, categorized upload, and caller-idempotent
+submission. These routes remain exact-origin/CSRF/no-store boundaries and do
+not replace the separate internal assigned-agent/administrator AAL2 document
+routes. Forward migration `20260726_0015` adds non-null borrower document
+category and nullable bounded `Other` description with a fail-fast
+non-falsifying legacy-row preflight. It also adds a nullable
+`deletion_pending_at` recovery marker so object deletion and metadata/audit
+commit failures remain retryable, block submission, and cannot strand an
+apparently downloadable row. The source chain has one head.
 
 FastAPI/Pydantic owns the OpenAPI contract. `make openapi` exports it and runs `openapi-typescript` to create TypeScript declarations. Generated output should change in the same review as API schema changes.
 

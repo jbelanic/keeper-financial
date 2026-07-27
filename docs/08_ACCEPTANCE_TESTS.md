@@ -44,6 +44,15 @@ The redirect assertions above characterize the currently implemented Phase 1B bo
 
 ## Borrower application
 
+Phase D.2 source coverage adds exact 25 MiB/configuration upper-bound behavior,
+25-current-document and 250 MiB aggregate enforcement, category/`Other`
+validation, capability-bound no-store list/removal, opaque object keys, active
+server consent retrieval, production-placeholder/real-data fail closure,
+same-request committed-result retry without duplicate submission evidence, and
+the borrower document/consent/submission UI. PostgreSQL concurrency, genuine
+MinIO/ClamAV, and genuine-browser evidence remain required and must not be
+inferred from SQLite/jsdom tests.
+
 Phase B source tests cover the model/migration/encryption/capability/typed-draft/internal-authorization subset below and prove that no successful public submission or capability revocation is available without the Phase D coordinator. Document, final-submission, retention/purge, UI, genuine-browser, deployment, and operational criteria remain unfulfilled; passing Phase B tests is not owner acceptance.
 
 - `apply.keeperfinancial.ca` is an exact Keeper-owned origin from the same repository; unknown hosts, reflected origins, wildcard CORS, and untrusted forwarded host/proto fail closed.

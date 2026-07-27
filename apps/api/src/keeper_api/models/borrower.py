@@ -332,6 +332,8 @@ class BorrowerConsentCatalog(IdTimestampsMixin, Base):
 
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
+    real_data_approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -399,6 +401,18 @@ class BorrowerDocument(IdTimestampsMixin, Base):
             "octet_length(encryption_nonce) = 12",
             name="ck_borrower_document_nonce_length",
         ),
+        CheckConstraint(
+            "category IN ('identification', 'income_employment', "
+            "'banking_investment', 'down_payment', 'property', 'tax', "
+            "'credit_liability', 'other')",
+            name="ck_borrower_document_category",
+        ),
+        CheckConstraint(
+            "(category = 'other' AND description IS NOT NULL "
+            "AND length(trim(description)) > 0) OR "
+            "(category <> 'other' AND description IS NULL)",
+            name="ck_borrower_document_description",
+        ),
         Index(
             "ix_borrower_documents_application_id",
             "application_id",
@@ -419,6 +433,10 @@ class BorrowerDocument(IdTimestampsMixin, Base):
 
     filename: Mapped[str] = mapped_column(String(200), nullable=False)
 
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    description: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
     mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
 
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -436,6 +454,10 @@ class BorrowerDocument(IdTimestampsMixin, Base):
     scan_status: Mapped[str] = mapped_column(String(32), nullable=False)
 
     scan_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    deletion_pending_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     uploaded_by: Mapped[str] = mapped_column(String(32), nullable=False, default="borrower")
 

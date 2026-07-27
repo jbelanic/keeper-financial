@@ -77,6 +77,14 @@ def _run_middleware(
                 maximum_file_bytes=16,
                 private=True,
             ),
+            UploadRouteLimit.pattern(
+                r"^/api/v1/borrower-applications/[^/]+/documents$",
+                maximum_file_bytes=16,
+                private=True,
+                auth_mode="borrower_capability",
+                expected_host="localhost:8000",
+                expected_origin="http://localhost:8000",
+            ),
         ),
         multipart_overhead_bytes=4,
     )
@@ -147,6 +155,54 @@ def test_sensitive_upload_replays_bounded_chunks_only_after_complete_body() -> N
     assert downstream_calls == 1
     assert sent[0]["status"] == 204
     assert sent[1]["body"] == b"12345678"
+
+
+@pytest.mark.parametrize(
+    "headers, expected_status",
+    [
+        ([], 401),
+        ([(b"cookie", b"__Host-keeper-borrower-draft=short")], 401),
+        (
+            [
+                (b"cookie", b"__Host-keeper-borrower-draft=" + b"a" * 50),
+                (b"host", b"localhost:8000"),
+                (b"origin", b"https://wrong.example"),
+                (b"x-keeper-borrower-csrf", b"1"),
+            ],
+            403,
+        ),
+    ],
+)
+def test_borrower_upload_preparser_rejects_before_reading_body(
+    headers: list[tuple[bytes, bytes]], expected_status: int
+) -> None:
+    sent, received, downstream_calls = _run_middleware(
+        path="/api/v1/borrower-applications/11111111-1111-1111-1111-111111111111/documents",
+        headers=headers,
+        incoming=[{"type": "http.request", "body": b"must-not-be-read", "more_body": False}],
+    )
+
+    assert received == 0
+    assert downstream_calls == 0
+    assert sent[0]["status"] == expected_status
+    assert dict(sent[0]["headers"])[b"cache-control"] == b"private, no-store"
+
+
+def test_borrower_upload_preparser_accepts_bounded_cookie_request() -> None:
+    sent, received, downstream_calls = _run_middleware(
+        path="/api/v1/borrower-applications/11111111-1111-1111-1111-111111111111/documents",
+        headers=[
+            (b"cookie", b"__Host-keeper-borrower-draft=" + b"a" * 50),
+            (b"host", b"localhost:8000"),
+            (b"origin", b"http://localhost:8000"),
+            (b"x-keeper-borrower-csrf", b"1"),
+        ],
+        incoming=[{"type": "http.request", "body": b"bounded", "more_body": False}],
+    )
+
+    assert received == 1
+    assert downstream_calls == 1
+    assert sent[0]["status"] == 204
 
 
 def test_candidate_upload_rejection_uses_private_no_store() -> None:

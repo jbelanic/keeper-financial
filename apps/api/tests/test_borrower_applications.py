@@ -6,12 +6,12 @@ import json
 import os
 import tempfile
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, update
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -22,14 +22,18 @@ from keeper_api.main import app
 from keeper_api.models.borrower import (
     BorrowerApplication,
     BorrowerApplicationLifecycleStatus,
+    BorrowerApplicationPayload,
+    BorrowerApplicationSnapshot,
     BorrowerApplicationStatusHistory,
     BorrowerAssignmentHistory,
     BorrowerConsentCatalog,
+    BorrowerConsentRecord,
     BorrowerDocument,
     BorrowerSinRevealAudit,
 )
 from keeper_api.models.domain import AuditEvent, Candidate, Role, User, UserIdentity, UserRole
 from keeper_api.models.statuses import CandidateStatus
+from keeper_api.services.audit import AuditService
 from keeper_api.services.borrower_applications import (
     assign_application,
     create_consent_record,
@@ -39,13 +43,15 @@ from keeper_api.services.borrower_applications import (
     revoke_capability,
     save_draft_payload,
     start_borrower_application,
+    submit_borrower_application,
     transition_lifecycle,
 )
 from keeper_api.services.borrower_crypto import (
     BorrowerCryptoState,
     load_borrower_crypto_state,
 )
-from keeper_api.services.malware_scanner import ScanDecision
+from keeper_api.services.borrower_documents import BorrowerDocumentStorageError
+from keeper_api.services.malware_scanner import MalwareScannerUnavailable, ScanDecision
 
 
 @pytest.fixture
@@ -268,6 +274,33 @@ class TestSaveDraftPayload:
 
         updated_application = db_session.get(BorrowerApplication, application.id)
         assert updated_application.last_activity_at >= original_activity_at
+
+    def test_locked_save_refreshes_stale_identity_map_lifecycle(
+        self, db_session: Session, crypto_state: BorrowerCryptoState
+    ) -> None:
+        application, _ = start_borrower_application(
+            db=db_session,
+            crypto_state=crypto_state,
+            settings=None,
+        )
+        db_session.execute(
+            update(BorrowerApplication)
+            .where(BorrowerApplication.id == application.id)
+            .values(lifecycle_status=BorrowerApplicationLifecycleStatus.SUBMITTED.value)
+            .execution_options(synchronize_session=False)
+        )
+        assert application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value
+
+        with pytest.raises(ValueError, match="not in draft"):
+            save_draft_payload(
+                db=db_session,
+                crypto_state=crypto_state,
+                application_id=application.id,
+                capability_session_id=application.capability_session_id,
+                expected_revision=0,
+                payload_data={"primary_borrower": {"first_name": "John"}},
+                settings=None,
+            )
 
 
 class TestGetLatestPayload:
@@ -659,9 +692,11 @@ class TestIncrementalDraftMerge:
         )
         assert summary_after["has_sin"] is True
         merged = get_latest_payload(db_session, crypto_state, application.id, 2)
+        assert merged is not None
         assert merged["primary_borrower"]["first_name"] == "Janet"
-        # SIN is stored in a dedicated ciphertext, never returned in the payload.
-        assert "sin" not in merged["primary_borrower"]
+        # The internal submit projection restores the dedicated ciphertext;
+        # public recovery responses strip it before serialization.
+        assert merged["primary_borrower"]["sin"] == "046454286"
 
     def test_unknown_key_rejected_fail_closed(
         self, db_session: Session, crypto_state: BorrowerCryptoState
@@ -822,7 +857,11 @@ class TestBorrowerDraftRouteIntegration:
         app.dependency_overrides[get_db] = override_db
         app.dependency_overrides[_real_get_settings] = lambda: settings
         try:
-            with TestClient(app, backend_options={"use_uvloop": True}) as client:
+            with TestClient(
+                app,
+                base_url="https://localhost:8000",
+                backend_options={"use_uvloop": True},
+            ) as client:
                 yield client
         finally:
             app.dependency_overrides.clear()
@@ -1077,9 +1116,14 @@ class TestBorrowerPhaseDRouteIntegration:
         try:
             if hasattr(app.state, "borrower_crypto_state"):
                 delattr(app.state, "borrower_crypto_state")
-            with TestClient(app, backend_options={"use_uvloop": True}) as client:
+            with TestClient(
+                app,
+                base_url="https://localhost:8000",
+                backend_options={"use_uvloop": True},
+            ) as client:
                 client._keeper_session_factory = SessionLocal
                 client._keeper_consent_digest = wording_digest
+                client._keeper_settings = settings
                 yield client
         finally:
             app.dependency_overrides.clear()
@@ -1101,6 +1145,49 @@ class TestBorrowerPhaseDRouteIntegration:
         assert resp.status_code == 201, resp.text
         return resp.json()["application_id"]
 
+    def test_start_cookie_satisfies_host_prefix_requirements(
+        self, route_client: TestClient
+    ) -> None:
+        response = route_client.post(
+            "/api/v1/borrower-applications/start",
+            headers=self._headers(),
+        )
+
+        assert response.status_code == 201, response.text
+        cookie = response.headers["set-cookie"]
+        assert cookie.startswith("__Host-keeper-borrower-draft=")
+        assert "; Secure" in cookie
+        assert "; HttpOnly" in cookie
+        assert "; Path=/" in cookie
+        assert "; Domain=" not in cookie
+
+    def test_invalid_sensitive_draft_returns_private_json_validation_errors(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        payload = _valid_submit_payload(with_co_borrower=True)
+        primary_borrower = payload["primary_borrower"]
+        co_borrower = payload["co_borrower"]
+        assert isinstance(primary_borrower, dict)
+        assert isinstance(co_borrower, dict)
+        primary_borrower["sin"] = "123123123"
+        primary_borrower["current_address"]["months_at_address"] = 12
+        co_borrower["sin"] = "123456789"
+
+        response = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=self._headers(),
+            json={"expected_revision": 0, "payload": payload},
+        )
+
+        assert response.status_code == 422, response.text
+        assert response.headers["content-type"] == "application/json"
+        assert "123123123" not in response.text
+        assert "123456789" not in response.text
+        errors = response.json()["detail"]
+        assert any(error["loc"] == ["primary_borrower", "sin"] for error in errors)
+        assert all("input" not in error and "ctx" not in error for error in errors)
+
     def _save_full_payload(
         self,
         client: TestClient,
@@ -1119,6 +1206,75 @@ class TestBorrowerPhaseDRouteIntegration:
         assert resp.status_code == 200, resp.text
         return resp.json()["revision"]
 
+    def test_get_draft_returns_resumable_payload_without_sin(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        self._save_full_payload(
+            route_client,
+            application_id,
+            with_co_borrower=True,
+        )
+
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=self._headers(),
+        )
+
+        assert response.status_code == 200, response.text
+        assert "no-store" in response.headers["cache-control"]
+        payload = response.json()["payload"]
+        assert payload["mortgage_request"]["mortgage_objective"] == "purchase"
+        assert payload["primary_borrower"]["first_name"] == "Jane"
+        assert payload["co_borrower"]["first_name"] == "Alex"
+        assert "sin" not in payload["primary_borrower"]
+        assert "sin" not in payload["co_borrower"]
+
+    def test_submit_preserves_sin_across_later_section_revisions(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+
+        later_save = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=self._headers(),
+            json={
+                "expected_revision": revision,
+                "payload": {"additional_notes": "Synthetic later section save."},
+            },
+        )
+        assert later_save.status_code == 200, later_save.text
+
+        # Recreate the legacy partial-save defect: the newer row carried the
+        # prior SIN ciphertext even though its AAD remained bound to the older
+        # payload revision. Existing local drafts must remain recoverable.
+        with route_client._keeper_session_factory() as session:
+            payload_rows = (
+                session.query(BorrowerApplicationPayload)
+                .filter(BorrowerApplicationPayload.application_id == uuid.UUID(application_id))
+                .order_by(BorrowerApplicationPayload.revision)
+                .all()
+            )
+            first_payload, latest_payload = payload_rows
+            latest_payload.encrypted_sin_ciphertext = first_payload.encrypted_sin_ciphertext
+            latest_payload.encrypted_sin_nonce = first_payload.encrypted_sin_nonce
+            session.commit()
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": route_client._keeper_consent_digest,
+                "borrower_coverage": "primary",
+                "expected_revision": later_save.json()["revision"],
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["lifecycle_status"] == "submitted"
+
     def _submit_full_application(
         self,
         client: TestClient,
@@ -1133,6 +1289,7 @@ class TestBorrowerPhaseDRouteIntegration:
             upload = client.post(
                 f"/api/v1/borrower-applications/{application_id}/documents",
                 headers=self._headers(),
+                data={"category": "property"},
                 files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
             )
             assert upload.status_code == 201, upload.text
@@ -1159,6 +1316,7 @@ class TestBorrowerPhaseDRouteIntegration:
         resp = route_client.post(
             f"/api/v1/borrower-applications/{application_id}/documents",
             headers=self._headers(),
+            data={"category": "property"},
             files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
         )
         assert resp.status_code == 201, resp.text
@@ -1173,7 +1331,443 @@ class TestBorrowerPhaseDRouteIntegration:
             assert document.size_bytes == len(valid_pdf())
             assert document.scan_status == "clean"
             assert document.uploaded_by == "borrower"
-            assert document.minio_object_key.startswith(f"borrower/documents/{application_id}/")
+            assert document.minio_object_key.startswith("borrower/documents/")
+            assert application_id not in document.minio_object_key
+            assert "notice" not in document.minio_object_key
+
+    def test_document_category_list_and_delete_contract(self, route_client: TestClient) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            started_expiry = session.get(
+                BorrowerApplication, uuid.UUID(application_id)
+            ).draft_expires_at
+        uploaded = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "other", "description": "Synthetic supporting record"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        assert uploaded.json()["category"] == "other"
+        assert uploaded.json()["description"] == "Synthetic supporting record"
+        with session_factory() as session:
+            uploaded_expiry = session.get(
+                BorrowerApplication, uuid.UUID(application_id)
+            ).draft_expires_at
+        assert uploaded_expiry > started_expiry
+
+        listed = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents",
+            headers=self._headers(),
+        )
+        assert listed.status_code == 200, listed.text
+        assert "no-store" in listed.headers["cache-control"]
+        assert listed.json()["items"] == [uploaded.json()]
+
+        deleted = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/"
+            f"{uploaded.json()['document_id']}",
+            headers=self._headers(),
+        )
+        assert deleted.status_code == 204, deleted.text
+        with session_factory() as session:
+            deleted_expiry = session.get(
+                BorrowerApplication, uuid.UUID(application_id)
+            ).draft_expires_at
+        assert deleted_expiry > uploaded_expiry
+        assert (
+            route_client.get(
+                f"/api/v1/borrower-applications/{application_id}/draft-documents",
+                headers=self._headers(),
+            ).json()["items"]
+            == []
+        )
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            audit_events = (
+                session.query(AuditEvent)
+                .filter(AuditEvent.target_id == uuid.UUID(uploaded.json()["document_id"]))
+                .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+                .all()
+            )
+            assert sorted(event.event_type for event in audit_events) == [
+                "borrower_document_removed",
+                "borrower_document_uploaded",
+            ]
+            audit_payload = json.dumps(
+                [event.safe_metadata for event in audit_events], sort_keys=True
+            )
+            assert "notice.pdf" not in audit_payload
+            assert "borrower/documents" not in audit_payload
+            assert "capability" not in audit_payload
+
+    def test_delete_metadata_failure_is_bounded_and_retryable(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        uploaded = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        document_id = uploaded.json()["document_id"]
+
+        original_record = AuditService.record
+        monkeypatch.setattr(
+            AuditService,
+            "record",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("synthetic delete metadata failure")
+            ),
+        )
+        failed = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}",
+            headers=self._headers(),
+        )
+        assert failed.status_code == 503, failed.text
+        assert failed.json()["detail"] == "storage_unavailable"
+
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            document = session.query(BorrowerDocument).one()
+            assert document.deletion_pending_at is not None
+        pending_list = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents",
+            headers=self._headers(),
+        )
+        assert pending_list.status_code == 200, pending_list.text
+        assert [item["document_id"] for item in pending_list.json()["items"]] == [document_id]
+        assert not any(
+            path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")
+        )
+
+        monkeypatch.setattr(AuditService, "record", original_record)
+        retried = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}",
+            headers=self._headers(),
+        )
+        assert retried.status_code == 204, retried.text
+        with session_factory() as session:
+            assert session.query(BorrowerDocument).count() == 0
+
+    def test_submission_waits_for_pending_document_removal_recovery(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        uploaded = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        document_id = uploaded.json()["document_id"]
+
+        original_record = AuditService.record
+        monkeypatch.setattr(
+            AuditService,
+            "record",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("synthetic delete metadata failure")
+            ),
+        )
+        failed = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}",
+            headers=self._headers(),
+        )
+        assert failed.status_code == 503, failed.text
+        monkeypatch.setattr(AuditService, "record", original_record)
+
+        revision = self._save_full_payload(route_client, application_id)
+        submit_body = {
+            "consent_version": "test-v1",
+            "consent_wording_digest": route_client._keeper_consent_digest,
+            "borrower_coverage": "primary",
+            "expected_revision": revision,
+        }
+        blocked = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json=submit_body,
+        )
+        assert blocked.status_code == 409, blocked.text
+        assert blocked.json()["detail"] == "document_operation_pending"
+
+        recovered = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}",
+            headers=self._headers(),
+        )
+        assert recovered.status_code == 204, recovered.text
+        submitted = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json=submit_body,
+        )
+        assert submitted.status_code == 200, submitted.text
+
+    def test_delete_object_failure_preserves_recoverable_pending_metadata(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from document_samples import valid_pdf
+        from keeper_api.services import borrower_documents
+
+        application_id = self._start(route_client)
+        uploaded = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        document_id = uploaded.json()["document_id"]
+
+        original_delete = borrower_documents.delete_borrower_object
+        monkeypatch.setattr(
+            borrower_documents,
+            "delete_borrower_object",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                BorrowerDocumentStorageError("storage_unavailable")
+            ),
+        )
+        failed = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}",
+            headers=self._headers(),
+        )
+        assert failed.status_code == 503, failed.text
+
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            document = session.query(BorrowerDocument).one()
+            assert document.deletion_pending_at is not None
+        assert any(
+            path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")
+        )
+
+        monkeypatch.setattr(borrower_documents, "delete_borrower_object", original_delete)
+        recovered = route_client.delete(
+            f"/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}",
+            headers=self._headers(),
+        )
+        assert recovered.status_code == 204, recovered.text
+        with session_factory() as session:
+            assert session.query(BorrowerDocument).count() == 0
+
+    def test_other_description_and_extra_upload_field_are_rejected(
+        self, route_client: TestClient
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        missing = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "other"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+        assert missing.status_code == 422
+        extra = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property", "unexpected": "denied"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+        assert extra.status_code == 422
+
+    def test_active_consent_is_no_store(self, route_client: TestClient) -> None:
+        application_id = self._start(route_client)
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/consent",
+            headers=self._headers(),
+        )
+        assert response.status_code == 200, response.text
+        assert "no-store" in response.headers["cache-control"]
+        assert response.json() == {
+            "consent_version": "test-v1",
+            "wording_digest": route_client._keeper_consent_digest,
+            "wording_text": "Synthetic local borrower consent wording for tests only.",
+        }
+
+    def test_active_consent_excludes_future_and_expired_entries(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        now = datetime.now(UTC)
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            session.add(
+                BorrowerConsentCatalog(
+                    consent_version="future-v2",
+                    wording_digest="f" * 64,
+                    wording_text="Synthetic future borrower consent wording for tests only.",
+                    is_active=True,
+                    effective_from=now + timedelta(days=1),
+                )
+            )
+            session.commit()
+
+        current = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/consent",
+            headers=self._headers(),
+        )
+        assert current.status_code == 200, current.text
+        assert current.json()["consent_version"] == "test-v1"
+
+        with session_factory() as session:
+            active = (
+                session.query(BorrowerConsentCatalog)
+                .filter(BorrowerConsentCatalog.consent_version == "test-v1")
+                .one()
+            )
+            assert active is not None
+            active.effective_to = now - timedelta(seconds=1)
+            session.commit()
+        unavailable = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/consent",
+            headers=self._headers(),
+        )
+        assert unavailable.status_code == 503, unavailable.text
+        assert unavailable.json()["detail"] == "consent_unavailable"
+
+    def test_non_local_submission_requires_real_data_release_gate(
+        self, route_client: TestClient
+    ) -> None:
+        started = route_client.post("/api/v1/borrower-applications/start", headers=self._headers())
+        assert started.status_code == 201, started.text
+        application_id = started.json()["application_id"]
+        capability_header = next(
+            value
+            for value in started.headers.get_list("set-cookie")
+            if value.startswith("__Host-keeper-borrower-draft=")
+        )
+        capability = capability_header.split(";", 1)[0].split("=", 1)[1]
+        revision = self._save_full_payload(route_client, application_id)
+        route_client._keeper_settings.app_env = "staging"
+        route_client._keeper_settings.borrower_real_data_enabled = False
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers={
+                "Host": "apply.keeperfinancial.ca",
+                "Origin": "https://apply.keeperfinancial.ca",
+                "x-keeper-borrower-csrf": "1",
+                "Cookie": f"__Host-keeper-borrower-draft={capability}",
+            },
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": route_client._keeper_consent_digest,
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"] == "real_data_submission_disabled"
+        assert "__Host-keeper-borrower-draft=" not in response.headers.get("set-cookie", "")
+
+    def test_non_local_submission_requires_explicitly_approved_consent(
+        self, route_client: TestClient
+    ) -> None:
+        started = route_client.post("/api/v1/borrower-applications/start", headers=self._headers())
+        assert started.status_code == 201, started.text
+        application_id = started.json()["application_id"]
+        capability_header = next(
+            value
+            for value in started.headers.get_list("set-cookie")
+            if value.startswith("__Host-keeper-borrower-draft=")
+        )
+        capability = capability_header.split(";", 1)[0].split("=", 1)[1]
+        revision = self._save_full_payload(route_client, application_id)
+        wording = "Synthetic release wording awaiting owner approval."
+        digest = hashlib.sha256(wording.encode()).hexdigest()
+        with route_client._keeper_session_factory() as session:
+            consent = session.query(BorrowerConsentCatalog).one()
+            consent.wording_text = wording
+            consent.wording_digest = digest
+            session.commit()
+
+        route_client._keeper_settings.app_env = "staging"
+        route_client._keeper_settings.borrower_real_data_enabled = True
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers={
+                "Host": "apply.keeperfinancial.ca",
+                "Origin": "https://apply.keeperfinancial.ca",
+                "x-keeper-borrower-csrf": "1",
+                "Cookie": f"__Host-keeper-borrower-draft={capability}",
+            },
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": digest,
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"] == "real_data_submission_disabled"
+
+        with route_client._keeper_session_factory() as session:
+            consent = session.query(BorrowerConsentCatalog).one()
+            consent.real_data_approved = True
+            session.commit()
+        route_client._keeper_settings.app_env = "local"
+        approved = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": digest,
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+        assert approved.status_code == 200, approved.text
+
+    def test_submission_rejects_stale_consent_during_overlap(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+        displayed = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/consent",
+            headers=self._headers(),
+        )
+        assert displayed.status_code == 200, displayed.text
+        old_consent = displayed.json()
+        newer_wording = "Synthetic newer local borrower consent wording for tests only."
+        newer_digest = hashlib.sha256(newer_wording.encode()).hexdigest()
+        with route_client._keeper_session_factory() as session:
+            session.add(
+                BorrowerConsentCatalog(
+                    consent_version="test-v2",
+                    wording_digest=newer_digest,
+                    wording_text=newer_wording,
+                    is_active=True,
+                    effective_from=datetime.now(UTC),
+                )
+            )
+            session.commit()
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": old_consent["consent_version"],
+                "consent_wording_digest": old_consent["wording_digest"],
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"] == "invalid_consent"
 
     def test_upload_eicar_rejected(self, route_client: TestClient) -> None:
         from document_samples import eicar_bytes, valid_pdf
@@ -1182,6 +1776,7 @@ class TestBorrowerPhaseDRouteIntegration:
         resp = route_client.post(
             f"/api/v1/borrower-applications/{application_id}/documents",
             headers=self._headers(),
+            data={"category": "property"},
             files={
                 "file": (
                     "notice.pdf",
@@ -1193,14 +1788,156 @@ class TestBorrowerPhaseDRouteIntegration:
         assert resp.status_code == 422, resp.text
         assert resp.json()["detail"] == "malware_detected"
 
+    def test_upload_metadata_failure_rolls_back_and_removes_encrypted_object(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        monkeypatch.setattr(
+            "keeper_api.services.borrower_documents.AuditService.record",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("synthetic metadata failure")
+            ),
+        )
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"] == "storage_unavailable"
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            assert session.query(BorrowerDocument).count() == 0
+        assert not any(
+            path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")
+        )
+
+    @pytest.mark.parametrize(
+        ("failure", "expected_detail"),
+        [
+            ("scanner", "scanner_unavailable"),
+            ("storage", "storage_unavailable"),
+        ],
+    )
+    def test_upload_scanner_and_storage_failures_leave_no_document_or_object(
+        self,
+        route_client: TestClient,
+        monkeypatch: pytest.MonkeyPatch,
+        failure: str,
+        expected_detail: str,
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        if failure == "scanner":
+            monkeypatch.setattr(
+                "keeper_api.services.borrower_documents.build_malware_scanner",
+                lambda _settings: (_ for _ in ()).throw(MalwareScannerUnavailable()),
+            )
+        else:
+            monkeypatch.setattr(
+                "keeper_api.services.borrower_documents._put_borrower_object",
+                lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                    BorrowerDocumentStorageError("storage_unavailable")
+                ),
+            )
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"] == expected_detail
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            assert session.query(BorrowerDocument).count() == 0
+            failure_event = (
+                session.query(AuditEvent)
+                .filter(
+                    AuditEvent.event_type == "borrower_document_upload_result",
+                    AuditEvent.target_id == uuid.UUID(application_id),
+                )
+                .one()
+            )
+            assert failure_event.safe_metadata == {
+                "result": "failure",
+                "reason": expected_detail,
+            }
+        assert not any(
+            path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")
+        )
+
     def test_upload_oversize_rejected_with_413(self, route_client: TestClient) -> None:
         application_id = self._start(route_client)
         resp = route_client.post(
             f"/api/v1/borrower-applications/{application_id}/documents",
             headers=self._headers(),
-            files={"file": ("large.pdf", b"x" * (10 * 1024 * 1024 + 1), "application/pdf")},
+            data={"category": "property"},
+            files={"file": ("large.pdf", b"x" * (25 * 1024 * 1024 + 1), "application/pdf")},
         )
         assert resp.status_code == 413, resp.text
+
+    def test_exact_25_mib_is_accepted(self, route_client: TestClient) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        payload = valid_pdf(minimum_size=25 * 1024 * 1024)
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("exact.pdf", payload, "application/pdf")},
+        )
+        assert response.status_code == 201, response.text
+        assert response.json()["size_bytes"] == 25 * 1024 * 1024
+
+    def test_document_count_and_narrowed_aggregate_limits(self, route_client: TestClient) -> None:
+        from document_samples import valid_pdf
+
+        settings = route_client._keeper_settings
+        settings.borrower_max_document_count = 2
+        settings.borrower_max_total_document_bytes = 1200
+        application_id = self._start(route_client)
+        payload = valid_pdf(minimum_size=700)
+        first = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("first.pdf", payload, "application/pdf")},
+        )
+        assert first.status_code == 201, first.text
+        aggregate = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "tax"},
+            files={"file": ("second.pdf", payload, "application/pdf")},
+        )
+        assert aggregate.status_code == 413
+        assert aggregate.json()["detail"] == "aggregate_size_limit"
+        settings.borrower_max_total_document_bytes = 250 * 1024 * 1024
+        second = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "tax"},
+            files={"file": ("second.pdf", payload, "application/pdf")},
+        )
+        assert second.status_code == 201, second.text
+        count = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "identification"},
+            files={"file": ("third.pdf", payload, "application/pdf")},
+        )
+        assert count.status_code == 413
+        assert count.json()["detail"] == "document_count_limit"
 
     def test_upload_wrong_mime_or_magic_rejected(self, route_client: TestClient) -> None:
         from document_samples import valid_pdf
@@ -1209,6 +1946,7 @@ class TestBorrowerPhaseDRouteIntegration:
         resp = route_client.post(
             f"/api/v1/borrower-applications/{application_id}/documents",
             headers=self._headers(),
+            data={"category": "property"},
             files={"file": ("notice.png", valid_pdf(), "image/png")},
         )
         assert resp.status_code == 422, resp.text
@@ -1219,6 +1957,7 @@ class TestBorrowerPhaseDRouteIntegration:
         resp = route_client.post(
             f"/api/v1/borrower-applications/{first_id}/documents",
             headers=self._headers(),
+            data={"category": "property"},
             files={"file": ("notice.pdf", b"%PDF-1.4\n%%EOF\n", "application/pdf")},
         )
         assert resp.status_code == 404, resp.text
@@ -1539,7 +2278,62 @@ class TestBorrowerPhaseDRouteIntegration:
             assert "046454286" not in audit_payload
             assert "agent" in audit_payload
 
-    def test_submit_again_returns_409(self, route_client: TestClient) -> None:
+    def test_submit_same_request_retry_returns_original_result_once(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+        capability = route_client.cookies.get("__Host-keeper-borrower-draft")
+        assert capability
+        body = {
+            "consent_version": "test-v1",
+            "consent_wording_digest": route_client._keeper_consent_digest,
+            "borrower_coverage": "primary",
+            "expected_revision": revision,
+        }
+        first = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json=body,
+        )
+        assert first.status_code == 200, first.text
+        assert "__Host-keeper-borrower-draft=" in first.headers["set-cookie"]
+        assert "Max-Age=0" in first.headers["set-cookie"]
+        second = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers={
+                **self._headers(),
+                "Cookie": f"__Host-keeper-borrower-draft={capability}",
+            },
+            json=body,
+        )
+        assert second.status_code == 200, second.text
+        assert "Max-Age=0" in second.headers["set-cookie"]
+        assert second.json() == first.json()
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            assert session.query(BorrowerApplicationSnapshot).count() == 1
+            assert session.query(BorrowerConsentRecord).count() == 1
+            assert (
+                session.query(BorrowerApplicationStatusHistory)
+                .filter(BorrowerApplicationStatusHistory.to_status == "submitted")
+                .count()
+                == 1
+            )
+            submission_audits = (
+                session.query(AuditEvent)
+                .filter(AuditEvent.event_type == "borrower_application_submitted")
+                .all()
+            )
+            assert len(submission_audits) == 1
+            assert submission_audits[0].safe_metadata == {
+                "result": "success",
+                "submission_revision": revision,
+            }
+
+    def test_submit_post_lock_same_request_converges_to_original_result(
+        self, route_client: TestClient
+    ) -> None:
         application_id = self._start(route_client)
         revision = self._save_full_payload(route_client, application_id)
         body = {
@@ -1554,12 +2348,135 @@ class TestBorrowerPhaseDRouteIntegration:
             json=body,
         )
         assert first.status_code == 200, first.text
-        second = route_client.post(
+
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert application is not None
+            replay_application, replay_snapshot, replay_consent = submit_borrower_application(
+                db=session,
+                crypto_state=route_client.app.state.borrower_crypto_state,
+                application_id=application.id,
+                capability_session_id=application.capability_session_id,
+                expected_revision=revision,
+                consent_version=body["consent_version"],
+                consent_wording_digest=body["consent_wording_digest"],
+                borrower_coverage=body["borrower_coverage"],
+                settings=route_client._keeper_settings,
+            )
+
+        assert str(replay_application.id) == first.json()["application_id"]
+        assert str(replay_snapshot.id) == first.json()["snapshot_id"]
+        assert str(replay_consent.id) == first.json()["consent_record_id"]
+
+    def test_submit_retry_returns_original_result_after_review_has_started(
+        self, route_client: TestClient
+    ) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+        capability = route_client.cookies.get("__Host-keeper-borrower-draft")
+        assert capability
+        body = {
+            "consent_version": "test-v1",
+            "consent_wording_digest": route_client._keeper_consent_digest,
+            "borrower_coverage": "primary",
+            "expected_revision": revision,
+        }
+        first = route_client.post(
             f"/api/v1/borrower-applications/{application_id}/submit",
             headers=self._headers(),
             json=body,
         )
-        assert second.status_code == 409, second.text
+        assert first.status_code == 200, first.text
+
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert application is not None
+            application.lifecycle_status = BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value
+            session.commit()
+
+        retry = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers={
+                **self._headers(),
+                "Cookie": f"__Host-keeper-borrower-draft={capability}",
+            },
+            json=body,
+        )
+        assert retry.status_code == 200, retry.text
+        assert retry.json() == first.json()
+
+    def test_submit_metadata_failure_rolls_back_and_removes_snapshot_object(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+        monkeypatch.setattr(
+            "keeper_api.services.borrower_applications.AuditService.record",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("synthetic submission metadata failure")
+            ),
+        )
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": route_client._keeper_consent_digest,
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"] == "submission_storage_unavailable"
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert application is not None
+            assert application.lifecycle_status == "draft"
+            assert application.capability_revoked_at is None
+            assert session.query(BorrowerApplicationSnapshot).count() == 0
+            assert session.query(BorrowerConsentRecord).count() == 0
+        assert not any(
+            path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")
+        )
+
+    def test_submit_snapshot_storage_failure_returns_bounded_error(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+        monkeypatch.setattr(
+            "keeper_api.services.borrower_documents._put_borrower_object",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                BorrowerDocumentStorageError("storage_unavailable")
+            ),
+        )
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/submit",
+            headers=self._headers(),
+            json={
+                "consent_version": "test-v1",
+                "consent_wording_digest": route_client._keeper_consent_digest,
+                "borrower_coverage": "primary",
+                "expected_revision": revision,
+            },
+        )
+
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"] == "submission_storage_unavailable"
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert application is not None
+            assert application.lifecycle_status == "draft"
+            assert application.capability_revoked_at is None
+            assert session.query(BorrowerApplicationSnapshot).count() == 0
+            assert session.query(BorrowerConsentRecord).count() == 0
 
     def test_submit_wrong_revision_returns_409(self, route_client: TestClient) -> None:
         application_id = self._start(route_client)
@@ -1594,6 +2511,8 @@ class TestBorrowerPhaseDRouteIntegration:
     def test_patch_after_submit_rejected(self, route_client: TestClient) -> None:
         application_id = self._start(route_client)
         revision = self._save_full_payload(route_client, application_id)
+        capability = route_client.cookies.get("__Host-keeper-borrower-draft")
+        assert capability
         submit = route_client.post(
             f"/api/v1/borrower-applications/{application_id}/submit",
             headers=self._headers(),
@@ -1607,13 +2526,17 @@ class TestBorrowerPhaseDRouteIntegration:
         assert submit.status_code == 200, submit.text
         resp = route_client.patch(
             f"/api/v1/borrower-applications/{application_id}",
-            headers=self._headers(),
+            headers={
+                **self._headers(),
+                "Cookie": f"__Host-keeper-borrower-draft={capability}",
+            },
             json={
                 "expected_revision": revision,
                 "payload": {"additional_notes": "late change"},
             },
         )
-        assert resp.status_code in {403, 409}, resp.text
+        assert resp.status_code == 409, resp.text
+        assert resp.json()["detail"] == "already_submitted"
 
     def test_web_shaped_subject_property_partial_merges(self, route_client: TestClient) -> None:
         application_id = self._start(route_client)

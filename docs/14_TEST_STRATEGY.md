@@ -7,7 +7,7 @@
 - Phase B encryption tests use synthetic test keys only and cover AES-GCM round trip, unique nonces, authenticated metadata/purpose binding, wrong/tampered key/nonce/ciphertext/AAD failure, active/old key IDs, malformed key material, serializer/error redaction, and no plaintext persistence.
 - Phase B SIN and authorization tests cover nine-digit/Luhn validation, no saved-value return to borrowers, masked projection, explicit AAL2 reveal, safe audit metadata, administrator/exact-assigned-agent matrices, and cross-assignment denial.
 - Phase B sequencing tests prove no public submit route exists and no draft internal projection succeeds without durable snapshot/consent evidence. Unit-tested lifecycle primitives do not substitute for the Phase D coordinator.
-- Phase D must add document and atomic/idempotent final-submission failure/race/orphan tests; Phase F must add retention/legal-hold/purge/restore tests; Phases C–F must add genuine browser and operational evidence.
+- Phase D.2 tests cover pre-parser request bounds and borrower cookie/origin/CSRF syntax, denial before multipart parsing, 25 MiB/file and count/aggregate quotas, category/`Other` metadata, opaque keys, scan/storage/metadata failure result evidence, encrypted-object compensation, retryable pending removal, 30-day capability expiry/activity extension, stale identity-map row-lock refresh, latest-effective consent overlap rejection, explicit consent-row real-data approval, capability-cookie expiry only after durable submission, idempotent committed-result retries, and frontend reconciliation after uncertain upload/removal responses. Opt-in PostgreSQL lock evidence, real MinIO/ClamAV, and genuine-browser evidence remain separate gates; Phase F must add retention/legal-hold/purge/restore tests.
 - Phase E tests cover the administrator/AAL2 borrower review queue, exact assigned-agent versus wrong-agent access, administrator detail access, active-agent assignment validation and idempotency, masked internal projection, document metadata omission of object keys, API-proxied decrypting document download and safe headers, missing/tampered object denial, bounded SIN reveal reasons, assigned-agent reveal, and safe reveal/audit payloads. Frontend tests cover the minimal admin review console load/assign/reveal/download workflow with mocked bearer transport. PostgreSQL row-lock concurrency remains best evidenced in an isolated database run because SQLite cannot prove lock behavior.
 - Genuine integration evidence uses only synthetic borrowers and generated safe documents. Passing source tests alone is not production, privacy, legal, operational, or release acceptance.
 
@@ -182,7 +182,30 @@ An owner-operated administrator information-request browser ceremony and a genui
 
 ## Phase C borrower-web additions
 
-- API-client tests pin same-origin relative paths, `credentials: include`, `cache: no-store`, CSRF headers, optimistic revisions, bounded validation errors, and opaque-ID-only recovery.
-- Component tests cover start/recovery, successful section advancement, failure value/step preservation, focused accessible error summary, masked/provided SIN replacement, one co-borrower, stable repeat controls, synthetic versioned consent, and the absence of a submit request.
+- API-client tests pin same-origin relative paths, `credentials: include`, `cache: no-store`, CSRF headers, optimistic revisions, bounded validation errors, and exact-capability recovery. API route tests prove the recovered payload contains current non-SIN answers, omits primary and co-borrower SIN, and remains private/no-store.
+- API route submission tests also prove that later section revisions re-encrypt and preserve the dedicated primary-SIN ciphertext, including bounded compatibility with drafts that carried an older revision-bound ciphertext, so a complete saved payload does not fail final submission as incomplete.
+- Component tests cover start/recovery with non-SIN in-memory rehydration and next-incomplete-section positioning, successful section advancement, failure value/step preservation, focused accessible error summary, masked/provided SIN replacement without repopulating the SIN input, one co-borrower, stable repeat controls, synthetic versioned consent, and the absence of a submit request.
 - Source regression tests reject application-answer/SIN persistence, console/analytics calls, and borrower submission paths. Proxy tests prove exact application-host routing, conflicting forwarded-host refusal, borrower-only API proxying, and no Supabase call in the accountless flow.
 - The production build proves `/mortgage-application` is dynamic and not statically embedded with borrower answers. No Chromium/Playwright executable is installed in the Phase C worktree, and sandbox port binding is denied, so genuine-browser keyboard, zoom, network inspection, and measured 320 CSS-pixel reflow remain explicit acceptance evidence rather than being inferred from jsdom/CSS tests.
+
+## Phase D.2 borrower contract closure
+
+- Focused API tests cover categorized upload, capability draft list/removal,
+  safe scanner/storage/metadata failures and cleanup, opaque keys, safe
+  upload/removal/submission audit evidence, consent wording/digest/coverage
+  matching, active-effective consent validation,
+  local-only placeholder behavior, non-local real-data release gates, and exact
+  committed-result submission retry without duplicate snapshot, consent, status
+  history, or audit evidence. Consent retrieval also excludes future or expired
+  catalog entries so the displayed wording is submission-eligible. The
+  retry contract is also checked after the application advances beyond the
+  original submitted state and at the post-row-lock service boundary. Removal
+  failure tests prove the durable pending marker preserves a retry handle,
+  denies submission until cleanup completes, and recovers both object-store
+  and post-object metadata/audit failures.
+- Focused web tests cover same-origin no-store consent/submission requests,
+  document operations, explicit acknowledgement, durable-success confirmation,
+  and removal of only the opaque session-storage locator.
+- PostgreSQL row-lock races, migration upgrade/check, genuine MinIO/ClamAV, and
+  genuine-browser accessibility/lost-response evidence must run only when their
+  supported prerequisites exist; mocks do not substitute for that evidence.

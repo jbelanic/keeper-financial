@@ -95,7 +95,7 @@ def eligible_agent_accounts(db: Session) -> list[User]:
             .join(Role, Role.id == UserRole.role_id)
             .outerjoin(Candidate, Candidate.user_id == User.id)
             .outerjoin(AgentProfile, AgentProfile.user_id == User.id)
-            .where(_eligible_profile_condition(), AgentProfile.id.is_(None))
+            .where(_eligible_profile_condition())
             .order_by(User.display_name, User.email, User.id)
         ).all()
     )

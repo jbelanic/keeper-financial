@@ -15,6 +15,7 @@ from keeper_api.models.borrower import (
 from keeper_api.models.domain import Candidate, Role, User, UserIdentity, UserRole
 from keeper_api.models.statuses import CandidateStatus
 from keeper_api.services.auth import Principal
+from keeper_api.services.borrower_applications import borrower_draft_expired
 from keeper_api.services.borrower_crypto import (
     BorrowerCryptoState,
     verify_capability_digest,
@@ -32,6 +33,9 @@ class BorrowerCapabilityContext:
 def validate_borrower_origin(request: Request, settings: Settings) -> None:
     host = request.headers.get("host", "")
     origin = request.headers.get("origin", "")
+
+    if host.split(":")[0] == "api":
+        host = request.headers.get("x-forwarded-host", "")
 
     expected_host = "apply.keeperfinancial.ca"
     expected_origin = "https://apply.keeperfinancial.ca"
@@ -72,11 +76,19 @@ def verify_borrower_capability(
     application_id: uuid.UUID,
     capability: str,
 ) -> BorrowerCapabilityContext:
-    application = db.get(BorrowerApplication, application_id)
+    application = db.scalar(
+        select(BorrowerApplication)
+        .where(BorrowerApplication.id == application_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
     if application is None:
         raise HTTPException(status_code=404, detail="application not found")
 
     if application.lifecycle_status != BorrowerApplicationLifecycleStatus.DRAFT.value:
+        raise HTTPException(status_code=404, detail="application not found")
+
+    if borrower_draft_expired(application):
         raise HTTPException(status_code=404, detail="application not found")
 
     if application.capability_digest is None:

@@ -983,6 +983,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/borrower-applications/{application_id}/draft-documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Draft Documents */
+    get: operations["list_draft_documents_api_v1_borrower_applications__application_id__draft_documents_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/borrower-applications/{application_id}/draft-documents/{document_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Draft Document Route */
+    delete: operations["delete_draft_document_route_api_v1_borrower_applications__application_id__draft_documents__document_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/borrower-applications/{application_id}/consent": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Active Borrower Consent */
+    get: operations["get_active_borrower_consent_api_v1_borrower_applications__application_id__consent_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/borrower-applications/{application_id}/submit": {
     parameters: {
       query?: never;
@@ -1462,11 +1513,6 @@ export interface components {
       /** Applications */
       applications: components["schemas"]["CandidateApplicationResponse"][];
     };
-    /** Body_upload_borrower_document_api_v1_borrower_applications__application_id__documents_post */
-    Body_upload_borrower_document_api_v1_borrower_applications__application_id__documents_post: {
-      /** File */
-      file: string;
-    };
     /** Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post */
     Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
       /** Category */
@@ -1478,6 +1524,27 @@ export interface components {
     Body_upload_document_api_v1_upload_document_post: {
       /** File */
       file: string;
+    };
+    /** BorrowerApplicationDraftResponse */
+    BorrowerApplicationDraftResponse: {
+      /** Application Id */
+      application_id: string;
+      /** Revision */
+      revision: number;
+      /** Lifecycle Status */
+      lifecycle_status: string;
+      /** Has Sin */
+      has_sin: boolean;
+      /** Has Co Borrower */
+      has_co_borrower: boolean;
+      /** Last Activity At */
+      last_activity_at: string;
+      /** Draft Expires At */
+      draft_expires_at: string | null;
+      /** Payload */
+      payload: {
+        [key: string]: unknown;
+      } | null;
     };
     /** BorrowerApplicationSaveRequest */
     BorrowerApplicationSaveRequest: {
@@ -1563,6 +1630,15 @@ export interface components {
       /** Assigned At */
       assigned_at: string | null;
     };
+    /** BorrowerConsentResponse */
+    BorrowerConsentResponse: {
+      /** Consent Version */
+      consent_version: string;
+      /** Wording Digest */
+      wording_digest: string;
+      /** Wording Text */
+      wording_text: string;
+    };
     /** BorrowerDocumentListResponse */
     BorrowerDocumentListResponse: {
       /** Items */
@@ -1576,6 +1652,10 @@ export interface components {
       document_id: string;
       /** Filename */
       filename: string;
+      /** Category */
+      category: string;
+      /** Description */
+      description: string | null;
       /** Mime Type */
       mime_type: string;
       /** Size Bytes */
@@ -1591,10 +1671,18 @@ export interface components {
       document_id: string;
       /** Filename */
       filename: string;
+      /** Category */
+      category: string;
+      /** Description */
+      description: string | null;
+      /** Mime Type */
+      mime_type: string;
       /** Size Bytes */
       size_bytes: number;
       /** Scan Status */
       scan_status: string;
+      /** Uploaded At */
+      uploaded_at: string;
     };
     /** BorrowerInternalProjection */
     BorrowerInternalProjection: {
@@ -6266,7 +6354,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["BorrowerApplicationSaveResponse"];
+          "application/json": components["schemas"]["BorrowerApplicationDraftResponse"];
         };
       };
       /** @description Validation Error */
@@ -6360,7 +6448,12 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "multipart/form-data": components["schemas"]["Body_upload_borrower_document_api_v1_borrower_applications__application_id__documents_post"];
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+          category: string;
+          description?: string | null;
+        };
       };
     };
     responses: {
@@ -6371,6 +6464,98 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BorrowerDocumentUploadResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_draft_documents_api_v1_borrower_applications__application_id__draft_documents_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerDocumentListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_draft_document_route_api_v1_borrower_applications__application_id__draft_documents__document_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_active_borrower_consent_api_v1_borrower_applications__application_id__consent_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerConsentResponse"];
         };
       };
       /** @description Validation Error */

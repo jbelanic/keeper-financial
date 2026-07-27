@@ -194,3 +194,10 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 - Measure recruiting funnel and lead conversion.
 - Decide whether to add mortgage-specific CRM, open-source CRM, or a limited custom client CRM.
 - Consider external e-signature automation.
+# 2026-07-26 borrower Phase D.2 checkpoint
+
+Phase D.1 is retained as the historical bounded documents/submission API
+checkpoint. The bounded Phase D.2 source slice completes the already approved
+borrower-facing document, server-consent, caller-idempotent submission, web,
+migration, and generated-contract work through `20260726_0015`. Phase F
+readiness implementation and every deployment/operational gate remain pending.

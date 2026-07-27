@@ -54,7 +54,7 @@ Mortgage agents conduct credit checks and downstream mortgage work outside Keepe
 - The browser receives the capability only in a `Secure`, `HttpOnly`, host-only, `SameSite=Strict` cookie scoped to `apply.keeperfinancial.ca`; the raw capability is never stored in PostgreSQL, logs, URLs, analytics, or MinIO.
 - PostgreSQL stores only a keyed digest of the capability and its expiry.
 - Every draft read, save, upload, delete, and submit operation requires the cookie, an exact allowed Origin/Host, CSRF protection, an active draft, and constant-time capability verification.
-- The MVP supports same-browser resume while the capability cookie remains valid. It has no cross-device resume, email magic link, shared co-borrower access, or post-submission borrower portal.
+- The MVP supports same-browser resume while the capability cookie remains valid. The authorized draft read returns the current saved non-SIN answers with private/no-store controls; the browser rehydrates in-memory form state without placing answers in local storage, session storage, URLs, analytics, logs, or server-rendered markup. It has no cross-device resume, email magic link, shared co-borrower access, or post-submission borrower portal.
 - The primary borrower enters co-borrower information with the co-borrower’s authority. A separate co-borrower collaboration/invitation flow is deferred.
 - Once submitted, the capability is revoked and the public browser cannot retrieve the application or its documents.
 
@@ -99,7 +99,8 @@ Because the application contains SIN and financial documents, database credentia
 - Collect SIN for each primary and co-borrower applicant as an approved required field.
 - Validate normalized nine-digit syntax and the SIN Luhn checksum server-side.
 - Encrypt the full SIN at the field/payload boundary. Never index, search, log, audit, email, include in URLs, or expose it in ordinary list/detail projections.
-- Draft responses return only `sin_provided` and masked last four digits after a successful save. A borrower may replace a SIN but cannot retrieve the previously stored full value.
+- Draft responses return only `sin_provided` and masked state for SIN after a successful save or recovery; full or partial SIN digits are not included in the resumable payload. A borrower may replace a SIN but cannot retrieve the previously stored full value.
+- The dedicated primary-SIN ciphertext is re-encrypted for every new payload revision because its authenticated-encryption context is revision-bound. Reads retain bounded compatibility with earlier draft rows that carried an older revision-bound SIN ciphertext, then the next material save writes a correctly revision-bound ciphertext.
 - Internal screens mask SIN by default. Full reveal requires assigned-agent or administrator authorization, AAL2, a deliberate reveal action, `no-store`, and a dedicated audit event containing IDs and reason/category only—not the SIN.
 - Credit checking remains outside Keeper; no credit score or bureau response is stored unless a later approved phase defines that new data flow.
 
