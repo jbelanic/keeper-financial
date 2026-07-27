@@ -26,6 +26,8 @@ This plan does **not itself** authorize:
 
 No implementation agent may infer operational authority from this plan. The owner separately authorized standard branch, commit, push, pull-request, and merge operations for the approved borrower phases on 2026-07-24. Deployment, shared-database, live-secret, external-service, real-data, destructive, and incident actions remain separately gated.
 
+**Owner direction (2026-07-27):** the owner directed that (a) the five minimal operational-readiness items in `docs/37_MINIMAL_OPERATIONAL_READINESS.md` are implemented as the minimal free baseline; (b) the public accessibility statement is incorporated into the site and is **not** a standalone release blocker (a formal specialist accessibility review remains a deferred production item); and (c) mandatory pilot go/no-go criteria are **not** required as a gate before the owner's separate deployment decision. The comprehensive `RF`/`OD` evidence items below remain available as planning aids and as the path to a controlled pilot, but they are not enforced as blockers. Real-borrower submission and production deployment still require the owner's explicit "deploy now"; approved wording, minimal readiness, and accessibility incorporation do not by themselves enable submission or deployment.
+
 ## 2. Governing boundaries
 
 The following boundaries remain mandatory throughout readiness work:

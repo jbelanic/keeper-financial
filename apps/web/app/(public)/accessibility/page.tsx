@@ -95,6 +95,23 @@ export default function AccessibilityPage() {
           </p>
         </section>
         <section>
+          <h2>Our accessibility commitment</h2>
+          <p>
+            Keeper Financial is committed to ensuring this website is accessible
+            to the widest possible audience, regardless of ability or
+            technology. We aim to meet recognized accessibility practices,
+            including the Web Content Accessibility Guidelines (WCAG) 2.1 Level
+            AA, for our public website and the mortgage-application experience.
+          </p>
+          <p>
+            This commitment covers perceivable content, operable interfaces,
+            understandable information, and robust markup across devices,
+            browsers, and assistive technologies. We review accessibility as
+            part of ongoing development and treat barriers as defects to be
+            prioritized and remediated.
+          </p>
+        </section>
+        <section>
           <h2>Ongoing review</h2>
           <p>
             Keeper Financial’s website implementation includes automated checks
@@ -103,9 +120,10 @@ export default function AccessibilityPage() {
             improving the website as content, technology, and user needs evolve.
           </p>
           <p>
-            A formal owner-approved accessibility policy, manual accessibility
-            review, and production readiness review should be completed before
-            final production approval.
+            The accessibility statement on this page is approved site content. A
+            separate formal specialist accessibility review remains a deferred
+            production-readiness item, but accessibility is incorporated into
+            the site and is not a standalone release blocker.
           </p>
         </section>
         <section>

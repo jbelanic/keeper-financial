@@ -155,8 +155,8 @@ Phase 1 is releasable only when:
 - Candidate documents are private.
 - Audit events are generated for high-risk actions.
 - Environment validation fails closed.
-- Required privacy, complaints, accessibility, and consent pages exist.
-- Real-borrower submission remains disabled until exact production consent wording/version, secure deployment evidence, and explicit release approval exist.
+- Required privacy, complaints, accessibility, and consent pages exist. The public accessibility statement (`apps/web/app/(public)/accessibility/page.tsx`) is approved site content and is not a standalone release blocker (a formal specialist accessibility review remains a deferred production item per `docs/26`).
+- Real-borrower submission remains disabled until the owner's explicit "deploy now." The borrower privacy/credit-use disclosure wording was approved 2026-07-27 (`borrower-privacy-credit-disclosure-2026-07-27-v1`); the minimal operational-readiness baseline (`docs/37`) and accessibility incorporation are complete. Pilot go/no-go criteria are not a gate before the owner's separate deployment decision.
 
 ## 12. Change-control rule
 
