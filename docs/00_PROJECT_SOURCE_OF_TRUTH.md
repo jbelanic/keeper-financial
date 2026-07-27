@@ -4,7 +4,7 @@
 
 **Product:** Keeper Financial public website and brokerage relationship platform  
 **Jurisdiction:** Ontario, Canada  
-**Phase:** Phase 1 baseline  
+**Phase:** owner-approved borrower-application expansion, Phase D.2 source contract closure
 **Primary users:** Mortgage clients, agent candidates, active mortgage agents, brokerage administrators, compliance reviewers, principal broker
 
 ## 2. Product purpose
@@ -13,6 +13,8 @@ Keeper Financial requires a professional public web presence and a secure broker
 
 - Mortgage-client entry points.
 - Minimal-information contact inquiries.
+- Secure borrower mortgage applications and supporting documents.
+- Assigned-agent and administrator application review.
 - Agent recruitment.
 - Candidate applications.
 - Candidate review and selection.
@@ -23,18 +25,11 @@ Keeper Financial requires a professional public web presence and a secure broker
 
 ## 3. Governing product boundary
 
-Keeper Financial will build the public brand, recruitment, onboarding, agent administration, and public agent-profile experience.
+Keeper Financial will build the public brand, borrower-application intake, recruitment, onboarding, agent administration, and public agent-profile experience.
 
-Keeper Financial will buy or use an established mortgage platform for:
+Keeper is the MVP system of record for borrower application data, SIN, versioned privacy/credit-use consent evidence, supporting documents, lifecycle, attribution, assignment, retention, legal holds, and safe audits. The owner-approved contract is `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`.
 
-- Full borrower mortgage applications.
-- Borrower financial data.
-- Borrower document collection.
-- Credit consent and bureau connectivity.
-- Mortgage underwriting records.
-- Lender submissions.
-- Deal compliance.
-- Commission and payroll capabilities where applicable.
+Keeper does not perform credit-bureau connectivity, automated underwriting or approval, lender submission, deal-compliance workflow, commission, payroll, or full client-CRM behavior in this MVP. No Filogix redirect, handoff, export, or API integration is required. A future external integration is a separate decision.
 
 ## 4. Phase 1 selected approach
 
@@ -42,9 +37,9 @@ Use a hybrid architecture:
 
 - Brokerage-controlled public website.
 - Brokerage-controlled recruitment and onboarding portal.
-- External secure mortgage application.
-- Existing Filogix lender-submission workflow remains in place unless a later approved decision changes it.
-- Mortgage-client CRM expansion is deferred until the existing Filogix CRM capability is assessed in operation.
+- Keeper-native secure borrower application at `apply.keeperfinancial.ca` from the same repository and release process.
+- Existing external lender-submission operations remain outside Keeper, but the MVP has no Filogix integration or handoff requirement.
+- Mortgage-client CRM expansion remains deferred.
 - Public agent profile pages are included.
 - Independent agent microsites are not included in the MVP.
 
@@ -58,8 +53,8 @@ The public website must provide one clear `Get Started` experience with both pat
    - Phone option.
 
 2. **Start a secure mortgage application**
-   - Redirect to the configured external mortgage-application provider.
-   - No recreation or embedding of a custom mortgage application unless separately approved.
+   - Enter the Keeper-native application at `https://apply.keeperfinancial.ca`.
+   - Use an accountless, capability-bound same-browser draft and submit into the assigned-agent/administrator review workflow.
 
 ## 6. Phase 1 technology baseline
 
@@ -69,14 +64,15 @@ Preferred foundation:
 - API: FastAPI.
 - Database: PostgreSQL.
 - ORM/migrations: SQLAlchemy and Alembic.
-- Identity: Supabase Auth.
+- Identity: the repository-tracked local Supabase CLI/Auth stack; no hosted Supabase.
 - Authorization authority: application database roles and lifecycle state.
-- Nonlocal object storage: private Cloudflare R2-compatible storage.
-- Local file storage: permitted only for local development.
-- Local runtime: Docker Compose.
-- Deployment: containerized or managed deployment selected later.
+- Object storage: private local S3-compatible MinIO with path-style addressing.
+- Malware scanning: local ClamAV `clamd` in Docker Compose; validation and a clean scan are required before private-object persistence.
+- Local file storage: test/development fallback only; never the live object store.
+- Live/production runtime: Docker Compose on the local Linux host. The local containers are the deployment targets.
+- Infrastructure boundary: no hosted Supabase, Cloudflare R2, or external cloud infrastructure keys/services.
 - Email: transactional provider selected later.
-- E-signature: established provider selected later; no custom signature system.
+- E-signature: self-hosted Documenso behind a configured server-side adapter; no custom signature system. Provider status refresh is authoritative, uses one configured API origin, rejects redirects, and fails closed.
 
 ## 7. Authorization rule
 
@@ -88,27 +84,11 @@ Suspended, rejected, withdrawn, offboarding, and offboarded states must constrai
 
 ## 8. Sensitive-data boundary
 
-The custom platform must not collect or store full mortgage application data.
+The platform may store the owner-approved borrower application, including primary and co-borrower identity/contact data, SIN, employment/income, property, asset/liability, consent, notes, and open mortgage-supporting document categories including `Other` within the approved application purpose and technical controls, plus the existing lead, recruitment, onboarding, profile, and audit records.
 
-It may store:
+Borrower data is a specially protected class. SIN and application payloads require authenticated application-level encryption; supporting documents require strict type/structure checks, fail-closed ClamAV, encryption, and private MinIO. Borrower capabilities, SIN, application answers, filenames, keys, and document contents must not enter logs, URLs, analytics, notifications, or audit payloads. Internal review requires exact assignment or administrator authority and AAL2.
 
-- Minimal client lead/contact data.
-- Agent candidate application information.
-- Recruitment and onboarding documents.
-- Policy acknowledgements.
-- Agent profile and licensing information.
-- Administrative review and audit records.
-
-It must not store borrower:
-
-- SIN.
-- Credit reports.
-- Bank statements.
-- Tax returns.
-- Detailed assets and liabilities.
-- Government identification for mortgage underwriting.
-- Lender submission packages.
-- Mortgage underwriting notes.
+The platform must not collect or generate credit reports through an integration, lender-submission packages, automated underwriting/approval decisions, deal-compliance records, or unrelated third-party personal data unless separately approved. Product openness for borrower document categories does not remove technical type, size, malware, encryption, authorization, retention, or delivery controls.
 
 ## 9. Compliance posture
 
@@ -121,12 +101,38 @@ It must not claim that:
 - E-signature validity is guaranteed by a custom checkbox.
 - Use of a vendor eliminates the brokerage’s PIPEDA accountability.
 
-## 10. Phase 1 release condition
+## 10. Current implementation and authority checkpoint
+
+The source baseline for this decision is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, including merged work through PR #9. It contains the accepted public site, contact path, candidate authentication/application/review, onboarding completion, agent activation/profile publication, private candidate documents, local PostgreSQL/MinIO/ClamAV/Supabase topology, and public-content updates. Historical reports retain the exact evidence and limitations of their original checkpoints.
+
+Borrower Phases B, C, D, and E are implemented as bounded source checkpoints
+through forward migration `20260726_0015`. Phase D.1 remains the historical API
+checkpoint; Phase D.2 closes its approved document, consent, idempotent
+submission, generated-contract, and borrower-web contract. Phase F retention
+jobs, legal-hold operations, ingress, backup/restore, deployment, monitoring,
+and operational evidence remain unimplemented and awaiting separate approval.
+
+On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
+
+On 2026-07-27 the owner approved (a) the assigned-agent full-data retrieval
+boundary (Scope B) and (b) stopping the local Supabase stack. Scope B lets the
+exact assigned active AAL2 mortgage agent read the unmasked SIN and the full
+financial payload (assets, liabilities, subject property, other properties,
+additional notes) for their assigned submitted/under-review application, while
+the admin/internal `BorrowerInternalProjection` remains masked (display-only
+SIN) and withholds those full financial fields. The privacy-boundary decision
+and the agent-only authorization model are recorded in
+`docs/35_AGENT_FULL_DATA_PRIVACY_APPROVAL.md`; the consolidated implementation
+plan is `docs/36_AGENT_RETRIEVAL_MINIMAL_PLAN.md`. Outside the agent web surface
+the borrower data stays masked everywhere.
+
+## 11. Phase 1 release condition
 
 Phase 1 is releasable only when:
 
 - Public website routes are production-ready.
 - Both client entry paths work.
+- The Keeper-native borrower application and document path passes its approved authorization, encryption, consent, lifecycle, retention, legal-hold, malware, browser, and operational gates.
 - Candidate identity and role controls are tested.
 - Candidate application and review workflow works.
 - Onboarding tasks and controlled documents work.
@@ -135,8 +141,10 @@ Phase 1 is releasable only when:
 - Audit events are generated for high-risk actions.
 - Environment validation fails closed.
 - Required privacy, complaints, accessibility, and consent pages exist.
-- No full mortgage application data is collected.
+- Real-borrower submission remains disabled until exact production consent wording/version, secure deployment evidence, and explicit release approval exist.
 
-## 11. Change-control rule
+## 12. Change-control rule
 
 Any approved change to scope, architecture, security boundaries, lifecycle states, systems of record, or compliance assumptions must update this file and all affected supporting documents in the same branch.
+
+The deployment and borrower-application decisions above supersede contradictory external-application, prohibited-borrower-data, hosted-service, and undecided-hosting language in historical implementation reports and bootstrap prompts; those files remain historical evidence rather than current instructions.

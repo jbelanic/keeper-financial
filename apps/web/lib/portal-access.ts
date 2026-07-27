@@ -9,6 +9,7 @@ export async function portalAccessRequest(
   const response = await fetcher(`${baseUrl}/api/v1/auth/access?area=${area}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
   });
   return response.ok;
 }

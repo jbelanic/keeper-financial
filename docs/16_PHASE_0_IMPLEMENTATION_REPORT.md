@@ -61,9 +61,9 @@ Phase 0 remains a foundation. It is not production-ready and does not claim lega
 | Lockfile validation | Pass: lockfile v3, successful clean install, registry integrity on every registry package, only expected workspace links, and four reviewed install-script packages. |
 | Alembic | Pass: `alembic upgrade head` and `alembic current` succeeded against PostgreSQL at revision `20260714_0001`. |
 | Compose | Pass: `docker compose config`; API and web images built successfully; `docker compose up -d` started healthy PostgreSQL and API services plus the web container. |
-| Supabase | Hosted Supabase Auth/JWKS remains unverified; the Supabase CLI is not installed. |
+| Supabase | Later reconciliation (2026-07-16): the tracked local stack starts via `npx supabase` 2.109.1; Auth is healthy; JWKS returns HTTP 200 with exactly one ES256 key. |
 
-Local Docker/PostgreSQL and migration validation is complete. Hosted Supabase Auth/JWKS, hosted R2, backup/restore, deployment, and production-readiness checks remain unverified. Passing local validation does not turn those external-service and operational checks into passes.
+This table retains the Phase 0 application-test evidence while recording the later Auth reconciliation above. Hosted Supabase and hosted R2 are no longer deployment targets. The current local Docker deployment has separate live evidence in `docs/LOCAL_DEVELOPMENT.md`; backup/restore, host hardening, real mail delivery, approved malware scanning, and release approval remain unresolved and are not converted into passes by local validation.
 
 ## Owner decisions still required
 
@@ -71,5 +71,5 @@ Local Docker/PostgreSQL and migration validation is complete. Hosted Supabase Au
 - Final font/image licensing, brand tokens, navigation labels, mobile interpretation, and accessibility/content approval.
 - Hosting, private R2 account/bucket, transactional email, booking, mortgage application, and established e-signature providers.
 - Mortgage provider allowed host/base URL and whether approved agent-specific links are supported.
-- Retention periods, candidate document categories, malware-scanning provider, candidate MFA policy, and post-decline/withdrawal access policy.
+- Retention periods and malware-scanning provider remain open. Candidate document categories, candidate MFA, and post-decline/withdrawal access were subsequently approved for Phase 1C in `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md`.
 - Roles allowed to approve profiles, onboarding exceptions, FSRA evidence, final activation, privacy contact, and incident/security owners.

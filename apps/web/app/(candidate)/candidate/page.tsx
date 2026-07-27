@@ -1,47 +1,71 @@
 import type { Metadata } from "next";
-import { Card, ProgressChecklist, StatusBadge, Timeline } from "@keeper/ui";
+import Link from "next/link";
+import { EmptyState, ErrorState, StatusBadge } from "@keeper/ui";
+import { portalServerJson } from "@/lib/portal-server-api";
+import type { components } from "@keeper/contracts";
+
+type StatusList = components["schemas"]["CandidateStatusListResponse"];
+
+const HUMAN_STATUSES: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  more_information_requested: "More information requested",
+  under_review: "Under review",
+  interview: "Interview",
+  conditionally_selected: "Conditionally selected",
+  declined: "Declined",
+  withdrawn: "Withdrawn",
+};
+
+function humanStatus(status: string): string {
+  return HUMAN_STATUSES[status] ?? status.replaceAll("_", " ");
+}
+
 export const metadata: Metadata = { title: "Candidate portal" };
-export default function Page() {
+
+export default async function CandidateOverviewPage() {
+  const result = await portalServerJson<StatusList>(
+    "/api/v1/candidate/applications/status",
+  );
   return (
     <>
       <header className="foundation-header">
         <p className="eyebrow">Candidate portal</p>
-        <h1>Your recruitment journey</h1>
-        <p>
-          The shell is protected by verified identity, a local candidate role,
-          an active user, and allowed lifecycle state.
-        </p>
+        <h1>Your application status</h1>
+        <p>Review the current status and messages for each application.</p>
       </header>
-      <div className="grid-2">
-        <Card>
-          <h2>
-            Foundation status{" "}
-            <StatusBadge tone="warning">Not started</StatusBadge>
-          </h2>
-          <ProgressChecklist
-            items={[
-              { label: "Application workflow", complete: false },
-              { label: "Selection workflow", complete: false },
-              { label: "Onboarding workflow", complete: false },
-            ]}
-          />
-        </Card>
-        <Card>
-          <h2>Status timeline</h2>
-          <Timeline
-            items={[
-              {
-                label: "Account access",
-                detail: "Authorization foundation active",
-              },
-              {
-                label: "Next",
-                detail: "Candidate workflow arrives in Phase 1C",
-              },
-            ]}
-          />
-        </Card>
-      </div>
+      {!result ? (
+        <ErrorState title="Your application status is temporarily unavailable">
+          Sign in again or try later.
+        </ErrorState>
+      ) : result.applications.length === 0 ? (
+        <EmptyState title="You have not started an application">
+          Choose a currently published opportunity to begin.
+        </EmptyState>
+      ) : (
+        <div className="grid-2">
+          {result.applications.map((item) => (
+            <article className="card" key={item.application_id}>
+              <h2>Application status</h2>
+              <p>
+                <StatusBadge>{humanStatus(item.status)}</StatusBadge>
+              </p>
+              {item.messages.length ? (
+                <ul>
+                  {item.messages.map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No candidate-visible messages have been added.</p>
+              )}
+              <Link href={`/candidate/applications/${item.application_id}`}>
+                View application
+              </Link>
+            </article>
+          ))}
+        </div>
+      )}
     </>
   );
 }

@@ -7,7 +7,36 @@ from sqlalchemy.orm import Session
 from conftest import create_user
 from keeper_api.db.session import get_db
 from keeper_api.main import app
-from keeper_api.models.domain import CandidateDocument
+from keeper_api.models.domain import CandidateApplication, CandidateDocument, RecruitmentPosting
+
+
+def linked_application(db: Session, candidate_id, email: str) -> CandidateApplication:  # type: ignore[no-untyped-def]
+    posting = RecruitmentPosting(
+        slug=f"synthetic-document-{candidate_id}",
+        title="Synthetic document fixture",
+        summary="Synthetic test fixture only.",
+        body="Not a real recruitment posting.",
+        status="published",
+        version=1,
+    )
+    db.add(posting)
+    db.flush()
+    application = CandidateApplication(
+        candidate_id=candidate_id,
+        recruitment_posting_id=posting.id,
+        attempt_number=1,
+        source_posting_slug=posting.slug,
+        source_posting_title=posting.title,
+        source_posting_version=1,
+        schema_version="candidate-application-2026-07-15-v1",
+        revision=1,
+        state="draft",
+        status="application_started",
+        email=email,
+    )
+    db.add(application)
+    db.flush()
+    return application
 
 
 def test_api_and_database_health_are_distinct(client: TestClient) -> None:
@@ -34,14 +63,18 @@ def test_candidate_document_is_not_publicly_addressable(
         db, subject="owner", role_code="candidate", candidate_status="application_started"
     )
     assert candidate is not None
+    application = linked_application(db, candidate.id, "owner@example.test")
     private_path = tmp_path / "objects" / "candidate" / "random-key"
     private_path.parent.mkdir(parents=True)
     private_path.write_bytes(b"synthetic document")
     document = CandidateDocument(
         candidate_id=candidate.id,
+        application_id=application.id,
+        category="resume",
         object_key="candidate/random-key",
         original_filename="synthetic.pdf",
         content_type="application/pdf",
+        detected_content_type="application/pdf",
         size_bytes=18,
         sha256_digest="0" * 64,
     )
@@ -59,11 +92,15 @@ def test_candidate_cannot_download_another_candidates_document(
     )
     create_user(db, subject="other", role_code="candidate", candidate_status="application_started")
     assert owner is not None
+    application = linked_application(db, owner.id, "owner@example.test")
     document = CandidateDocument(
         candidate_id=owner.id,
+        application_id=application.id,
+        category="resume",
         object_key="candidate/random-key",
         original_filename="synthetic.pdf",
         content_type="application/pdf",
+        detected_content_type="application/pdf",
         size_bytes=1,
         sha256_digest="0" * 64,
     )

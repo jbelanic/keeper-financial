@@ -40,3 +40,42 @@ class DocumentStatus(StrEnum):
     REJECTED = "rejected"
     EXPIRED = "expired"
     SUPERSEDED = "superseded"
+
+
+class OnboardingTaskStatus(StrEnum):
+    REQUIRED = "required"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    COMPLETED = "completed"
+    REJECTED = "rejected"
+
+
+class OnboardingAssignmentStatus(StrEnum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    SUPERSEDED = "superseded"
+
+
+class InterviewStatus(StrEnum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no_show"
+
+
+class EsignEnvelopeStatus(StrEnum):
+    SENT = "sent"
+    VIEWED = "viewed"
+    COMPLETED = "completed"
+    REJECTED = "rejected"
+    VOIDED = "voided"
+
+
+class InformationRequestStatus(StrEnum):
+    OPEN = "open"
+    RESPONDED = "responded"
+
+
+class GateStatus(StrEnum):
+    OPEN = "open"
+    SATISFIED = "satisfied"

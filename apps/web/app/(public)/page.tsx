@@ -1,71 +1,181 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { Card, StatusBadge } from "@keeper/ui";
+import { SectionHeading } from "@keeper/ui";
+import { CtaBand, Icon, PageHero, ServiceCard } from "@/lib/public-components";
+import { mortgageServices, processSteps } from "@/lib/public-content";
+import { createPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Ontario mortgage guidance",
+export const metadata: Metadata = createPageMetadata({
+  title: "Start with your mortgage goal",
   description:
-    "Meet Keeper Financial and choose a conversation-first or secure external application path.",
-};
+    "Explore common mortgage topics, ask a general question, or continue to the mortgage application when you are ready to provide detailed information.",
+  path: "/",
+});
+
+const serviceIcons = [
+  "home",
+  "refresh",
+  "calendar",
+  "key",
+  "building",
+] as const;
 
 export default function HomePage() {
   return (
     <>
-      <section className="hero">
-        <div className="container hero-grid">
-          <div>
-            <p className="eyebrow">Ontario mortgage brokerage foundation</p>
-            <h1>Clear mortgage guidance starts with the right conversation.</h1>
-            <p>
-              This Phase 0 site establishes Keeper Financial’s accessible public
-              experience while approved content and regulatory details are
-              prepared.
-            </p>
-            <div className="button-row">
-              <Link className="button-link" href="/apply">
-                Explore both ways to get started
-              </Link>
-              <Link className="button-link button-secondary" href="/mortgages">
-                Mortgage services
-              </Link>
-            </div>
+      <PageHero
+        eyebrow="Mortgage guidance"
+        title="Start with your mortgage goal. Continue securely when you’re ready."
+        description="Explore common mortgage topics, ask a general question, or continue to the mortgage application when you are ready to provide detailed information."
+        image="/images/home-conversation.png"
+        imageAlt="A couple having a relaxed conversation in their living room"
+        imagePriority
+      >
+        <div className="button-row">
+          <Link className="button-link" href="/mortgages">
+            Explore mortgage topics
+          </Link>
+          <Link className="button-link button-secondary" href="/apply">
+            Get started
+          </Link>
+        </div>
+      </PageHero>
+
+      <div className="container trust-strip" aria-label="What to expect">
+        <div>
+          <Icon name="conversation" />
+          <span>
+            <strong>Clear information</strong>General questions first
+          </span>
+        </div>
+        <div>
+          <Icon name="shield" />
+          <span>
+            <strong>General questions first</strong>Sensitive details stay in
+            the application
+          </span>
+        </div>
+        <div>
+          <Icon name="building" />
+          <span>
+            <strong>Sensitive details stay in the application</strong>Keep
+            detailed information in the mortgage application
+          </span>
+        </div>
+      </div>
+
+      <section className="section">
+        <div className="container">
+          <SectionHeading
+            eyebrow="Common mortgage goals"
+            title="Where would you like to begin?"
+            description="Choose the topic closest to your current goal. These pages provide general information and do not determine eligibility, rates or approval."
+            align="center"
+          />
+          <div className="service-grid">
+            {mortgageServices.map((service, index) => (
+              <ServiceCard
+                key={service.slug}
+                href={`/mortgages/${service.slug}`}
+                title={service.shortTitle}
+                description={service.summary}
+                icon={serviceIcons[index]}
+              />
+            ))}
           </div>
-          <aside className="hero-panel">
-            <StatusBadge tone="warning">Foundation release</StatusBadge>
-            <h2>Privacy-aware by design</h2>
+        </div>
+      </section>
+
+      <section className="section section-muted">
+        <div className="container process-layout">
+          <SectionHeading
+            eyebrow="How it works"
+            title="A clear first step"
+            description="Choose your topic. Review general information without providing financial or identity documents. Ask a question. Contact Keeper Financial using basic contact details and non-sensitive context. Continue to the application. Use the configured mortgage application service when detailed information is required."
+          />
+          <ol className="process-list">
+            {processSteps.map((step, index) => (
+              <li key={step.title}>
+                <span className="step-number" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="container split-feature">
+          <div>
+            <p className="eyebrow">Prefer to contact a specific agent?</p>
+            <h2>
+              Browse currently published profiles and choose an agent to
+              contact.
+            </h2>
             <p>
-              Speak with the team using minimal contact details, or continue to
-              an approved external platform for a full mortgage application.
+              Browse currently published profiles and choose an agent to
+              contact.
             </p>
+            <Link className="button-link" href="/agents">
+              Find an Agent
+            </Link>
+          </div>
+          <aside className="paper-panel">
+            <Icon name="shield" />
+            <h3>Keep sensitive information out of general messages.</h3>
+            <p>
+              Do not send a SIN, banking information, tax records, identity
+              documents, passwords or mortgage documents through a public
+              contact form or general email. Use the mortgage application or
+              another authorized secure channel when requested.
+            </p>
+            <Link className="text-link" href="/contact">
+              Contact Keeper Financial <Icon name="arrow" />
+            </Link>
           </aside>
         </div>
       </section>
-      <section className="section">
-        <div className="container">
-          <p className="eyebrow">A deliberate boundary</p>
-          <h2>Keeper Financial does not ask for underwriting data here.</h2>
-          <div className="grid-3">
-            <Card>
-              <h3>Speak with someone</h3>
-              <p>
-                Share only basic contact information and a general objective.
-              </p>
-            </Card>
-            <Card>
-              <h3>Apply securely elsewhere</h3>
-              <p>
-                A validated link will direct applicants to the configured
-                established provider.
-              </p>
-            </Card>
-            <Card>
-              <h3>Join the brokerage</h3>
-              <p>
-                A separate candidate portal supports controlled recruitment and
-                onboarding.
-              </p>
-            </Card>
+
+      <section className="recruitment-feature">
+        <div className="container recruitment-grid">
+          <div className="recruitment-copy">
+            <p className="eyebrow eyebrow-light">Join Keeper Financial</p>
+            <h2>Explore currently published opportunities.</h2>
+            <p>
+              Each posting describes its own responsibilities, requirements and
+              application process. You do not need an account to browse.
+            </p>
+            <Link className="button-link" href="/careers">
+              Join Keeper Financial
+            </Link>
           </div>
+          <div className="recruitment-image">
+            <Image
+              src="/images/recruitment-team.png"
+              alt="Three mortgage professionals talking in a modern office"
+              fill
+              sizes="(max-width: 832px) 100vw, 52vw"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="section section-tight">
+        <div className="container">
+          <CtaBand
+            title="Choose your next step"
+            description="Ask a general question or continue to the mortgage application."
+            primaryHref="/apply"
+            primaryLabel="Get started"
+            secondaryHref="/contact"
+            secondaryLabel="Contact Keeper Financial"
+          />
         </div>
       </section>
     </>

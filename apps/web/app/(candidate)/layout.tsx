@@ -1,13 +1,20 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { requirePortalAccess } from "@/lib/require-portal-access";
+import {
+  portalServerJson,
+  type CandidateOnboardingAvailability,
+} from "@/lib/review-onboarding-api";
 import { PortalShell } from "@/lib/shells";
 
-const links: Array<[string, string]> = [
+const baseLinks: Array<[string, string]> = [
   ["Overview", "/candidate"],
-  ["Application", "/candidate/application"],
-  ["Onboarding", "/candidate/onboarding"],
-  ["Documents", "/candidate/documents"],
+  ["Applications", "/candidate/application"],
 ];
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export default async function CandidateLayout({
   children,
@@ -15,6 +22,15 @@ export default async function CandidateLayout({
   children: ReactNode;
 }) {
   await requirePortalAccess("candidate");
+  const onboarding = await portalServerJson<CandidateOnboardingAvailability>(
+    "/api/v1/candidate/onboarding/availability",
+  );
+  const links = onboarding?.available
+    ? [
+        ...baseLinks,
+        ["Onboarding", "/candidate/onboarding"] as [string, string],
+      ]
+    : baseLinks;
   return (
     <PortalShell area="Candidate" links={links}>
       {children}

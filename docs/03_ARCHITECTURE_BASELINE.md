@@ -56,6 +56,7 @@ PostgreSQL is authoritative for:
 - Lead inquiries.
 - Consent evidence.
 - Audit events.
+- Borrower application metadata, encrypted draft payloads, capabilities, attribution, assignment, lifecycle, document metadata, retention, and legal holds.
 
 Do not store raw object files in PostgreSQL.
 
@@ -63,7 +64,7 @@ Do not store raw object files in PostgreSQL.
 
 ### Identity
 
-Supabase Auth supplies:
+The repository-tracked local Supabase CLI stack supplies:
 
 - Sign-up/sign-in.
 - Email verification.
@@ -82,15 +83,15 @@ The API verifies the Supabase JWT and maps the subject to:
 
 No active application relationship means no portal entry.
 
+The current web and API code genuinely depends on Supabase Auth token/session semantics. The supported live approach is therefore the checked-in `supabase/config.toml` started locally on the same Linux host. Hosted Supabase is prohibited. The API reaches its JWKS endpoint through the Docker host gateway while validating the issuer embedded by the local Auth service.
+
+Supabase Studio is optional local-operator tooling only and must not be exposed as a public, shared, or application-facing service. Supabase Storage and its S3 protocol remain disabled; they are not application storage and must not replace MinIO.
+
 ## Object storage
 
-### Local
+The live object store is the `minio` service in `compose.yaml`. PostgreSQL stores metadata; MinIO stores bytes. Borrower documents use a dedicated private bucket or least-privilege namespace, and immutable submitted application snapshots are encrypted before MinIO persistence. The API uses the S3-compatible interface with path-style addressing, the `minio` service name for container traffic, and a loopback host endpoint only when producing short-lived browser download URLs. Local filesystem storage remains a test/development fallback only.
 
-Local development may store files under a configured local-only directory.
-
-### Nonlocal
-
-Use a private Cloudflare R2-compatible bucket.
+The live malware-scanning boundary is the `clamav` Compose service. The API sends bounded in-memory bytes to `clamd` over the internal `clamav:3310` TCP endpoint using framed `INSTREAM`; port 3310 is published on loopback only for operator verification. Candidate bytes are not written to MinIO until type/structure validation and a clean scan both succeed.
 
 Required:
 
@@ -104,26 +105,29 @@ Required:
 - No original filename as the object key.
 - No public URL.
 
-## External mortgage application
+## Keeper-native borrower application
 
-Configuration controls:
+The same repository and release process will serve `https://apply.keeperfinancial.ca`. The Phase C branch implements the exact-host Next.js borrower route, Keeper-native form, public `/apply` entry, same-origin no-store browser client, and removal of the web dependency on the legacy external redirect. No external-provider redirect, Filogix handoff, export, or API integration is required in the MVP. This source work is not deployment, genuine-browser, or real-data evidence; the Phase C completion report records the remaining API integration reconciliation.
 
-- Provider name.
-- Brokerage-wide application URL.
-- Allowed hostnames.
-- Optional agent-specific URL mapping.
-- Availability state.
+Borrowers use a high-entropy capability stored only in a secure host-only cookie, while PostgreSQL stores a keyed digest bound to one draft. The capability is not identity verification and grants no internal access. Exact host/origin, CSRF, rate-limit, expiry, revision, and lifecycle checks remain mandatory.
 
-The API or server-rendered route validates redirects. Never allow arbitrary query-provided destinations.
+PostgreSQL holds encrypted mutable drafts and authoritative metadata. Private MinIO holds encrypted documents and immutable encrypted submission snapshots. Because borrower objects contain application-layer ciphertext, authorized downloads are API-proxied decryptions rather than direct presigned MinIO URLs. Agent attribution is resolved from an eligible public slug on the server; internal reads require exact assignment or administrator authority and AAL2.
+
+Phase B does not write borrower document or snapshot bytes, expose a public submit operation, deploy the borrower origin, or provide browser/operational evidence. Final submission remains fail-closed until the Phase D coordinator can verify durable encrypted snapshot and consent evidence.
 
 ## E-signature
 
-Use an adapter boundary. Initial supported modes may be:
+Use the server-side adapter boundary. The selected provider is self-hosted
+Documenso or `disabled`. The adapter accepts one configured API base URL and
+token, constructs only the exact allow-listed envelope-status URL, rejects
+redirects, bounds response size and timeout, verifies the returned envelope ID,
+and accepts only deployed-version-confirmed statuses. Provider or network
+ambiguity fails closed and never marks an agreement complete.
 
-- `external_manual`
-- `docusign`
-- `adobe_sign`
-- `disabled`
+Envelope records belong to one exact onboarding assignment. Replacement creates
+a new current envelope and retains the rejected predecessor as non-satisfying
+history. Webhooks are not implemented until the deployed Documenso version's
+exact event names and signature scheme are separately confirmed.
 
 Do not represent a typed name or checkbox as a legal electronic signature unless approved requirements and legal review support that use.
 
@@ -147,23 +151,22 @@ Email must not include:
 - Audit events are not a substitute for logs.
 - Logs are not a substitute for audit events.
 
-## Deployment tiers
+## Deployment topology
 
-Minimum:
+This is the approved deployment target and an implemented local topology, not evidence of production deployment or release approval. Phase 1F must define and approve the production and controlled-pilot operating plan, evidence, owners, and go/no-go criteria before release.
 
-- `local`
-- `staging_non_sensitive`
-- `production`
+There are two application modes: `local` for isolated development/tests and `production` for the live local Docker deployment. There is no remote staging or hosted production tier.
 
-Nonlocal tiers must fail startup when:
+The approved target topology is one Docker Compose project on the self-hosted Linux host, fronted by an exact-host TLS ingress for `keeperfinancial.ca` and `apply.keeperfinancial.ca`:
 
-- Development-header authentication is enabled.
-- Local file storage is selected.
-- public object URLs are enabled;
-- loopback origins are configured;
-- required secrets are missing;
-- CORS is overly broad;
-- unsafe debug mode is enabled.
+- `web` calls `api` at `http://api:8000` for server-side traffic; browsers use `http://localhost:8000`.
+- `api` connects to PostgreSQL at the `db` service using `postgresql+psycopg` and to MinIO at `http://minio:9000`.
+- `db` and `minio` use durable named volumes and healthchecks.
+- `minio-init` idempotently creates the configured private bucket and disables anonymous access before API startup; MinIO API CORS uses the server's `MINIO_API_CORS_ALLOW_ORIGIN` environment variable with the exact loopback web origin.
+- browsers access the existing local Supabase CLI Auth endpoint through loopback; the API fetches JWKS through `host.docker.internal`. The CLI owns its separate port bindings, which require host-firewall protection.
+- only ingress ports 80/443 are public; API, database, MinIO, MinIO Console, clamd, Studio, and other operator surfaces remain private or loopback-only.
+
+Production validation fails closed when debug/development auth is enabled, admin MFA is not required, local file storage is selected, public object URLs are enabled, required local-service settings are missing, or database/Auth/storage URLs do not match this topology. Alembic migrations are an explicit operator action and never run automatically during service startup.
 
 ## API modules
 
@@ -181,6 +184,7 @@ Suggested initial modules:
 - `audit`
 - `health`
 - `integrations`
+- `borrower_applications`
 
 ## Future CRM boundary
 
@@ -192,6 +196,6 @@ Expose a future event/adapter boundary for:
 - Lead assigned.
 - Candidate activated as agent.
 - Agent profile published.
-- External mortgage application started where supported.
+- Keeper borrower application submitted and assigned.
 
-No vendor-specific implementation is required in Phase 1.
+No Filogix or credit-bureau implementation is required in the borrower MVP.

@@ -14,9 +14,17 @@ from keeper_api.api.router import api_router
 from keeper_api.api.routes.health import router as health_router
 from keeper_api.core.config import get_settings
 from keeper_api.core.logging import configure_logging
+from keeper_api.middleware.sensitive_uploads import (
+    SensitiveUploadMiddleware,
+    UploadRouteLimit,
+    configure_multipart_spooling,
+)
+from keeper_api.services.candidate_files import FIVE_MIB
+from keeper_api.services.document_scan_gate import ProcessLocalDocumentScanGate
 from keeper_api.services.submission_guard import LeadSubmissionGuard, SubmissionRateLimited
 
 settings = get_settings()
+SENSITIVE_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 configure_logging()
 logger = logging.getLogger("keeper_api.request")
 request_id_pattern = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
@@ -33,17 +41,25 @@ app.state.lead_submission_guard = LeadSubmissionGuard(
     window_seconds=settings.lead_rate_limit_window_seconds,
     tracked_clients=settings.lead_rate_limit_tracked_clients,
 )
+app.state.document_scan_gate = ProcessLocalDocumentScanGate(settings.document_scan_max_concurrency)
+configure_multipart_spooling(
+    max(FIVE_MIB, settings.max_document_bytes, settings.borrower_max_document_bytes)
+    + SENSITIVE_MULTIPART_OVERHEAD_BYTES
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=[
         "Authorization",
         "Content-Type",
         "X-Request-ID",
         "X-Dev-Auth-Sub",
         "X-Dev-Auth-AAL",
+        "X-Dev-Auth-Email",
+        "X-Dev-Auth-Verified",
+        "X-Keeper-Borrower-CSRF",
     ],
 )
 
@@ -77,6 +93,22 @@ async def request_context(
             response = await call_next(request)
     else:
         response = await call_next(request)
+    if (request.method == "GET" and request.url.path == "/api/v1/leads") or (
+        request.method == "POST"
+        and request.url.path.startswith("/api/v1/leads/")
+        and request.url.path.endswith("/marketing-consent/withdrawal")
+    ):
+        response.headers["Cache-Control"] = "no-store"
+    if request.url.path.startswith("/api/v1/admin/"):
+        response.headers["Cache-Control"] = "no-store"
+    if request.url.path == "/api/v1/upload-document":
+        response.headers["Cache-Control"] = "no-store"
+    elif (
+        request.url.path.startswith("/api/v1/borrower-applications/")
+        or request.url.path.startswith("/api/v1/candidate/")
+        or request.url.path.endswith("/applications/start")
+    ):
+        response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Request-ID"] = request_id
     logger.info(
         "request completed",
@@ -90,6 +122,34 @@ async def request_context(
         },
     )
     return response
+
+
+app.add_middleware(
+    SensitiveUploadMiddleware,
+    route_limits=(
+        UploadRouteLimit.exact("/api/v1/upload-document", maximum_file_bytes=FIVE_MIB),
+        UploadRouteLimit.pattern(
+            r"^/api/v1/candidate/applications/[^/]+/documents$",
+            maximum_file_bytes=settings.max_document_bytes,
+            private=True,
+        ),
+        UploadRouteLimit.pattern(
+            r"^/api/v1/borrower-applications/[^/]+/documents$",
+            maximum_file_bytes=settings.borrower_max_document_bytes,
+            private=True,
+            auth_mode="borrower_capability",
+            expected_host=(
+                "localhost:8000" if settings.app_env == "local" else "apply.keeperfinancial.ca"
+            ),
+            expected_origin=(
+                "http://localhost:8000"
+                if settings.app_env == "local"
+                else "https://apply.keeperfinancial.ca"
+            ),
+        ),
+    ),
+    multipart_overhead_bytes=SENSITIVE_MULTIPART_OVERHEAD_BYTES,
+)
 
 
 app.include_router(health_router)

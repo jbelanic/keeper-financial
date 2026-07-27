@@ -1,18 +1,60 @@
-import { cloneElement, isValidElement } from "react";
-import type { ComponentPropsWithoutRef, ReactElement, ReactNode } from "react";
+import { cloneElement, forwardRef, isValidElement } from "react";
+import type {
+  ComponentPropsWithoutRef,
+  ReactElement,
+  ReactNode,
+  RefObject,
+} from "react";
 
-export function Button({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"button">) {
-  return <button className={`button ${className}`.trim()} {...props} />;
-}
+export const Button = forwardRef<
+  HTMLButtonElement,
+  ComponentPropsWithoutRef<"button">
+>(function Button({ className = "", ...props }, ref) {
+  return (
+    <button ref={ref} className={`button ${className}`.trim()} {...props} />
+  );
+});
 
 export function Card({
   className = "",
   ...props
 }: ComponentPropsWithoutRef<"section">) {
   return <section className={`card ${className}`.trim()} {...props} />;
+}
+
+export function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  align = "start",
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  align?: "start" | "center";
+}) {
+  return (
+    <header className={`section-heading section-heading-${align}`}>
+      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+      <h2>{title}</h2>
+      {description ? <p>{description}</p> : null}
+    </header>
+  );
+}
+
+export function Disclosure({
+  summary,
+  children,
+}: {
+  summary: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className="disclosure">
+      <summary>{summary}</summary>
+      <div className="disclosure-content">{children}</div>
+    </details>
+  );
 }
 
 export function FormField({
@@ -49,7 +91,7 @@ export function FormField({
       {hint ? <span id={`${id}-hint`}>{hint}</span> : null}
       {control}
       {error ? (
-        <span id={`${id}-error`} role="alert" className="field-error">
+        <span id={`${id}-error`} className="field-error">
           {error}
         </span>
       ) : null}
@@ -242,32 +284,84 @@ export function ConfirmationDialog({
   open,
   onCancel,
   onConfirm,
+  dialogRef,
+  busy = false,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
 }: {
   title: string;
   children: ReactNode;
   open: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  dialogRef: RefObject<HTMLDialogElement | null>;
+  busy?: boolean;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }) {
   if (!open) return null;
   return (
-    <div
+    <dialog
+      ref={dialogRef}
+      open
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"
+      aria-busy={busy}
       className="dialog"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!busy) onCancel();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          if (!busy) onCancel();
+          return;
+        }
+        if (event.key !== "Tab") return;
+        const focusable = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((element) => !element.hasAttribute("hidden"));
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (!first || !last) {
+          event.preventDefault();
+        } else if (
+          event.shiftKey &&
+          (document.activeElement === first ||
+            !event.currentTarget.contains(document.activeElement))
+        ) {
+          event.preventDefault();
+          last.focus();
+        } else if (
+          !event.shiftKey &&
+          (document.activeElement === last ||
+            !event.currentTarget.contains(document.activeElement))
+        ) {
+          event.preventDefault();
+          first.focus();
+        }
+      }}
     >
       <h2 id="dialog-title">{title}</h2>
       <div>{children}</div>
       <div className="button-row">
-        <Button type="button" onClick={onCancel}>
-          Cancel
+        <Button type="button" onClick={onCancel} autoFocus disabled={busy}>
+          {cancelLabel}
         </Button>
-        <Button type="button" className="button-danger" onClick={onConfirm}>
-          Confirm
+        <Button
+          type="button"
+          className="button-danger"
+          onClick={onConfirm}
+          disabled={busy}
+        >
+          {confirmLabel}
         </Button>
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -295,15 +389,31 @@ export function ConsentCheckbox({
   id,
   children,
   required = false,
+  error,
 }: {
   id: string;
   children: ReactNode;
   required?: boolean;
+  error?: string;
 }) {
   return (
     <div className="consent">
-      <input id={id} name={id} type="checkbox" required={required} />
-      <label htmlFor={id}>{children}</label>
+      <input
+        id={id}
+        name={id}
+        type="checkbox"
+        required={required}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+      />
+      <div>
+        <label htmlFor={id}>{children}</label>
+        {error ? (
+          <div id={`${id}-error`} className="field-error">
+            {error}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

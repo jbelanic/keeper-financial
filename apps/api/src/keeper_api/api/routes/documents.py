@@ -15,7 +15,16 @@ from keeper_api.services.storage import StorageError, build_storage
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-@router.get("/{document_id}/download", response_model=None)
+@router.get(
+    "/{document_id}/download",
+    response_model=None,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Ownership, role, lifecycle, or AAL2 denied"},
+        404: {"description": "Document metadata or private object unavailable"},
+        409: {"description": "Document is quarantined or non-clean"},
+    },
+)
 def download_candidate_document(
     document_id: uuid.UUID,
     request: Request,
@@ -31,6 +40,8 @@ def download_candidate_document(
     if not (is_owner or is_admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="document access denied")
     authorize_portal(principal, "admin" if is_admin else "candidate", settings)
+    if is_owner and principal.aal != "aal2":
+        raise HTTPException(status_code=403, detail="candidate MFA is required for documents")
     if document.scan_status != "clean":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -60,5 +71,5 @@ def download_candidate_document(
     return RedirectResponse(
         retrieval,
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-        headers={"Cache-Control": "private, no-store"},
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
     )

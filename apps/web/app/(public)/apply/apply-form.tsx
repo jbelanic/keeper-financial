@@ -1,17 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, ConsentCheckbox, ErrorSummary, FormField } from "@keeper/ui";
 
-export function ApplyForm() {
+const VALIDATED_FIELDS = {
+  name: {
+    required: "Name is required.",
+    invalid: "Name must contain at least 2 characters.",
+  },
+  email: {
+    required: "Email is required.",
+    invalid: "Enter a valid email address.",
+  },
+  telephone: {
+    required: "Telephone is required.",
+    invalid: "Enter a valid telephone number.",
+  },
+  preferred_contact_method: {
+    required: "Preferred contact method is required.",
+    invalid: "Select a valid preferred contact method.",
+  },
+  mortgage_objective: {
+    required: "General mortgage objective is required.",
+    invalid: "Select a valid general mortgage objective.",
+  },
+  service_contact_acknowledged: {
+    required: "Service-contact acknowledgement is required.",
+    invalid: "Service-contact acknowledgement is required.",
+  },
+} as const;
+
+type ValidatedField = keyof typeof VALIDATED_FIELDS;
+type FieldErrors = Partial<Record<ValidatedField, string>>;
+
+function validateFields(form: HTMLFormElement): FieldErrors {
+  const fieldErrors: FieldErrors = {};
+  for (const field of Object.keys(VALIDATED_FIELDS) as ValidatedField[]) {
+    const control = form.elements.namedItem(field);
+    if (
+      !(
+        control instanceof HTMLInputElement ||
+        control instanceof HTMLSelectElement ||
+        control instanceof HTMLTextAreaElement
+      ) ||
+      control.validity.valid
+    ) {
+      continue;
+    }
+    fieldErrors[field] = control.validity.valueMissing
+      ? VALIDATED_FIELDS[field].required
+      : VALIDATED_FIELDS[field].invalid;
+  }
+  return fieldErrors;
+}
+
+export function ApplyForm({
+  unavailableContact = "the published phone or email contact",
+  preferredAgentSlug,
+}: {
+  unavailableContact?: string;
+  preferredAgentSlug?: string;
+}) {
   const [errors, setErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [pending, setPending] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (errors.length > 0) {
+      formRef.current?.querySelector<HTMLElement>(".error-summary")?.focus();
+    }
+  }, [errors]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submittingRef.current) return;
     const formElement = event.currentTarget;
     setErrors([]);
+    setFieldErrors({});
     setSubmitted(false);
+    const invalidFields = validateFields(formElement);
+    if (Object.keys(invalidFields).length > 0) {
+      setFieldErrors(invalidFields);
+      setErrors(Object.values(invalidFields));
+      return;
+    }
+    submittingRef.current = true;
+    setPending(true);
     const data = new FormData(formElement);
     const payload = {
       name: data.get("name"),
@@ -19,7 +96,9 @@ export function ApplyForm() {
       telephone: data.get("telephone"),
       mortgage_objective: data.get("mortgage_objective"),
       preferred_contact_method: data.get("preferred_contact_method"),
-      preferred_agent_slug: data.get("preferred_agent_slug") || null,
+      ...(preferredAgentSlug
+        ? { preferred_agent_slug: preferredAgentSlug }
+        : {}),
       message: data.get("message") || null,
       service_contact_acknowledged:
         data.get("service_contact_acknowledged") === "on",
@@ -36,39 +115,60 @@ export function ApplyForm() {
         },
       );
       if (!response.ok) {
-        const problem = (await response.json()) as {
-          detail?: Array<{ msg?: string }> | string;
-        };
-        const details = Array.isArray(problem.detail)
-          ? problem.detail.map((item) => item.msg ?? "Invalid value")
-          : [
-              typeof problem.detail === "string"
-                ? problem.detail
-                : "The inquiry could not be submitted.",
-            ];
-        setErrors(details);
+        if (response.status === 422) {
+          setErrors([
+            "Check the required fields and remove sensitive or unsupported information.",
+          ]);
+        } else if (response.status === 429) {
+          const retryAfter = response.headers.get("Retry-After");
+          setErrors([
+            retryAfter && /^\d+$/.test(retryAfter)
+              ? `Too many requests were received. Please wait ${retryAfter} seconds and try again.`
+              : "Too many requests were received. Please wait a short while and try again.",
+          ]);
+        } else if (response.status === 503) {
+          setErrors([
+            `The mortgage application is temporarily unavailable. No application information has been submitted. Try again later or contact Keeper Financial using the published telephone number or email address.`,
+          ]);
+        } else {
+          setErrors([
+            `We could not send your request. Review the form and try again. If the problem continues, contact Keeper Financial using the published telephone number or email address.`,
+          ]);
+        }
         return;
       }
       formElement.reset();
       setSubmitted(true);
     } catch {
       setErrors([
-        "The contact service is unavailable. Please use the approved telephone contact once published.",
+        `The contact service is unavailable. Please use ${unavailableContact}.`,
       ]);
+    } finally {
+      submittingRef.current = false;
+      setPending(false);
     }
   }
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form ref={formRef} onSubmit={submit} noValidate aria-busy={pending}>
       <input type="hidden" name="website" value="" autoComplete="off" />
+      {preferredAgentSlug ? (
+        <input
+          type="hidden"
+          name="preferred_agent_slug"
+          value={preferredAgentSlug}
+        />
+      ) : null}
       <ErrorSummary errors={errors} />
       {submitted ? (
-        <p role="status" className="notice">
-          Thank you. Your minimal-contact inquiry was recorded.
+        <p role="status" aria-live="polite" className="notice notice-success">
+          Your contact request has been received. Keep sensitive information out
+          of follow-up email. Use an authorized secure process if documents are
+          requested.
         </p>
       ) : null}
       <div className="grid-2">
-        <FormField id="name" label="Name">
+        <FormField id="name" label="Name" error={fieldErrors.name}>
           <input
             id="name"
             name="name"
@@ -77,7 +177,7 @@ export function ApplyForm() {
             maxLength={120}
           />
         </FormField>
-        <FormField id="email" label="Email">
+        <FormField id="email" label="Email" error={fieldErrors.email}>
           <input
             id="email"
             name="email"
@@ -87,19 +187,26 @@ export function ApplyForm() {
             maxLength={320}
           />
         </FormField>
-        <FormField id="telephone" label="Telephone">
+        <FormField
+          id="telephone"
+          label="Telephone"
+          error={fieldErrors.telephone}
+        >
           <input
             id="telephone"
             name="telephone"
             type="tel"
             autoComplete="tel"
             required
+            minLength={7}
             maxLength={32}
+            pattern="[0-9+().\- x]+"
           />
         </FormField>
         <FormField
           id="preferred_contact_method"
           label="Preferred contact method"
+          error={fieldErrors.preferred_contact_method}
         >
           <select
             id="preferred_contact_method"
@@ -114,7 +221,11 @@ export function ApplyForm() {
             <option value="telephone">Telephone</option>
           </select>
         </FormField>
-        <FormField id="mortgage_objective" label="General mortgage objective">
+        <FormField
+          id="mortgage_objective"
+          label="General mortgage objective"
+          error={fieldErrors.mortgage_objective}
+        >
           <select
             id="mortgage_objective"
             name="mortgage_objective"
@@ -131,27 +242,19 @@ export function ApplyForm() {
             <option value="other">Other</option>
           </select>
         </FormField>
-        <FormField
-          id="preferred_agent_slug"
-          label="Preferred agent (optional)"
-          hint="Use an approved agent profile identifier only."
-        >
-          <input
-            id="preferred_agent_slug"
-            name="preferred_agent_slug"
-            maxLength={100}
-            pattern="[a-z0-9-]+"
-          />
-        </FormField>
       </div>
       <FormField
         id="message"
         label="Brief message (optional)"
-        hint="Do not include your SIN, banking or card details, tax information, debts, identification, medical information, or passwords."
+        hint="Do not include a SIN, banking information, tax records, credit information, passwords, identity documents or mortgage documents."
       >
         <textarea id="message" name="message" maxLength={1000} />
       </FormField>
-      <ConsentCheckbox id="service_contact_acknowledged" required>
+      <ConsentCheckbox
+        id="service_contact_acknowledged"
+        required
+        error={fieldErrors.service_contact_acknowledged}
+      >
         I agree that Keeper Financial may contact me about this service inquiry.{" "}
         <strong>Required.</strong>
       </ConsentCheckbox>
@@ -159,7 +262,9 @@ export function ApplyForm() {
         I would also like optional marketing communications. This is separate
         and not required for service.
       </ConsentCheckbox>
-      <Button type="submit">Send contact request</Button>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Sending…" : "Send contact request"}
+      </Button>
     </form>
   );
 }

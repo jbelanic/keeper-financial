@@ -1,4 +1,9 @@
-import { ADMIN_ROUTES, CANDIDATE_ROUTES, PUBLIC_ROUTES } from "@/lib/routes";
+import {
+  ADMIN_ROUTES,
+  BORROWER_ROUTES,
+  CANDIDATE_ROUTES,
+  PUBLIC_ROUTES,
+} from "@/lib/routes";
 
 describe("route inventory", () => {
   it("keeps all required public routes outside portal inventories", () => {
@@ -6,6 +11,10 @@ describe("route inventory", () => {
       expect.arrayContaining([
         "/",
         "/apply",
+        "/how-it-works",
+        "/about",
+        "/mortgages/purchase",
+        "/mortgages/investment-properties",
         "/agents/[slug]",
         "/careers/[slug]",
         "/privacy",
@@ -21,13 +30,24 @@ describe("route inventory", () => {
   });
 
   it("classifies every protected candidate and admin route", () => {
+    expect(CANDIDATE_ROUTES).toContain(
+      "/candidate/applications/[applicationId]",
+    );
     expect(CANDIDATE_ROUTES).toHaveLength(4);
     expect(
       CANDIDATE_ROUTES.every((route) => route.startsWith("/candidate")),
     ).toBe(true);
-    expect(ADMIN_ROUTES).toHaveLength(5);
+    expect(ADMIN_ROUTES).toContain("/admin/leads");
+    expect(ADMIN_ROUTES).toContain("/admin/recruitment");
+    expect(ADMIN_ROUTES).toHaveLength(6);
+    expect(ADMIN_ROUTES).not.toContain("/admin/content");
     expect(ADMIN_ROUTES.every((route) => route.startsWith("/admin"))).toBe(
       true,
     );
+  });
+
+  it("keeps the accountless borrower route separate from portal routes", () => {
+    expect(BORROWER_ROUTES.application).toBe("/mortgage-application");
+    expect(PUBLIC_ROUTES).not.toContain(BORROWER_ROUTES.application);
   });
 });

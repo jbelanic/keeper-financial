@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @keeper/web",
     "build": "npm run build --workspace @keeper/web",
+    "audit:ci": "node scripts/check-npm-audit.mjs",
     "lint": "npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "format:check": "npm run format:check --workspaces --if-present",
@@ -22,7 +23,8 @@
   "overrides": {
     "next": {
       "postcss": "8.5.19"
-    }
+    },
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "prettier": "3.6.2"

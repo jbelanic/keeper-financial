@@ -1,29 +1,65 @@
 export const PUBLIC_ROUTES = [
   "/",
   "/mortgages",
+  "/mortgages/purchase",
+  "/mortgages/refinancing",
+  "/mortgages/renewals",
+  "/mortgages/first-time-buyers",
+  "/mortgages/investment-properties",
+  "/how-it-works",
   "/apply",
+  "/broker",
   "/agents",
   "/agents/[slug]",
   "/careers",
   "/careers/[slug]",
+  "/about",
   "/privacy",
   "/complaints",
   "/accessibility",
   "/contact",
   "/auth/sign-in",
+  "/auth/mfa",
+  "/auth/register",
+  "/auth/callback",
+] as const;
+
+export const SITEMAP_ROUTES = [
+  "/",
+  "/mortgages",
+  "/mortgages/purchase",
+  "/mortgages/refinancing",
+  "/mortgages/renewals",
+  "/mortgages/first-time-buyers",
+  "/mortgages/investment-properties",
+  "/how-it-works",
+  "/apply",
+  "/broker",
+  "/agents",
+  "/careers",
+  "/about",
+  "/contact",
+  "/privacy",
+  "/complaints",
+  "/accessibility",
 ] as const;
 
 export const CANDIDATE_ROUTES = [
   "/candidate",
   "/candidate/application",
+  "/candidate/applications/[applicationId]",
   "/candidate/onboarding",
-  "/candidate/documents",
 ] as const;
 
 export const ADMIN_ROUTES = [
   "/admin",
+  "/admin/leads",
+  "/admin/recruitment",
   "/admin/candidates",
   "/admin/onboarding",
   "/admin/agents",
-  "/admin/content",
 ] as const;
+
+export const BORROWER_ROUTES = {
+  application: "/mortgage-application",
+} as const;

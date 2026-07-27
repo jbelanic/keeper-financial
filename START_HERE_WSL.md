@@ -51,7 +51,7 @@ keeper-financial/
 │   └── scripts/
 ├── docs/
 ├── storage/
-│   └── dev_uploads/          # local development only; never nonlocal
+│   └── dev_uploads/          # source tests/development only; never live storage
 ├── .env.example
 ├── compose.yaml
 ├── Makefile
@@ -68,10 +68,11 @@ Preferred default:
 - FastAPI for the application API.
 - PostgreSQL for application data.
 - SQLAlchemy and Alembic.
-- Hosted Supabase Auth for nonlocal identity.
-- Local Supabase CLI for local identity.
-- Private Cloudflare R2 for nonlocal candidate documents.
-- Docker Compose for local supporting services.
+- Repository-tracked local Supabase CLI/Auth stack for identity.
+- Private local S3-compatible MinIO for candidate documents.
+- Docker Compose on the local Linux host as the live/production environment.
+
+This deployment list reflects the current owner decision and supersedes the original hosted-service proposal retained elsewhere in this historical bootstrap record.
 
 Reason: the public site, recruiting pages, and agent profile pages need reliable SEO and social previews. A client-only Vite SPA should not be the default public-site architecture. If the final approved UI implementation requires Vite, Codex must document the SEO/pre-rendering strategy before changing this decision.
 
@@ -86,7 +87,7 @@ npm --version
 python3 --version
 docker --version
 docker compose version
-supabase --version
+npx supabase --version
 codex --version
 ```
 
@@ -109,7 +110,7 @@ Codex should stop after the requested foundation phase, summarize the result, li
 Confirm:
 
 - The source-of-truth documents were not contradicted.
-- No mortgage-application or borrower-document storage was created.
+- No borrower application/document implementation was created before the 2026-07-24 owner-approved phased requirements; later work must match `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` rather than this historical bootstrap check.
 - No custom e-signature implementation was created.
 - No fake vendor integration was created.
 - Authentication and authorization are separate.

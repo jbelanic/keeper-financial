@@ -1,14 +1,21 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { requirePortalAccess } from "@/lib/require-portal-access";
 import { PortalShell } from "@/lib/shells";
 
 const links: Array<[string, string]> = [
   ["Overview", "/admin"],
+  ["Leads", "/admin/leads"],
+  ["Recruitment postings", "/admin/recruitment"],
   ["Candidates", "/admin/candidates"],
+  ["Borrower applications", "/admin/borrower-applications"],
   ["Onboarding", "/admin/onboarding"],
   ["Agents", "/admin/agents"],
-  ["Content", "/admin/content"],
 ];
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, noarchive: true },
+};
 
 export default async function AdminLayout({
   children,

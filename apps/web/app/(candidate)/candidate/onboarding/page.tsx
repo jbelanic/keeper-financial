@@ -1,12 +1,51 @@
 import type { Metadata } from "next";
-import { FoundationPage } from "@/lib/foundation-page";
-export const metadata: Metadata = { title: "Candidate onboarding" };
-export default function Page() {
+import Link from "next/link";
+import { Card, ErrorState, StatusBadge } from "@keeper/ui";
+import {
+  portalServerJson,
+  type CandidateOnboardingDashboard,
+} from "@/lib/review-onboarding-api";
+import { CandidateOnboardingDashboardView } from "./candidate-onboarding-dashboard";
+
+export const metadata: Metadata = { title: "My onboarding" };
+
+export default async function CandidateOnboardingPage() {
+  const dashboard = await portalServerJson<CandidateOnboardingDashboard>(
+    "/api/v1/candidate/onboarding",
+  );
   return (
-    <FoundationPage
-      area="candidate"
-      title="Onboarding"
-      description="Assigned tasks and activation gates will be available only after a controlled candidate selection."
-    />
+    <>
+      <header className="foundation-header">
+        <p className="eyebrow">Candidate</p>
+        <h1>Your onboarding</h1>
+        <p>
+          Complete the tasks and document steps assigned to you. Onboarding
+          progress does not by itself mean that you are an active agent,
+          employee or contractor.
+        </p>
+      </header>
+      {dashboard?.assignment ? (
+        <CandidateOnboardingDashboardView dashboard={dashboard} />
+      ) : dashboard ? (
+        <Card>
+          <StatusBadge tone="neutral">Not assigned</StatusBadge>
+          <h2>Onboarding is not available yet</h2>
+          <p>
+            It will appear if your application advances and an onboarding plan
+            is assigned. You can continue using your application portal now.
+          </p>
+          <Link href="/candidate/application">Return to your applications</Link>
+        </Card>
+      ) : (
+        <Card>
+          <StatusBadge tone="warning">Access unavailable</StatusBadge>
+          <ErrorState title="Onboarding unavailable">
+            Your candidate session or the onboarding service could not be
+            verified.
+          </ErrorState>
+          <Link href="/candidate/onboarding">Try onboarding again</Link>
+        </Card>
+      )}
+    </>
   );
 }

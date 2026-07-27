@@ -1,56 +1,117 @@
 import type { Metadata } from "next";
 import { Card } from "@keeper/ui";
+import { InteriorPageHeader, Icon, CtaBand } from "@/lib/public-components";
+import { safeAgentAttribution } from "@/lib/lead-attribution";
+import { createPageMetadata } from "@/lib/metadata";
+import { getPublicSiteConfig, siteConfig } from "@/lib/site-config";
 import { ApplyForm } from "./apply-form";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Get started",
   description:
-    "Choose a minimal contact-first inquiry or an approved secure external mortgage application.",
-};
+    "Choose a minimal contact-first request or continue through Keeper Financial’s validated secure mortgage-application route.",
+  path: "/apply",
+});
 
-export default function ApplyPage() {
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+type PublicSiteConfig = ReturnType<typeof getPublicSiteConfig>;
+
+export function ApplyPaths({
+  agentSlug,
+  config = siteConfig,
+}: {
+  agentSlug?: string;
+  config?: PublicSiteConfig;
+}) {
+  const attribution = agentSlug
+    ? `?${new URLSearchParams({ agent: agentSlug }).toString()}`
+    : "";
   return (
     <>
-      <header className="foundation-header container">
-        <p className="eyebrow">Get started</p>
-        <h1>Choose the path that works for you.</h1>
-        <p>
-          Both options are presented equally. A full mortgage application is
-          never collected on this website.
+      <div className="container">
+        <InteriorPageHeader
+          title="Choose how you’d like to begin"
+          description="Ask a general question using basic contact details, or continue to the mortgage application when you are ready to provide detailed information."
+        />
+        <p className="notice apply-warning">
+          Do not submit financial, identity, health, credential, or underwriting
+          information in the contact form. Use the secure full-application path
+          for detailed mortgage information.
         </p>
-      </header>
-      <section className="container section">
-        <div className="grid-2">
-          <Card>
-            <h2>Speak with someone first</h2>
+      </div>
+      <section className="section section-no-top">
+        <div className="container apply-grid">
+          <Card className="apply-card">
+            <div className="card-icon">
+              <Icon name="conversation" />
+            </div>
+            <p className="eyebrow">Option one</p>
+            <h2>Ask a general question</h2>
             <p>
-              Provide only enough information for the team to contact you. Do
-              not submit sensitive financial or identity information.
+              Share your name, contact details, general mortgage objective and
+              optional non-sensitive context.
             </p>
-            <ApplyForm />
+            <p className="contact-shortcuts">
+              Prefer to call?{" "}
+              <a href={config.phoneHref}>{config.phoneDisplay}</a>
+              {config.bookingUrl ? (
+                <>
+                  {" "}
+                  or <a href={config.bookingUrl}>Book a call</a>
+                </>
+              ) : null}
+            </p>
+            <ApplyForm
+              preferredAgentSlug={agentSlug}
+              unavailableContact={`${config.phoneDisplay} or ${config.email}`}
+            />
           </Card>
-          <Card>
-            <h2>Start a secure full application</h2>
+          <Card className="apply-card secure-application-card">
+            <div className="card-icon">
+              <Icon name="shield" />
+            </div>
+            <p className="eyebrow">Option two</p>
+            <h2>Continue to the mortgage application</h2>
             <p>
-              Your financial and underwriting information belongs in the
-              selected established mortgage-application platform—not on Keeper
-              Financial’s website.
-            </p>
-            <p className="notice">
-              The provider is not yet selected. Until an approved HTTPS host is
-              configured, this link fails safely and no application is started.
+              Start a private, same-browser Keeper application for detailed
+              financial, identity, property and mortgage information.
             </p>
             <a
               className="button-link"
-              href={`${apiBase}/api/v1/integrations/mortgage-application`}
+              href={`${config.mortgageApplicationUrl}${attribution}`}
             >
-              Continue to configured secure provider
+              Continue to the mortgage application
             </a>
+            <p className="fine-print">
+              Your draft stays with Keeper and resumes only in this browser
+              while its secure cookie remains available. Do not use a shared
+              device. Final submission and document upload are not yet
+              available. If the application is unavailable, call{" "}
+              {config.phoneDisplay} or email {config.email}.
+            </p>
           </Card>
+        </div>
+      </section>
+      <section className="section section-tight">
+        <div className="container">
+          <CtaBand
+            title="Not ready to continue yet?"
+            description="Return to the contact options if you only have a general question."
+            primaryHref="/contact"
+            primaryLabel="Return to contact options"
+            secondaryHref="/how-it-works"
+            secondaryLabel="See how the process works"
+          />
         </div>
       </section>
     </>
   );
+}
+
+export default async function ApplyPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ agent?: string | string[] }>;
+} = {}) {
+  const agentSlug = safeAgentAttribution((await searchParams)?.agent);
+  return <ApplyPaths agentSlug={agentSlug} />;
 }
