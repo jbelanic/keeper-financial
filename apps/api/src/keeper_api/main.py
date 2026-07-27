@@ -24,6 +24,7 @@ from keeper_api.services.document_scan_gate import ProcessLocalDocumentScanGate
 from keeper_api.services.submission_guard import LeadSubmissionGuard, SubmissionRateLimited
 
 settings = get_settings()
+SENSITIVE_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 configure_logging()
 logger = logging.getLogger("keeper_api.request")
 request_id_pattern = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
@@ -41,7 +42,10 @@ app.state.lead_submission_guard = LeadSubmissionGuard(
     tracked_clients=settings.lead_rate_limit_tracked_clients,
 )
 app.state.document_scan_gate = ProcessLocalDocumentScanGate(settings.document_scan_max_concurrency)
-configure_multipart_spooling(max(FIVE_MIB, settings.max_document_bytes))
+configure_multipart_spooling(
+    max(FIVE_MIB, settings.max_document_bytes, settings.borrower_max_document_bytes)
+    + SENSITIVE_MULTIPART_OVERHEAD_BYTES
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -129,8 +133,22 @@ app.add_middleware(
             maximum_file_bytes=settings.max_document_bytes,
             private=True,
         ),
+        UploadRouteLimit.pattern(
+            r"^/api/v1/borrower-applications/[^/]+/documents$",
+            maximum_file_bytes=settings.borrower_max_document_bytes,
+            private=True,
+            auth_mode="borrower_capability",
+            expected_host=(
+                "localhost:8000" if settings.app_env == "local" else "apply.keeperfinancial.ca"
+            ),
+            expected_origin=(
+                "http://localhost:8000"
+                if settings.app_env == "local"
+                else "https://apply.keeperfinancial.ca"
+            ),
+        ),
     ),
-    multipart_overhead_bytes=64 * 1024,
+    multipart_overhead_bytes=SENSITIVE_MULTIPART_OVERHEAD_BYTES,
 )
 
 

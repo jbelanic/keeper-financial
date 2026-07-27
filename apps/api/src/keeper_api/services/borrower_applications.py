@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from keeper_api.core.config import Settings
@@ -20,6 +20,7 @@ from keeper_api.models.borrower import (
     BorrowerAssignmentHistory,
     BorrowerConsentCatalog,
     BorrowerConsentRecord,
+    BorrowerDocument,
 )
 from keeper_api.models.domain import User
 from keeper_api.services.audit import AuditService
@@ -29,6 +30,7 @@ from keeper_api.services.borrower_crypto import (
     EncryptedEnvelope,
     compute_capability_digest,
     decrypt_payload,
+    decrypt_sin,
     encrypt_payload,
     encrypt_sin,
     generate_capability,
@@ -40,6 +42,88 @@ class BorrowerSubmissionError(ValueError):
         super().__init__(code)
         self.code = code
         self.status_code = status_code
+
+
+def _decrypt_payload_sin(
+    db: Session,
+    crypto_state: BorrowerCryptoState,
+    payload: BorrowerApplicationPayload,
+) -> str | None:
+    if payload.encrypted_sin_ciphertext is None or payload.encrypted_sin_nonce is None:
+        return None
+
+    candidates = [payload]
+    candidates.extend(
+        db.scalars(
+            select(BorrowerApplicationPayload)
+            .where(
+                BorrowerApplicationPayload.application_id == payload.application_id,
+                BorrowerApplicationPayload.revision < payload.revision,
+                BorrowerApplicationPayload.encrypted_sin_ciphertext
+                == payload.encrypted_sin_ciphertext,
+                BorrowerApplicationPayload.encrypted_sin_nonce == payload.encrypted_sin_nonce,
+            )
+            .order_by(BorrowerApplicationPayload.revision.desc())
+        ).all()
+    )
+    for candidate in candidates:
+        try:
+            return decrypt_sin(
+                state=crypto_state,
+                ciphertext=payload.encrypted_sin_ciphertext,
+                nonce=payload.encrypted_sin_nonce,
+                application_id=str(payload.application_id),
+                payload_revision=candidate.revision,
+                key_id=candidate.key_id,
+            )
+        except BorrowerDecryptionError:
+            continue
+    raise BorrowerDecryptionError()
+
+
+def _as_aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def borrower_draft_expired(
+    application: BorrowerApplication, *, now: datetime | None = None
+) -> bool:
+    if application.draft_expires_at is None:
+        return True
+    checked_at = now or datetime.now(UTC)
+    return _as_aware_utc(application.draft_expires_at) <= checked_at
+
+
+def record_borrower_draft_activity(
+    application: BorrowerApplication, *, now: datetime | None = None
+) -> None:
+    activity_at = now or datetime.now(UTC)
+    application.last_activity_at = activity_at
+    application.draft_expires_at = activity_at + timedelta(days=30)
+
+
+def get_current_borrower_consent(
+    db: Session, *, now: datetime | None = None
+) -> BorrowerConsentCatalog | None:
+    checked_at = now or datetime.now(UTC)
+    return db.scalar(
+        select(BorrowerConsentCatalog)
+        .where(
+            BorrowerConsentCatalog.is_active.is_(True),
+            BorrowerConsentCatalog.effective_from <= checked_at,
+            or_(
+                BorrowerConsentCatalog.effective_to.is_(None),
+                BorrowerConsentCatalog.effective_to > checked_at,
+            ),
+        )
+        .order_by(
+            BorrowerConsentCatalog.effective_from.desc(),
+            BorrowerConsentCatalog.created_at.desc(),
+            BorrowerConsentCatalog.id.desc(),
+        )
+    )
 
 
 def _deep_merge(base: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
@@ -113,12 +197,20 @@ def save_draft_payload(
     payload_data: dict[str, Any],
     settings: Settings,
 ) -> BorrowerApplication:
-    application = db.get(BorrowerApplication, application_id)
+    application = db.scalar(
+        select(BorrowerApplication)
+        .where(BorrowerApplication.id == application_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
     if application is None:
         raise ValueError("application not found")
 
     if application.lifecycle_status != BorrowerApplicationLifecycleStatus.DRAFT.value:
         raise ValueError("application is not in draft status")
+
+    if borrower_draft_expired(application):
+        raise ValueError("application not found")
 
     if application.capability_session_id != capability_session_id:
         raise ValueError("capability mismatch")
@@ -160,28 +252,18 @@ def save_draft_payload(
             except BorrowerDecryptionError:
                 raise ValueError("borrower cryptography is unavailable") from None
 
-    # SIN is stored separately from the payload ciphertext. Track prior SIN
-    # ciphertext so a partial save that omits `sin` preserves the earlier value.
-    prior_encrypted_sin_ciphertext = (
-        prior_payload_row.encrypted_sin_ciphertext if prior_payload_row else None
-    )
-    prior_encrypted_sin_nonce = prior_payload_row.encrypted_sin_nonce if prior_payload_row else None
-
     merged_payload = _deep_merge(prior_plaintext, payload_data)
 
     has_co_borrower = bool(merged_payload.get("co_borrower"))
 
-    encrypted_sin_ciphertext = prior_encrypted_sin_ciphertext
-    encrypted_sin_nonce = prior_encrypted_sin_nonce
     incoming_sin = payload_data.get("primary_borrower", {}).get("sin")
-    if incoming_sin:
-        encrypted_sin_ciphertext, encrypted_sin_nonce = encrypt_sin(
-            crypto_state, incoming_sin, str(application_id), expected_revision + 1
-        )
-    # The SIN is stored in a dedicated ciphertext (stripped from the payload
-    # dict before encryption), so has_sin tracks the ciphertext, not the merged
-    # payload. A partial save that omits sin preserves the prior ciphertext.
-    has_sin = bool(encrypted_sin_ciphertext)
+    preserved_sin = None
+    if prior_payload_row is not None:
+        try:
+            preserved_sin = _decrypt_payload_sin(db, crypto_state, prior_payload_row)
+        except BorrowerDecryptionError:
+            raise ValueError("borrower cryptography is unavailable") from None
+    sin_changed = incoming_sin is not None and incoming_sin != preserved_sin
 
     payload_for_encryption = {k: v for k, v in merged_payload.items() if k != "primary_borrower"}
     if "primary_borrower" in merged_payload:
@@ -194,12 +276,22 @@ def save_draft_payload(
     # No-op guard: if the merged result serializes identically to the prior
     # revision, do not mint a new revision. Compare the canonical serialized
     # form (not the decoded dict) so Decimal/date round-tripping is stable.
-    if prior_payload_row is not None and prior_plaintext:
+    if prior_payload_row is not None and prior_plaintext and not sin_changed:
         prior_serialized = json.dumps(prior_plaintext, sort_keys=True, cls=_SafeEncoder).encode(
             "utf-8"
         )
         if prior_serialized == plaintext:
             return application
+
+    new_revision = expected_revision + 1
+    encrypted_sin_ciphertext = None
+    encrypted_sin_nonce = None
+    sin_to_store = incoming_sin if incoming_sin is not None else preserved_sin
+    if sin_to_store:
+        encrypted_sin_ciphertext, encrypted_sin_nonce = encrypt_sin(
+            crypto_state, sin_to_store, str(application_id), new_revision
+        )
+    has_sin = bool(encrypted_sin_ciphertext)
 
     envelope = encrypt_payload(
         state=crypto_state,
@@ -207,10 +299,8 @@ def save_draft_payload(
         application_id=str(application_id),
         purpose="borrower_application",
         schema_version="1.0",
-        payload_revision=expected_revision + 1,
+        payload_revision=new_revision,
     )
-
-    new_revision = expected_revision + 1
 
     payload = BorrowerApplicationPayload(
         application_id=application_id,
@@ -228,8 +318,7 @@ def save_draft_payload(
 
     application.revision = new_revision
     application.payload_revision = new_revision
-    application.last_activity_at = datetime.now(UTC)
-    application.draft_expires_at = datetime.now(UTC) + timedelta(days=30)
+    record_borrower_draft_activity(application)
 
     history = BorrowerApplicationStatusHistory(
         application_id=application_id,
@@ -286,23 +375,13 @@ def get_latest_payload(
         )
         result: dict[str, Any] = json.loads(plaintext)
 
-        if payload.encrypted_sin_ciphertext is not None and payload.encrypted_sin_nonce is not None:
-            from keeper_api.services.borrower_crypto import decrypt_sin
-
-            try:
-                sin = decrypt_sin(
-                    state=crypto_state,
-                    ciphertext=payload.encrypted_sin_ciphertext,
-                    nonce=payload.encrypted_sin_nonce,
-                    application_id=str(application_id),
-                    payload_revision=payload.revision,
-                    key_id=payload.key_id,
-                )
-                primary = result.get("primary_borrower")
-                if primary is not None:
-                    primary["sin"] = sin
-            except BorrowerDecryptionError:
-                pass
+        try:
+            sin = _decrypt_payload_sin(db, crypto_state, payload)
+            primary = result.get("primary_borrower")
+            if sin is not None and isinstance(primary, dict):
+                primary["sin"] = sin
+        except BorrowerDecryptionError:
+            pass
 
         return result
     except BorrowerDecryptionError:
@@ -314,12 +393,6 @@ def _seven_year_retention(now: datetime) -> datetime:
         return now.replace(year=now.year + 7)
     except ValueError:
         return now.replace(month=2, day=28, year=now.year + 7)
-
-
-def _as_aware_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 def submit_borrower_application(
@@ -336,17 +409,56 @@ def submit_borrower_application(
     if crypto_state is None:
         raise BorrowerSubmissionError("borrower_cryptography_unavailable", status_code=503)
 
-    application = db.get(BorrowerApplication, application_id)
+    application = db.scalar(
+        select(BorrowerApplication)
+        .where(BorrowerApplication.id == application_id)
+        .execution_options(populate_existing=True)
+        .with_for_update()
+    )
     if application is None:
         raise BorrowerSubmissionError("application_not_found", status_code=404)
     if application.capability_session_id != capability_session_id:
         raise BorrowerSubmissionError("application_not_found", status_code=404)
+    if (
+        application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value
+        and borrower_draft_expired(application)
+    ):
+        raise BorrowerSubmissionError("application_not_found", status_code=404)
     if application.lifecycle_status != BorrowerApplicationLifecycleStatus.DRAFT.value:
+        consent = db.scalar(
+            select(BorrowerConsentRecord).where(
+                BorrowerConsentRecord.application_id == application_id
+            )
+        )
+        snapshot = db.scalar(
+            select(BorrowerApplicationSnapshot).where(
+                BorrowerApplicationSnapshot.application_id == application_id
+            )
+        )
+        if (
+            consent is not None
+            and snapshot is not None
+            and consent.capability_session_id == capability_session_id
+            and consent.submission_revision == expected_revision
+            and consent.consent_version == consent_version
+            and consent.wording_digest == consent_wording_digest
+            and consent.borrower_coverage == borrower_coverage
+        ):
+            return application, snapshot, consent
         raise BorrowerSubmissionError("already_submitted", status_code=409)
     if application.revision != expected_revision:
         raise BorrowerSubmissionError("stale_revision", status_code=409)
     if application.payload_revision != expected_revision or application.payload_revision <= 0:
         raise BorrowerSubmissionError("missing_payload", status_code=422)
+    if db.scalar(
+        select(BorrowerDocument.id)
+        .where(
+            BorrowerDocument.application_id == application_id,
+            BorrowerDocument.deletion_pending_at.is_not(None),
+        )
+        .limit(1)
+    ):
+        raise BorrowerSubmissionError("document_operation_pending", status_code=409)
 
     payload_row = db.scalar(
         select(BorrowerApplicationPayload).where(
@@ -370,17 +482,19 @@ def submit_borrower_application(
     except Exception as exc:
         raise BorrowerSubmissionError("payload_incomplete", status_code=422) from exc
 
-    catalog_entry = db.scalar(
-        select(BorrowerConsentCatalog).where(
-            BorrowerConsentCatalog.consent_version == consent_version,
-            BorrowerConsentCatalog.wording_digest == consent_wording_digest,
-            BorrowerConsentCatalog.is_active.is_(True),
-        )
-    )
-    if catalog_entry is None:
-        raise BorrowerSubmissionError("invalid_consent", status_code=422)
-
     now = datetime.now(UTC)
+    catalog_entry = get_current_borrower_consent(db, now=now)
+    if (
+        catalog_entry is None
+        or catalog_entry.consent_version != consent_version
+        or catalog_entry.wording_digest != consent_wording_digest
+    ):
+        raise BorrowerSubmissionError("invalid_consent", status_code=422)
+    if (settings.app_env != "local" and not settings.borrower_real_data_enabled) or (
+        settings.borrower_real_data_enabled and not catalog_entry.real_data_approved
+    ):
+        raise BorrowerSubmissionError("real_data_submission_disabled", status_code=503)
+
     effective_from = _as_aware_utc(catalog_entry.effective_from)
     effective_to = (
         _as_aware_utc(catalog_entry.effective_to)
@@ -414,16 +528,20 @@ def submit_borrower_application(
     )
 
     from keeper_api.services.borrower_documents import (
+        BorrowerDocumentStorageError,
         delete_borrower_object,
         put_encrypted_borrower_object,
     )
 
-    stored = put_encrypted_borrower_object(
-        settings,
-        prefix=f"snapshots/{application_id}",
-        content=envelope.ciphertext,
-        content_type="application/octet-stream",
-    )
+    try:
+        stored = put_encrypted_borrower_object(
+            settings,
+            prefix="snapshots",
+            content=envelope.ciphertext,
+            content_type="application/octet-stream",
+        )
+    except BorrowerDocumentStorageError as exc:
+        raise BorrowerSubmissionError("submission_storage_unavailable", status_code=503) from exc
     try:
         consent = BorrowerConsentRecord(
             application_id=application_id,
@@ -473,15 +591,26 @@ def submit_borrower_application(
                 capability_session_id=capability_session_id,
             )
         )
+        AuditService(db).record(
+            "borrower_application_submitted",
+            "borrower_application",
+            application.id,
+            safe_metadata={
+                "result": "success",
+                "submission_revision": application.revision,
+            },
+        )
         db.flush()
         db.commit()
-        db.refresh(application)
-        db.refresh(snapshot)
-        db.refresh(consent)
-    except Exception:
+    except Exception as exc:
         db.rollback()
-        delete_borrower_object(settings, stored.object_key)
-        raise
+        try:
+            delete_borrower_object(settings, stored.object_key)
+        except BorrowerDocumentStorageError as cleanup_exc:
+            raise BorrowerSubmissionError(
+                "submission_cleanup_unavailable", status_code=503
+            ) from cleanup_exc
+        raise BorrowerSubmissionError("submission_storage_unavailable", status_code=503) from exc
 
     return application, snapshot, consent
 
@@ -741,6 +870,7 @@ def assign_submitted_application(
     application = db.scalar(
         select(BorrowerApplication)
         .where(BorrowerApplication.id == application_id)
+        .execution_options(populate_existing=True)
         .with_for_update()
     )
     if application is None:

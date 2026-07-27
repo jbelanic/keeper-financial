@@ -4,16 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import { Button, LoadingState } from "@keeper/ui";
 import {
   BorrowerApplicationError,
+  forgetBorrowerApplicationId,
+  getBorrowerConsent,
   patchBorrowerDraft,
   recoverOrStartBorrowerDraft,
+  submitBorrowerApplication,
+  type BorrowerConsent,
   type BorrowerDraft,
   type BorrowerDraftPayload,
+  type BorrowerRecoveredDraft,
   type BorrowerDraftStart,
 } from "@/lib/borrower-application-api";
 import { AgentPreferenceSection } from "./components/agent-preference-section";
 import { AssetsLiabilitiesSection } from "./components/assets-liabilities-section";
 import { BorrowerDetailsSection } from "./components/borrower-details-section";
 import { ConsentSection } from "./components/consent-section";
+import { DocumentUpload } from "./components/document-upload";
 import { EmploymentIncomeSection } from "./components/employment-income-section";
 import { MortgagePurposeSection } from "./components/mortgage-purpose-section";
 import { NotesSection } from "./components/notes-section";
@@ -30,6 +36,7 @@ import {
   type OtherPropertyState,
   type SubjectPropertyState,
 } from "./components/types";
+import { hydrateBorrowerDraft } from "./draft-hydration";
 
 const steps = [
   "Mortgage request",
@@ -39,20 +46,25 @@ const steps = [
   "Subject property",
   "Other properties",
   "Notes",
+  "Documents",
   "Consent and submission",
 ] as const;
 
-type DraftSummary = BorrowerDraft | BorrowerDraftStart;
+type DraftSummary = BorrowerDraft | BorrowerRecoveredDraft | BorrowerDraftStart;
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 type FormApi = {
   recoverOrStart: typeof recoverOrStartBorrowerDraft;
   patch: typeof patchBorrowerDraft;
+  getConsent?: typeof getBorrowerConsent;
+  submit?: typeof submitBorrowerApplication;
 };
 
 const defaultApi: FormApi = {
   recoverOrStart: recoverOrStartBorrowerDraft,
   patch: patchBorrowerDraft,
+  getConsent: getBorrowerConsent,
+  submit: submitBorrowerApplication,
 };
 
 const numberOrUndefined = (value: string) =>
@@ -145,6 +157,22 @@ function validateBorrower(
   return errors;
 }
 
+export function validateSubjectProperty(value: SubjectPropertyState) {
+  if (!value.identified) return [];
+  const required: Array<[string, string]> = [
+    [value.address, "Address"],
+    [value.city, "City"],
+    [value.province, "Province or territory"],
+    [value.postal_code, "Postal code"],
+    [value.property_type, "Property type"],
+    [value.property_style, "Property style"],
+    [value.occupancy, "Occupancy"],
+  ];
+  return required.flatMap(([candidate, label]) =>
+    candidate.trim() ? [] : [`${label} is required.`],
+  );
+}
+
 function saveErrorMessages(error: unknown) {
   if (error instanceof BorrowerApplicationError) {
     if (error.status === 409) {
@@ -157,6 +185,16 @@ function saveErrorMessages(error: unknown) {
         (issue) =>
           `Review ${issue.path.filter((part) => part !== "body").join(" → ") || "this section"}: ${issue.message}`,
       );
+    }
+    if (error.status === 422 && error.code === "payload_incomplete") {
+      return [
+        "The saved application is incomplete. Return to the earlier sections and confirm every required field before submitting again.",
+      ];
+    }
+    if (error.status === 422) {
+      return [
+        "The saved application could not be submitted. Review the consent and borrower sections before trying again.",
+      ];
     }
     if (error.status === 404) {
       return [
@@ -235,6 +273,10 @@ export function BorrowerApplicationForm({
   );
   const [notes, setNotes] = useState("");
   const [consentAcknowledged, setConsentAcknowledged] = useState(false);
+  const [consent, setConsent] = useState<BorrowerConsent | null>(null);
+  const [documentsSettled, setDocumentsSettled] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const hasSavedSin = Boolean(draft && "has_sin" in draft && draft.has_sin);
   const hasSavedCoBorrower = Boolean(
     draft && "has_co_borrower" in draft && draft.has_co_borrower,
@@ -250,6 +292,40 @@ export function BorrowerApplicationForm({
         setRecovered(wasRecovered);
         if (
           wasRecovered &&
+          "payload" in nextDraft &&
+          nextDraft.payload !== null &&
+          typeof nextDraft.payload === "object" &&
+          !Array.isArray(nextDraft.payload)
+        ) {
+          const restored = hydrateBorrowerDraft(
+            nextDraft.payload as Record<string, unknown>,
+            preferredAgentSlug,
+          );
+          setMortgage(restored.mortgage);
+          setPrimary(restored.primary);
+          setCoBorrower(restored.coBorrower);
+          setPrimaryEmployment(restored.primaryEmployment);
+          setCoEmployment(restored.coEmployment);
+          setAssets(restored.assets);
+          setLiabilities(restored.liabilities);
+          setAssetsComplete(restored.assetsComplete);
+          setLiabilitiesComplete(restored.liabilitiesComplete);
+          setSubjectProperty(restored.subjectProperty);
+          setOtherProperties(restored.otherProperties);
+          setNotes(restored.notes);
+          setStep(restored.resumeStep);
+        }
+        (api.getConsent ?? getBorrowerConsent)(nextDraft.application_id)
+          .then((value) => {
+            if (active) setConsent(value);
+          })
+          .catch(() => {
+            if (active)
+              setErrors(["Current consent wording could not be loaded."]);
+          });
+        if (
+          wasRecovered &&
+          !("payload" in nextDraft && nextDraft.payload) &&
           "has_co_borrower" in nextDraft &&
           nextDraft.has_co_borrower
         ) {
@@ -263,7 +339,7 @@ export function BorrowerApplicationForm({
     return () => {
       active = false;
     };
-  }, [api]);
+  }, [api, preferredAgentSlug]);
 
   useEffect(() => {
     if (errors.length) errorRef.current?.focus();
@@ -390,8 +466,20 @@ export function BorrowerApplicationForm({
     if (step === 6) {
       return <NotesSection value={notes} onChange={setNotes} />;
     }
+    if (step === 7) {
+      return (
+        <DocumentUpload
+          applicationId={draft.application_id}
+          onSettledChange={setDocumentsSettled}
+        />
+      );
+    }
     return (
       <ConsentSection
+        wording={
+          consent?.wording_text ?? "Current consent wording is unavailable."
+        }
+        version={consent?.consent_version ?? "unavailable"}
         acknowledged={consentAcknowledged}
         onChange={setConsentAcknowledged}
       />
@@ -521,17 +609,6 @@ export function BorrowerApplicationForm({
       );
     }
     if (step === 4) {
-      const validation =
-        subjectProperty.identified &&
-        (!subjectProperty.address ||
-          !subjectProperty.city ||
-          !subjectProperty.province ||
-          !subjectProperty.postal_code ||
-          !subjectProperty.property_type ||
-          !subjectProperty.property_style ||
-          !subjectProperty.occupancy)
-          ? ["Complete the required identified-property fields."]
-          : [];
       return saveSection(
         {
           subject_property: subjectProperty.identified
@@ -562,7 +639,7 @@ export function BorrowerApplicationForm({
               })
             : null,
         },
-        validation,
+        validateSubjectProperty(subjectProperty),
       );
     }
     if (step === 5) {
@@ -589,6 +666,40 @@ export function BorrowerApplicationForm({
     }
   }
 
+  async function submitApplication() {
+    if (!draft || !consent || !consentAcknowledged || !documentsSettled) return;
+    setErrors([]);
+    setSubmitting(true);
+    try {
+      await (api.submit ?? submitBorrowerApplication)(
+        draft.application_id,
+        draft.revision,
+        consent,
+        coBorrower || hasSavedCoBorrower ? "both" : "primary",
+      );
+      forgetBorrowerApplicationId();
+      setSubmitted(true);
+    } catch (error) {
+      setErrors(saveErrorMessages(error));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="container borrower-page">
+        <section role="status" className="success-state">
+          <h1>Application submitted</h1>
+          <p>
+            Keeper confirmed durable submission. This browser no longer retains
+            the application locator and cannot reopen the submitted record.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="container borrower-page">
       <header className="borrower-intro">
@@ -602,12 +713,12 @@ export function BorrowerApplicationForm({
         <p className="notice">
           Do not use a shared device. This draft can resume only while this
           browser retains its secure capability cookie. Final submission and
-          document upload are deferred to the next implementation phase.
+          this browser retains its secure capability cookie.
         </p>
         {recovered ? (
           <p className="save-feedback save-feedback-saved" role="status">
-            Existing private draft recovered. Saved SIN is shown only as
-            provided/masked state; other answers are not returned to this page.
+            Existing private draft recovered. Saved non-SIN answers have been
+            restored; SIN remains provided/masked only.
           </p>
         ) : null}
       </header>
@@ -672,18 +783,33 @@ export function BorrowerApplicationForm({
           {step < steps.length - 1 ? (
             <Button
               type="button"
-              disabled={saveState === "saving"}
-              onClick={() => void currentSave()}
+              disabled={
+                saveState === "saving" || (step === 7 && !documentsSettled)
+              }
+              onClick={() =>
+                step === 7
+                  ? setStep((current) => current + 1)
+                  : void currentSave()
+              }
             >
-              {saveState === "saving" ? "Saving…" : "Save and continue"}
+              {step === 7
+                ? "Continue to consent"
+                : saveState === "saving"
+                  ? "Saving…"
+                  : "Save and continue"}
             </Button>
           ) : (
             <Button
               type="button"
-              disabled
-              aria-describedby="submission-deferred"
+              disabled={
+                submitting ||
+                !consent ||
+                !consentAcknowledged ||
+                !documentsSettled
+              }
+              onClick={() => void submitApplication()}
             >
-              Submit application — coming in Phase D
+              {submitting ? "Submitting…" : "Submit application"}
             </Button>
           )}
         </div>
@@ -699,13 +825,6 @@ export function BorrowerApplicationForm({
                 ? "Nothing was advanced or cleared."
                 : ""}
         </p>
-        {step === steps.length - 1 ? (
-          <p id="submission-deferred" className="notice">
-            Final submission is deliberately unavailable in Phase C. No submit
-            endpoint is called, even after acknowledging the synthetic draft
-            consent wording.
-          </p>
-        ) : null}
       </div>
     </div>
   );

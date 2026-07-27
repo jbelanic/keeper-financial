@@ -14,6 +14,14 @@ The Phase B secure borrower foundation is implemented and validated as source on
 
 ## Borrower application limitations after Phase D.1 source
 
+Phase D.1 remains the historical bounded API checkpoint. Phase D.2 completes
+the approved borrower-facing document/consent/final-submission source contract
+through migration `20260726_0015`, including the 25 MiB/25/250 MiB bounded
+settings, category metadata with `Other`, capability list/removal, opaque keys,
+server consent, caller-idempotent retry, and web journey. Genuine PostgreSQL
+concurrency/migration evidence, genuine MinIO/ClamAV/browser evidence,
+production consent, and all Phase F operational work remain required.
+
 - Phase C replaces the web entry dependency on the former configuration-only external redirect with an exact-origin Keeper-native borrower form. Phase D.1 adds source-validated borrower object persistence and final submission, but the work remains unaccepted source work and is not deployed.
 - Phase B provides borrower models/migration, typed encrypted draft revisions, capability authorization, SIN masking/reveal primitives, exact-assignment internal authorization, and consent/snapshot/legal-hold schema primitives. Phase C provides the web UI and browser draft client. Phase D.1 provides document upload, immutable encrypted snapshot creation, consent binding, and capability revocation. Phase E adds the bounded internal administrator review queue, assignment/reassignment to active agents, exact assigned-agent/admin masked review, document metadata, API-proxied decrypting downloads, and assigned-agent/admin SIN reveal. Purge/legal-hold operations, dedicated TLS ingress, genuine-browser evidence, and operational readiness remain pending.
 - The Phase C API integration discrepancy is retained as historical decision evidence in `docs/31_PHASE_C_BORROWER_WEB_FORM_COMPLETION_REPORT.md`. The current source uses the approved deep-merge save path and the web/API subject-property vocabulary is aligned under the recorded option-A decision; broader schema changes remain owner-controlled and are not expanded here.

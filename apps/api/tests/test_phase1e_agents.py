@@ -504,9 +504,7 @@ def test_agent_attribution_uses_only_approved_mapping_and_fails_closed(
     assert approved.headers["location"] == "https://apply.keeper.example/synthetic-agent"
 
 
-def test_eligible_agent_selector_excludes_existing_profiles(
-    client: TestClient, db: Session
-) -> None:
+def test_eligible_agent_selector_includes_profiled_agents(client: TestClient, db: Session) -> None:
     create_user(db, subject="phase1e-admin", role_code="brokerage_admin")
     first, _ = _agent_account(db, subject="eligible-agent")
     second, _ = _agent_account(db, subject="profiled-agent")
@@ -519,13 +517,66 @@ def test_eligible_agent_selector_excludes_existing_profiles(
 
     response = client.get("/api/v1/admin/eligible-agents", headers=ADMIN_HEADERS)
     assert response.status_code == 200
-    assert response.json() == [
-        {
-            "user_id": str(first.id),
-            "display_name": first.display_name,
-            "email": first.email,
-        }
-    ]
+    returned_ids = {item["user_id"] for item in response.json()}
+    assert str(first.id) in returned_ids
+    assert str(second.id) in returned_ids
+
+
+def test_eligible_agent_accounts_includes_profiled_agents(client: TestClient, db: Session) -> None:
+    create_user(db, subject="phase1e-admin", role_code="brokerage_admin")
+    first, _ = _agent_account(db, subject="eligible-agent")
+    second, _ = _agent_account(db, subject="profiled-agent")
+    payload = _profile_payload(str(second.id))
+    payload["slug"] = "profiled-agent"
+    assert (
+        client.post("/api/v1/admin/agent-profiles", json=payload, headers=ADMIN_HEADERS).status_code
+        == 201
+    )
+
+    from keeper_api.services.agents import eligible_agent_accounts
+
+    returned_ids = {str(user.id) for user in eligible_agent_accounts(db)}
+    assert str(first.id) in returned_ids
+    assert str(second.id) in returned_ids
+
+
+def test_published_agent_assignable_to_submitted_application(
+    client: TestClient, db: Session
+) -> None:
+    create_user(db, subject="phase1e-admin", role_code="brokerage_admin")
+    agent_user, _ = _agent_account(db, subject="assignable-agent")
+    payload = _profile_payload(str(agent_user.id))
+    payload["slug"] = "assignable-agent"
+    created = client.post("/api/v1/admin/agent-profiles", json=payload, headers=ADMIN_HEADERS)
+    assert created.status_code == 201
+    profile_id = created.json()["id"]
+    pending = client.post(
+        f"/api/v1/agents/{profile_id}/status",
+        json={"status": "pending_approval"},
+        headers=ADMIN_HEADERS,
+    )
+    assert pending.status_code == 200
+    published = client.post(
+        f"/api/v1/agents/{profile_id}/status",
+        json={"status": "published"},
+        headers=ADMIN_HEADERS,
+    )
+    assert published.status_code == 200
+
+    from keeper_api.services.borrower_authorization import validate_assignment_target
+
+    # The assignment target validator must accept a published-agent account.
+    # It does not require the absence of an agent profile.
+    try:
+        validate_assignment_target(db, agent_user.id)
+    except Exception as exc:  # pylint: disable=broad-except
+        raise AssertionError("published agent should be a valid assignment target") from exc
+
+    # The eligible-agents dropdown must surface the same account.
+    from keeper_api.services.agents import eligible_agent_accounts
+
+    returned_ids = {str(user.id) for user in eligible_agent_accounts(db)}
+    assert str(agent_user.id) in returned_ids
 
 
 def test_slug_availability_and_first_publication_lock(client: TestClient, db: Session) -> None:

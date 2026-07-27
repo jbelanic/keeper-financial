@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -146,6 +146,22 @@ def mock_request():
 
 
 class TestValidateBorrowerOrigin:
+    def test_local_post_accepts_exact_internal_proxy_forwarding(self, mock_request) -> None:
+        request = mock_request(
+            method="POST",
+            headers={
+                "host": "api:8000",
+                "x-forwarded-host": "localhost:8000",
+                "origin": "http://localhost:8000",
+                "x-keeper-borrower-csrf": "1",
+            },
+        )
+
+        class MockSettings:
+            app_env = "local"
+
+        validate_borrower_origin(request, MockSettings())  # type: ignore[arg-type]
+
     def test_valid_origin_get(self, mock_request) -> None:
         request = mock_request(
             method="GET",
@@ -288,6 +304,28 @@ class TestVerifyBorrowerCapability:
                 "invalid-capability",
             )
         assert exc_info.value.status_code == 404
+
+    def test_expired_capability_is_indistinguishably_rejected(
+        self, db_session: Session, crypto_state: BorrowerCryptoState
+    ) -> None:
+        application, capability = start_borrower_application(
+            db=db_session,
+            crypto_state=crypto_state,
+            settings=None,
+        )
+        application.draft_expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db_session.commit()
+
+        with pytest.raises(HTTPException) as exc_info:
+            verify_borrower_capability(
+                db_session,
+                crypto_state,
+                application.id,
+                capability,
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail == "application not found"
 
     def test_nonexistent_application(
         self, db_session: Session, crypto_state: BorrowerCryptoState

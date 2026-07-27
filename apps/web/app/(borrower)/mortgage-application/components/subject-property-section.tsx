@@ -30,6 +30,7 @@ export function SubjectPropertySection({
           <FormField id="subject-address" label="Address (required)">
             <input
               id="subject-address"
+              required
               value={value.address}
               onChange={(event) => set("address", event.currentTarget.value)}
             />
@@ -37,6 +38,7 @@ export function SubjectPropertySection({
           <FormField id="subject-city" label="City (required)">
             <input
               id="subject-city"
+              required
               value={value.city}
               onChange={(event) => set("city", event.currentTarget.value)}
             />
@@ -48,6 +50,7 @@ export function SubjectPropertySection({
             <input
               id="subject-province"
               maxLength={2}
+              required
               value={value.province}
               onChange={(event) => set("province", event.currentTarget.value)}
             />
@@ -56,6 +59,7 @@ export function SubjectPropertySection({
             <input
               id="subject-postal"
               maxLength={7}
+              required
               value={value.postal_code}
               onChange={(event) =>
                 set("postal_code", event.currentTarget.value)
@@ -65,6 +69,7 @@ export function SubjectPropertySection({
           <FormField id="subject-type" label="Property type (required)">
             <select
               id="subject-type"
+              required
               value={value.property_type}
               onChange={(event) =>
                 set("property_type", event.currentTarget.value)
@@ -82,11 +87,13 @@ export function SubjectPropertySection({
           <FormField id="subject-style" label="Property style (required)">
             <select
               id="subject-style"
+              required
               value={value.property_style}
               onChange={(event) =>
                 set("property_style", event.currentTarget.value)
               }
             >
+              <option value="">Select a style</option>
               <option value="detached">Detached</option>
               <option value="semi_detached">Semi-detached</option>
               <option value="townhouse_row">Townhouse row</option>
@@ -97,9 +104,11 @@ export function SubjectPropertySection({
           <FormField id="subject-occupancy" label="Occupancy (required)">
             <select
               id="subject-occupancy"
+              required
               value={value.occupancy}
               onChange={(event) => set("occupancy", event.currentTarget.value)}
             >
+              <option value="">Select occupancy</option>
               <option value="owner_occupied">Owner occupied</option>
               <option value="tenant">Rental</option>
               <option value="vacant">Vacant</option>

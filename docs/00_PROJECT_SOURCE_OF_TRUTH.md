@@ -4,7 +4,7 @@
 
 **Product:** Keeper Financial public website and brokerage relationship platform  
 **Jurisdiction:** Ontario, Canada  
-**Phase:** owner-approved borrower-application expansion, Phase A authority checkpoint
+**Phase:** owner-approved borrower-application expansion, Phase D.2 source contract closure
 **Primary users:** Mortgage clients, agent candidates, active mortgage agents, brokerage administrators, compliance reviewers, principal broker
 
 ## 2. Product purpose
@@ -105,7 +105,12 @@ It must not claim that:
 
 The source baseline for this decision is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, including merged work through PR #9. It contains the accepted public site, contact path, candidate authentication/application/review, onboarding completion, agent activation/profile publication, private candidate documents, local PostgreSQL/MinIO/ClamAV/Supabase topology, and public-content updates. Historical reports retain the exact evidence and limitations of their original checkpoints.
 
-The borrower application described in `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md` is owner-approved but is **not implemented** at this Phase A documentation checkpoint. Current code still exposes the former configuration-only mortgage-application redirect and has no borrower models, capability session, SIN encryption, borrower document bucket, borrower review UI, legal-hold/purge operation, or dedicated ingress implementation. Those must be changed only in the later approved implementation phases.
+Borrower Phases B, C, D, and E are implemented as bounded source checkpoints
+through forward migration `20260726_0015`. Phase D.1 remains the historical API
+checkpoint; Phase D.2 closes its approved document, consent, idempotent
+submission, generated-contract, and borrower-web contract. Phase F retention
+jobs, legal-hold operations, ingress, backup/restore, deployment, monitoring,
+and operational evidence remain unimplemented and awaiting separate approval.
 
 On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 

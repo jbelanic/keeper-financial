@@ -27,7 +27,7 @@ Phase B implements typed API settings and tests for the secure draft foundation.
 
 | Group | Current names | Required boundary |
 | --- | --- | --- |
-| Feature/release gate | `BORROWER_APPLICATION_ENABLED`, `BORROWER_REAL_DATA_ENABLED` | Default false; real data cannot be enabled without exact consent copy and release evidence. |
+| Feature/release gate | `BORROWER_APPLICATION_ENABLED`, `BORROWER_REAL_DATA_ENABLED` | Default false; every non-local environment rejects submission while the real-data gate is off. Enabling the environment gate is insufficient by itself: the newest active/effective consent-catalog row must also carry the server-owned `real_data_approved=true` marker, which may be set only after owner approval of that exact version/digest and release evidence. The migration defaults every row to false. |
 | Origin | `BORROWER_APPLICATION_ORIGIN` | Exact configured origin; no wildcard/reflection. Production ingress trust remains Phase F work. |
 | Capability | `BORROWER_CAPABILITY_HMAC_KEY_FILE` | Root-owned key file; capability inactivity/revocation follows the server-owned draft lifecycle. |
 | Encryption | `BORROWER_ENCRYPTION_ACTIVE_KEY_ID`, `BORROWER_ENCRYPTION_KEYRING_FILE` | Versioned key IDs and a root-owned read-only keyring file; no key bytes in environment. |
@@ -41,5 +41,5 @@ The following settings remain reserved for later document, retention, and deploy
 | Ingress trust | `TRUSTED_PROXY_NETWORKS` | Explicit approved ingress only. |
 | Internal MFA policy | `REQUIRE_AGENT_MFA` | Internal borrower access remains unconditionally AAL2 in current source; any deployment setting must not weaken that rule. |
 | Object storage | `BORROWER_S3_BUCKET`, `BORROWER_S3_ACCESS_KEY_ID`, `BORROWER_S3_SECRET_ACCESS_KEY` | Dedicated private bucket/least-privilege credentials; secret value remains ignored. |
-| Document limits | `BORROWER_MAX_DOCUMENT_BYTES`, `BORROWER_MAX_DOCUMENT_COUNT`, `BORROWER_MAX_TOTAL_DOCUMENT_BYTES`, `BORROWER_ALLOWED_DOCUMENT_MIME_TYPES` | Owner-approved maxima are 25 MiB, 25 files, 250 MiB, and PDF/DOC/DOCX/JPEG/PNG. Configuration may narrow but must fail closed rather than expand these limits without a later decision; strict structure and ClamAV remain mandatory. |
+| Document limits | `BORROWER_MAX_DOCUMENT_BYTES`, `BORROWER_MAX_DOCUMENT_COUNT`, `BORROWER_MAX_TOTAL_DOCUMENT_BYTES` | Implemented typed settings default to and cannot exceed the owner-approved 25 MiB, 25 current files, and 250 MiB aggregate plaintext maxima. Configuration may narrow only. PDF/DOC/DOCX/JPEG/PNG remain the fixed strict allow-list; structure agreement and fail-closed ClamAV remain mandatory. |
 | Backup retention | `BORROWER_BACKUP_RETENTION_DAYS` | Approved value is 30 days and must fail closed if changed without a later decision. Submitted retention is the server-enforced seven-year rule, not a deployment-tunable value; legal hold blocks submitted purge only. |

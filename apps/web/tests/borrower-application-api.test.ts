@@ -2,6 +2,9 @@ import {
   BorrowerApplicationError,
   getBorrowerDraft,
   patchBorrowerDraft,
+  getBorrowerConsent,
+  removeBorrowerDocument,
+  submitBorrowerApplication,
   recoverOrStartBorrowerDraft,
   startBorrowerDraft,
 } from "@/lib/borrower-application-api";
@@ -132,5 +135,92 @@ describe("borrower application API client", () => {
         },
       ],
     } satisfies Partial<BorrowerApplicationError>);
+  });
+
+  it("retains a bounded submission error code without exposing response text", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "payload_incomplete" }), {
+        status: 422,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(
+      submitBorrowerApplication(
+        applicationId,
+        7,
+        {
+          consent_version: "synthetic-v1",
+          wording_digest: "a".repeat(64),
+          wording_text: "Synthetic consent wording.",
+        },
+        "primary",
+      ),
+    ).rejects.toMatchObject({
+      status: 422,
+      code: "payload_incomplete",
+      issues: [],
+    } satisfies Partial<BorrowerApplicationError>);
+  });
+
+  it("retrieves current consent and submits through no-store exact-draft requests", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            consent_version: "synthetic-v1",
+            wording_digest: "a".repeat(64),
+            wording_text: "Synthetic consent wording.",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            application_id: applicationId,
+            lifecycle_status: "submitted",
+            submitted_at: "2026-07-26T12:00:00Z",
+            retention_due_at: "2033-07-26T12:00:00Z",
+            snapshot_id: "22222222-2222-4222-8222-222222222222",
+            consent_record_id: "33333333-3333-4333-8333-333333333333",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    const consent = await getBorrowerConsent(applicationId);
+    await submitBorrowerApplication(applicationId, 7, consent, "primary");
+    expect(fetchMock.mock.calls[0][0]).toContain("/consent");
+    expect(fetchMock.mock.calls[1][0]).toContain("/submit");
+    expect(fetchMock.mock.calls[1][1]).toEqual(
+      expect.objectContaining({
+        credentials: "include",
+        cache: "no-store",
+      }),
+    );
+  });
+
+  it("treats a successful no-content document removal as success", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(
+      removeBorrowerDocument(
+        applicationId,
+        "22222222-2222-4222-8222-222222222222",
+      ),
+    ).resolves.toBeUndefined();
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init).toEqual(
+      expect.objectContaining({
+        method: "DELETE",
+        credentials: "include",
+        cache: "no-store",
+      }),
+    );
+    expect(new Headers(init?.headers).get("X-Keeper-Borrower-CSRF")).toBe("1");
   });
 });

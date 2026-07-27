@@ -94,6 +94,11 @@ class Settings(BaseSettings):
     borrower_rate_limit_requests: int = Field(default=10, ge=1, le=100)
     borrower_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
     borrower_rate_limit_tracked_clients: int = Field(default=10_000, ge=100, le=100_000)
+    borrower_max_document_bytes: int = Field(default=25 * 1024 * 1024, ge=1, le=25 * 1024 * 1024)
+    borrower_max_document_count: int = Field(default=25, ge=1, le=25)
+    borrower_max_total_document_bytes: int = Field(
+        default=250 * 1024 * 1024, ge=1, le=250 * 1024 * 1024
+    )
 
     @field_validator("mortgage_application_agent_links", mode="before")
     @classmethod
