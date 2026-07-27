@@ -126,6 +126,21 @@ and the agent-only authorization model are recorded in
 plan is `docs/36_AGENT_RETRIEVAL_MINIMAL_PLAN.md`. Outside the agent web surface
 the borrower data stays masked everywhere.
 
+On 2026-07-27 the owner also approved the borrower/mortgage-applicant privacy
+and credit-use disclosure wording and immutably versioned it
+`borrower-privacy-credit-disclosure-2026-07-27-v1`. This resolves the former
+"exact production wording remains an owner/legal-content prerequisite" gap for
+the borrower MVP. The approved text is recorded verbatim in `docs/28` §6 and is
+deliberately distinct from the Phase 1C candidate privacy disclosure
+(`docs/19`) — recruitment/candidate scope and borrower scope coexist. Real-data
+borrower submission remains disabled until the separate owner release/deploy
+approval and secure-deployment evidence exist; approved wording alone does not
+enable submission. The owner directed the candidate disclosure not be reused
+verbatim for borrowers; the adopted text was corrected to match the approved
+borrower collection set (SIN and financial data are collected and specially
+protected; résumé, cover letter, education/training, referral source, applicant
+statements, and availability are not collected from borrowers).
+
 ## 11. Phase 1 release condition
 
 Phase 1 is releasable only when:
