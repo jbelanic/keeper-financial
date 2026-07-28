@@ -1664,6 +1664,8 @@ export interface components {
       payload: {
         [key: string]: unknown;
       } | null;
+      /** Payload Revision */
+      payload_revision: number;
     };
     /** BorrowerApplicationSaveRequest */
     BorrowerApplicationSaveRequest: {

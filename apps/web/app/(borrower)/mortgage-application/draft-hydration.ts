@@ -200,6 +200,10 @@ export function hydrateBorrowerDraft(
   if (has(payload, "other_properties")) resumeStep = 6;
   if (has(payload, "additional_notes")) resumeStep = 7;
 
+  // Land on the highest populated step so recovered answers are visible,
+  // not on the next-empty section (which would look blank on return).
+  resumeStep = Math.max(0, resumeStep - 1);
+
   return {
     mortgage: {
       mortgage_objective: text(mortgageRequest.mortgage_objective),

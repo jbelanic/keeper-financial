@@ -7586,6 +7586,10 @@
               }
             ],
             "title": "Payload"
+          },
+          "payload_revision": {
+            "type": "integer",
+            "title": "Payload Revision"
           }
         },
         "additionalProperties": false,
@@ -7598,7 +7602,8 @@
           "has_co_borrower",
           "last_activity_at",
           "draft_expires_at",
-          "payload"
+          "payload",
+          "payload_revision"
         ],
         "title": "BorrowerApplicationDraftResponse"
       },

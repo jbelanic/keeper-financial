@@ -185,6 +185,7 @@ class BorrowerApplicationSaveResponse(BaseModel):
 
 class BorrowerApplicationDraftResponse(BorrowerApplicationSaveResponse):
     payload: dict[str, Any] | None
+    payload_revision: int
 
 
 class BorrowerSinRevealRequest(BaseModel):
@@ -424,6 +425,7 @@ def get_application(
         has_co_borrower=summary["has_co_borrower"],
         last_activity_at=summary["last_activity_at"],
         draft_expires_at=summary["draft_expires_at"],
+        payload_revision=summary["payload_revision"],
         payload=payload,
     )
 
