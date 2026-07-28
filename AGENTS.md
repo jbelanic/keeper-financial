@@ -170,6 +170,10 @@ The owner authorized standard branch, commit, push, pull-request, and merge oper
 
 Use one dedicated branch or worktree per implementation phase. Do not allow concurrent writers to modify the same files, branch, or worktree.
 
+### Git maintenance discipline
+
+Before and after any change, the architect must recommend the next Git step as an explicit, approvable choice (branch → commit → push → PR → merge), stating the exact commands. Never work directly on `main` for fixes or features; use one dedicated branch per unit of work and never two concurrent writers on the same branch or worktree. Commit in small logical units after each verified change. Execute push, PR, merge, deployment, shared-database mutation, credential or external-service changes, or destructive operations only after explicit owner approval. The owner relies on the architect to recommend the correct next step and will approve; do not silently expand scope or skip a hygiene step.
+
 Only one writer should use the primary checkout at a time. In particular, do not allow:
 
 - `keeper-architect` and `keeper-marketing` to edit simultaneously;
