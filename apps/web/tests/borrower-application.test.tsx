@@ -168,6 +168,33 @@ describe("accountless borrower application form", () => {
     ).toHaveValue("");
   });
 
+  it("does not claim restoration when a recovered draft has no payload", async () => {
+    const recoveredDraft = {
+      ...saved,
+      has_sin: false,
+      payload: null,
+    };
+    render(
+      <BorrowerApplicationForm
+        api={{
+          recoverOrStart: vi
+            .fn()
+            .mockResolvedValue({ draft: recoveredDraft, recovered: true }),
+          patch: vi.fn().mockResolvedValue(saved),
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "We found your saved draft, but no previous answers were recovered yet. Continue where you left off.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Saved non-SIN answers have been restored/),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders recovered SIN as provided state and never places it in the input", async () => {
     render(
       <BorrowerDetailsSection
