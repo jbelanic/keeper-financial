@@ -4,6 +4,9 @@ const requirePortalAccess = vi.fn();
 const portalServerJson = vi.fn();
 
 vi.mock("@/lib/require-portal-access", () => ({ requirePortalAccess }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 vi.mock("@/lib/review-onboarding-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/review-onboarding-api")>()),
   portalServerJson,

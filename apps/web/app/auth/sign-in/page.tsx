@@ -8,8 +8,9 @@ export const metadata: Metadata = {
   title: "Sign in",
   robots: { index: false, follow: false },
 };
-function safeReturnTo(value: string | undefined): "/candidate" | "/admin" {
-  return value === "/admin" ? "/admin" : "/candidate";
+function safeReturnTo(value: string | undefined): "/candidate" | "/admin" | "/agent" {
+  if (value === "/admin" || value === "/agent") return value;
+  return "/candidate";
 }
 
 function scalar(value: string | string[] | undefined): string | undefined {

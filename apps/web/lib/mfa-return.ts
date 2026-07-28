@@ -1,5 +1,6 @@
 export type MfaReturnTo =
   | "/admin"
+  | "/agent"
   | "/candidate"
   | `/candidate/applications/${string}#documents`;
 
@@ -9,7 +10,9 @@ const CANDIDATE_DOCUMENT_RETURN =
 export function safeMfaReturnTo(
   value: string | string[] | undefined,
 ): MfaReturnTo {
-  if (value === "/admin" || value === "/candidate") return value;
+  if (value === "/admin" || value === "/agent" || value === "/candidate") {
+    return value;
+  }
   if (typeof value === "string" && CANDIDATE_DOCUMENT_RETURN.test(value)) {
     return value as MfaReturnTo;
   }

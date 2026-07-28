@@ -9,15 +9,16 @@ import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 function safeReturnTo(
   value: FormDataEntryValue | null,
-): "/candidate" | "/admin" {
-  return value === "/admin" ? "/admin" : "/candidate";
+): "/candidate" | "/admin" | "/agent" {
+  if (value === "/admin" || value === "/agent") return value;
+  return "/candidate";
 }
 
 function signInUrl(
   request: NextRequest,
   error: string,
   posting?: string,
-  returnTo: "/candidate" | "/admin" = "/candidate",
+  returnTo: "/candidate" | "/admin" | "/agent" = "/candidate",
 ) {
   const url = requestUrl(request, "/auth/sign-in");
   url.searchParams.set("error", error);
@@ -79,6 +80,12 @@ export async function POST(request: NextRequest) {
     if (returnTo === "/admin") {
       return NextResponse.redirect(
         requestUrl(request, "/auth/mfa?returnTo=/admin"),
+        303,
+      );
+    }
+    if (returnTo === "/agent") {
+      return NextResponse.redirect(
+        requestUrl(request, "/auth/mfa?returnTo=/agent"),
         303,
       );
     }
