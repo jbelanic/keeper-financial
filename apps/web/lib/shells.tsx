@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { publicNavigation } from "@/lib/public-content";
 import { siteConfig } from "@/lib/site-config";
+import { PortalSignOut } from "@/lib/portal-sign-out";
 
 export function Brand() {
   return (
@@ -171,6 +172,9 @@ export function PublicShell({ children }: { children: ReactNode }) {
             Mortgage options are subject to borrower qualification and lender
             approval.
           </p>
+          <p className="footer-portal-access">
+            <Link href="/auth/sign-in?returnTo=/agent">Agent sign in</Link>
+          </p>
         </div>
       </footer>
     </>
@@ -202,6 +206,11 @@ export function PortalShell({
                 <Link href={href}>{label}</Link>
               </li>
             ))}
+          </ul>
+          <ul className="portal-sign-out-row">
+            <li>
+              <PortalSignOut />
+            </li>
           </ul>
         </nav>
         <main id="main-content" className="portal-main">

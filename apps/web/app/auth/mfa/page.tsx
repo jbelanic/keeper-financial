@@ -19,16 +19,25 @@ export default async function MfaPage({
   const params = await searchParams;
   const returnTo = safeMfaReturnTo(params.returnTo);
   const candidateFlow = returnTo.startsWith("/candidate");
+  const agentFlow = returnTo === "/agent";
   const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
     redirect(`/auth/sign-in?returnTo=${encodeURIComponent(returnTo)}`);
   }
+  const backHref = candidateFlow
+    ? returnTo
+    : agentFlow
+      ? "/auth/sign-in?returnTo=/agent"
+      : "/auth/sign-in?returnTo=/admin";
+  const backLabel = candidateFlow
+    ? "the candidate application"
+    : agentFlow
+      ? "agent sign in"
+      : "sign in";
   return (
     <main id="main-content" className="container section">
-      <Link href={candidateFlow ? returnTo : "/auth/sign-in?returnTo=/admin"}>
-        ← Return to {candidateFlow ? "the candidate application" : "sign in"}
-      </Link>
+      <Link href={backHref}>← Return to {backLabel}</Link>
       <header className="foundation-header">
         <p className="eyebrow">Account security</p>
         <h1>Verify with your authenticator app</h1>

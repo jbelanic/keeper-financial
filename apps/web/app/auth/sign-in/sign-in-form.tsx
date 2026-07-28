@@ -20,7 +20,7 @@ export function SignInForm({
   error,
 }: {
   posting?: string;
-  returnTo: "/candidate" | "/admin";
+  returnTo: "/candidate" | "/admin" | "/agent";
   error?: string;
 }) {
   const message = error ? ERROR_MESSAGES[error] : undefined;

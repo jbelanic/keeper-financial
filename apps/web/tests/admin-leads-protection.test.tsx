@@ -4,6 +4,9 @@ const { requirePortalAccess } = vi.hoisted(() => ({
   requirePortalAccess: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("@/lib/require-portal-access", () => ({ requirePortalAccess }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 
 import AdminLayout from "@/app/(admin)/layout";
 
