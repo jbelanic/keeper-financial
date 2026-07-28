@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { hydrateBorrowerDraft } from "@/app/(borrower)/mortgage-application/draft-hydration";
 
 describe("borrower draft hydration", () => {
-  it("restores every non-SIN section and resumes at the next incomplete section", () => {
+  it("restores every non-SIN section and resumes at the last populated section so saved answers stay visible", () => {
     const restored = hydrateBorrowerDraft({
       mortgage_request: {
         mortgage_objective: "purchase",
@@ -98,6 +98,6 @@ describe("borrower draft hydration", () => {
       "200000.00",
     );
     expect(restored.notes).toBe("Synthetic testing note.");
-    expect(restored.resumeStep).toBe(7);
+    expect(restored.resumeStep).toBe(6);
   });
 });

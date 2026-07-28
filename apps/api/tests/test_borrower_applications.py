@@ -1230,6 +1230,20 @@ class TestBorrowerPhaseDRouteIntegration:
         assert "sin" not in payload["primary_borrower"]
         assert "sin" not in payload["co_borrower"]
 
+    def test_get_draft_response_includes_payload_revision(self, route_client: TestClient) -> None:
+        application_id = self._start(route_client)
+        revision = self._save_full_payload(route_client, application_id)
+
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=self._headers(),
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["payload_revision"] == revision
+        assert body["revision"] == revision
+
     def test_submit_preserves_sin_across_later_section_revisions(
         self, route_client: TestClient
     ) -> None:
