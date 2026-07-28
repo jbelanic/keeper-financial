@@ -135,6 +135,8 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./storage/local-documenso-tls/ca-bundle.crt:/etc/ssl/certs/keeper-local-documenso-ca-bundle.crt:ro
+      - ./secrets/borrower_capability_hmac_key:/run/secrets/borrower_capability_hmac_key:ro
+      - ./secrets/borrower_encryption_keyring:/run/secrets/borrower_encryption_keyring:ro
     depends_on:
       db:
         condition: service_healthy

@@ -30,6 +30,9 @@ __pycache__/
 storage/dev_uploads/*
 !storage/dev_uploads/.gitkeep
 /storage/local-secrets/
+# Local crypto key material (borrower capability HMAC + encryption keyring).
+# Mounted into the API via compose.yaml; never commit.
+/secrets/
 compose.override.yaml
 /start-hermes.sh
 
