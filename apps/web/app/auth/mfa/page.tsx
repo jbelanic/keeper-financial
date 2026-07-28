@@ -37,9 +37,7 @@ export default async function MfaPage({
       : "sign in";
   return (
     <main id="main-content" className="container section">
-      <Link href={backHref}>
-        ← Return to {backLabel}
-      </Link>
+      <Link href={backHref}>← Return to {backLabel}</Link>
       <header className="foundation-header">
         <p className="eyebrow">Account security</p>
         <h1>Verify with your authenticator app</h1>
