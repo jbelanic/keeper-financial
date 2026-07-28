@@ -224,6 +224,7 @@ export function BorrowerApplicationForm({
 }) {
   const [draft, setDraft] = useState<DraftSummary | null>(null);
   const [recovered, setRecovered] = useState(false);
+  const [restoredData, setRestoredData] = useState(false);
   const [startError, setStartError] = useState(false);
   const [step, setStep] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -314,6 +315,7 @@ export function BorrowerApplicationForm({
           setOtherProperties(restored.otherProperties);
           setNotes(restored.notes);
           setStep(restored.resumeStep);
+          setRestoredData(Object.keys(nextDraft.payload).length > 0);
         }
         (api.getConsent ?? getBorrowerConsent)(nextDraft.application_id)
           .then((value) => {
@@ -716,10 +718,17 @@ export function BorrowerApplicationForm({
           this browser retains its secure capability cookie.
         </p>
         {recovered ? (
-          <p className="save-feedback save-feedback-saved" role="status">
-            Existing private draft recovered. Saved non-SIN answers have been
-            restored; SIN remains provided/masked only.
-          </p>
+          restoredData ? (
+            <p className="save-feedback save-feedback-saved" role="status">
+              Existing private draft recovered. Saved non-SIN answers have been
+              restored; SIN remains provided/masked only.
+            </p>
+          ) : (
+            <p className="notice" role="status">
+              We found your saved draft, but no previous answers were recovered
+              yet. Continue where you left off.
+            </p>
+          )
         ) : null}
       </header>
       <AgentPreferenceSection slug={preferredAgentSlug} />
