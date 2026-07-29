@@ -199,7 +199,9 @@ def test_local_operator_database_commands_run_inside_api_container() -> None:
         "\n\nopenapi:", maxsplit=1
     )[0]
 
-    assert "docker compose run --rm --build -e APP_ENV=local api python scripts/seed_local.py" in seed
+    assert (
+        "docker compose run --rm --build -e APP_ENV=local api python scripts/seed_local.py" in seed
+    )
     assert ".venv/bin/python apps/api/scripts/seed_local.py" not in seed
     assert (
         "docker compose run --rm --build -e APP_ENV=local api python "
