@@ -393,7 +393,7 @@ export const recruitmentContent = {
     title: "Build your mortgage business. Keep more control.",
     lead: "Keeper offers competitive compensation, more earning potential, access to lead opportunities and the autonomy to run your business your way, backed by hands-on coaching, mentorship and dedicated brokerage support.",
     imageAlt:
-      "An editorial image of three professionals in conversation in a modern office setting",
+      "Four professionals collaborating around a table in a modern office setting",
     ctaLabel: "Explore the current opportunity",
     ctaNote: "Review the role before creating an account.",
   },

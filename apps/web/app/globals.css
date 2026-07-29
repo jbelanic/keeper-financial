@@ -993,7 +993,7 @@ p {
   object-position: 58% center;
 }
 .recruitment-image img {
-  object-position: 72% center;
+  object-position: center;
 }
 .page-lead {
   font-size: clamp(1.05rem, 1.6vw, 1.22rem);
@@ -1265,7 +1265,7 @@ p {
   color: white;
 }
 .recruitment-image {
-  aspect-ratio: 6 / 5;
+  aspect-ratio: 8 / 5;
   border-radius: var(--radius-md);
   overflow: hidden;
   position: relative;
@@ -1365,10 +1365,10 @@ p {
   color: var(--color-ink);
 }
 .recruitment-hero .page-hero-media {
-  aspect-ratio: 5 / 4;
+  aspect-ratio: 8 / 5;
 }
 .recruitment-hero .page-hero-media img {
-  object-position: 72% center;
+  object-position: center;
 }
 .hero-microcopy {
   font-size: 0.88rem;
