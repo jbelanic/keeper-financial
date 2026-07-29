@@ -187,6 +187,20 @@ def test_local_compose_allows_application_subdomain_for_contact_cors() -> None:
     assert "http://apply.localhost:3000" in settings.cors_origin_list
 
 
+def test_compose_exposes_opt_in_lead_notification_settings() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
+
+    assert "SMTP_ENABLED: ${SMTP_ENABLED:-false}" in api_service
+    assert "SMTP_HOST: ${SMTP_HOST:-host.docker.internal}" in api_service
+    assert "SMTP_PORT: ${SMTP_PORT:-54324}" in api_service
+    assert (
+        "LEAD_NOTIFICATION_EMAIL_ENABLED: ${LEAD_NOTIFICATION_EMAIL_ENABLED:-false}" in api_service
+    )
+    assert "LEAD_NOTIFICATION_ADMIN_EMAIL: ${LEAD_NOTIFICATION_ADMIN_EMAIL:-}" in api_service
+    assert "LEAD_NOTIFICATION_BROKER_EMAIL: ${LEAD_NOTIFICATION_BROKER_EMAIL:-}" in api_service
+
+
 def test_compose_routes_documenso_through_loopback_only_tls_with_explicit_trust() -> None:
     compose = (PROJECT_ROOT / "compose.yaml").read_text()
     proxy_service = compose.split("\n  documenso-tls:\n", maxsplit=1)[1].split(

@@ -1,6 +1,8 @@
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
+from email.message import EmailMessage
+from typing import ClassVar
 
 import pytest
 from fastapi.testclient import TestClient
@@ -522,3 +524,113 @@ def test_marketing_withdrawal_unknown_or_absent_consent_fails_safely(
     assert response.status_code == 404
     assert response.headers["Cache-Control"] == "no-store"
     assert db.query(AuditEvent).count() == 0
+
+
+class FakeLeadSMTP:
+    messages: ClassVar[list[EmailMessage]] = []
+
+    def __init__(self, host: str, port: int, timeout: int = 10) -> None:
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+
+    def __enter__(self) -> "FakeLeadSMTP":
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        return None
+
+    def starttls(self) -> None:
+        return None
+
+    def send_message(self, message: EmailMessage) -> None:
+        self.messages.append(message)
+
+
+def message_text(message: EmailMessage) -> str:
+    if message.is_multipart():
+        return "\n".join(
+            part.get_content()
+            for part in message.iter_parts()
+            if part.get_content_type() == "text/plain"
+        )
+    return message.get_content()
+
+
+def enable_lead_notifications(settings: Settings) -> None:
+    settings.smtp_enabled = True
+    settings.lead_notification_email_enabled = True
+    settings.lead_notification_admin_email = "admin@example.test"
+    settings.lead_notification_broker_email = "broker@example.test"
+
+
+def test_contact_lead_notifies_selected_agent_and_admin_without_pii(
+    client: TestClient, db: Session, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+    FakeLeadSMTP.messages = []
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
+    agent = User(email="agent@example.test", display_name="Synthetic Agent")
+    db.add(agent)
+    db.flush()
+    db.add(
+        AgentProfile(
+            user_id=agent.id,
+            slug="published-agent",
+            licensed_name="Synthetic Agent",
+            approved_title="Mortgage Agent",
+            licence_number="SYNTHETIC",
+            status="published",
+        )
+    )
+    db.commit()
+    payload = valid_payload()
+    payload["preferred_agent_slug"] = "published-agent"
+
+    response = client.post("/api/v1/leads", json=payload)
+
+    assert response.status_code == 201
+    assert [message["To"] for message in FakeLeadSMTP.messages] == [
+        "agent@example.test",
+        "admin@example.test",
+    ]
+    bodies = "\n".join(message_text(message) for message in FakeLeadSMTP.messages)
+    assert str(response.json()["id"]) in bodies
+    assert "/admin/leads" in bodies
+    assert "Synthetic Visitor" not in bodies
+    assert "visitor@example.com" not in bodies
+    assert "+1 (416) 555-0100" not in bodies
+    assert "Please contact me next week" not in bodies
+
+
+def test_contact_lead_notifies_broker_and_admin_when_no_agent_selected(
+    client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+    FakeLeadSMTP.messages = []
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
+
+    response = client.post("/api/v1/leads", json=valid_payload())
+
+    assert response.status_code == 201
+    assert [message["To"] for message in FakeLeadSMTP.messages] == [
+        "broker@example.test",
+        "admin@example.test",
+    ]
+
+
+def test_contact_lead_submission_succeeds_when_notification_smtp_fails(
+    client: TestClient, db: Session, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+
+    class FailingSMTP(FakeLeadSMTP):
+        def send_message(self, message: EmailMessage) -> None:
+            raise OSError("synthetic SMTP outage")
+
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FailingSMTP)
+
+    response = client.post("/api/v1/leads", json=valid_payload())
+
+    assert response.status_code == 201
+    assert db.query(LeadInquiry).count() == 1
