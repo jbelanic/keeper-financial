@@ -71,7 +71,7 @@ const yaml = vulnerabilities["js-yaml"];
 if (
   redocly.isDirect !== false ||
   redocly.severity !== "high" ||
-  redocly.range !== "<=1.34.17" ||
+  redocly.range !== "<=1.34.18" ||
   JSON.stringify(redocly.via) !== JSON.stringify(["js-yaml", "minimatch"]) ||
   JSON.stringify(redocly.effects) !== JSON.stringify([]) ||
   !Array.isArray(redocly.nodes) ||
