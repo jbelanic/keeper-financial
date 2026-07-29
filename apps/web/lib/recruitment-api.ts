@@ -2,6 +2,7 @@ import type { components } from "@keeper/contracts";
 
 export type PublicPosting = components["schemas"]["PublicPosting"];
 export type PublicPostingList = components["schemas"]["PublicPostingList"];
+export type PublicPostingSummary = PublicPostingList["items"][number];
 export type CandidateApplication =
   components["schemas"]["CandidateApplicationResponse"];
 export type CandidateApplicationList =

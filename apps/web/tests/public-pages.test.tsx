@@ -29,6 +29,21 @@ describe("anonymous public pages", () => {
     },
   );
 
+  it("aligns the homepage recruitment teaser without bypassing careers", () => {
+    const { container } = render(<HomePage />);
+
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Build your mortgage business. Keep more control.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Explore careers at Keeper" }),
+    ).toHaveAttribute("href", "/careers");
+    expect(container.querySelector('a[href^="/auth/"]')).toBeNull();
+  });
+
   it("renders careers anonymously from the published-posting boundary", async () => {
     vi.stubGlobal(
       "fetch",
@@ -42,7 +57,10 @@ describe("anonymous public pages", () => {
     );
     render(<>{await CareersPage()}</>);
     expect(
-      screen.getByRole("heading", { level: 1, name: /join keeper financial/i }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: /build your mortgage business\. keep more control\./i,
+      }),
     ).toBeInTheDocument();
     vi.unstubAllGlobals();
   });

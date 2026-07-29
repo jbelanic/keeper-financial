@@ -52,6 +52,7 @@ export function PageHero({
   image,
   imageAlt,
   imagePriority = false,
+  className,
 }: {
   eyebrow: string;
   title: string;
@@ -60,9 +61,12 @@ export function PageHero({
   image?: string;
   imageAlt?: string;
   imagePriority?: boolean;
+  className?: string;
 }) {
   return (
-    <header className={`page-hero ${image ? "page-hero-with-image" : ""}`}>
+    <header
+      className={`page-hero ${image ? "page-hero-with-image" : ""} ${className ?? ""}`.trim()}
+    >
       <div className="container page-hero-grid">
         <div className="page-hero-copy">
           <p className="eyebrow">{eyebrow}</p>

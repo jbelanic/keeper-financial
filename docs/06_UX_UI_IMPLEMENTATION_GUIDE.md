@@ -24,7 +24,7 @@ Do not copy inaccessible interactions or layouts without adaptation.
 - Public heroes use a split copy/image composition on wide screens and a single-column crop-safe layout on narrow screens.
 - The public header exposes all approved navigation labels in a desktop navigation and a keyboard-native `details`/`summary` mobile menu.
 - Service cards, process steps, dark calls to action, empty states, policy content, and recruitment sections are reusable patterns rather than screenshot-specific markup.
-- The logo is a semantic text/CSS lockup because no approved standalone vector logo was supplied.
+- The logo is a semantic text/CSS lockup. The owner approved this treatment for production use on 2026-07-29; a standalone vector logo is not required for the recruitment refresh.
 - Two photography-only raster assets were generated from the approved home and recruitment mockups as visual references. They contain no embedded UI, brand text, rates, awards, testimonials, or sample data and are documented in `docs/ui/README.md`.
 - The agent-profile mockup informed card, border, icon, and spacing treatment only. No CRM dashboard, client, application, production, pipeline, appointment, or portal feature was implemented in Phase 1A.
 
@@ -100,6 +100,18 @@ dashboard proves a current eligible assignment.
 - Task-oriented onboarding dashboard.
 - Document version and completion state.
 - Candidate portal navigation must expose onboarding when an onboarding assignment is available; the direct route must remain authorization- and lifecycle-protected even when the navigation item is absent or ineligible.
+
+## Public recruitment journey
+
+The owner-approved 2026-07-29 recruitment direction makes `/careers` the main public entry point for mortgage-agent recruitment while preserving the posting-specific candidate boundary.
+
+- Lead with the Ontario mortgage-agent audience, competitive compensation, more earning potential, autonomy, available lead opportunities, coaching, mentorship, dedicated brokerage support, and broad lender access.
+- Do not publish CRM, marketing-automation, or document-management claims; awards, rankings, “best” or “leading” comparisons; testimonials that do not yet exist; agent earnings or growth statistics; or invented compensation details, lead volumes, lender counts, or timelines.
+- When exactly one posting is published, link the hero, featured opportunity, and closing action to that posting's detail page. Do not bypass role review by linking `/careers` directly to registration.
+- Preserve honest zero-posting and API-unavailable states. If more than one posting is returned, show every published posting rather than silently selecting one.
+- Keep the brokerage story visible when no posting can be shown, but do not add a general-interest form, résumé inbox, newsletter, or new candidate-data path.
+- Explain the implemented journey factually: review the role without an account, create a posting-specific application and save a draft, follow candidate-visible updates, and complete controlled onboarding only if selected.
+- The existing recruitment image is approved for use. Its alternative text and surrounding copy must not present the generated scene as real Keeper employees, premises, or a testimonial.
 
 ## Admin portal
 
