@@ -170,4 +170,22 @@ describe("Supabase SSR session refresh proxy", () => {
     );
     expect(getUser).not.toHaveBeenCalled();
   });
+
+  it("sends public navigation on the application host back to the public site", async () => {
+    const { proxy } = await import("@/proxy");
+    const response = await proxy(
+      new NextRequest(
+        "http://apply.localhost:3000/mortgages/purchase?from=footer",
+        {
+          headers: { host: "apply.localhost:3000" },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/mortgages/purchase?from=footer",
+    );
+    expect(getUser).not.toHaveBeenCalled();
+  });
 });

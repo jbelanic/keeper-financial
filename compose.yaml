@@ -122,10 +122,10 @@ services:
       DOCUMENSO_API_BASE_URL: https://sign.keeperfinancial.ca/api/v2
       DOCUMENSO_PUBLIC_BASE_URL: https://sign.keeperfinancial.ca
       SSL_CERT_FILE: /etc/ssl/certs/keeper-local-documenso-ca-bundle.crt
-      # Local CORS allow-list. Browser is reached at either localhost or
-      # 127.0.0.1; the web bundle calls the API at the matching host:port.
-      # Both stay local-host HTTP so the production validator still passes.
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:8000
+      # Local CORS allow-list. Browser traffic may originate from the public
+      # localhost site or the dedicated apply.localhost borrower host. All
+      # origins stay local-host HTTP so the production validator still passes.
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://apply.localhost:3000,http://127.0.0.1:8000
       SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
       SUPABASE_USER_URL: http://host.docker.internal:54321/auth/v1/user
       SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}

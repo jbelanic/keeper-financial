@@ -7,6 +7,36 @@ const applicationHosts = new Set([
   "apply.keeperfinancial.ca",
 ]);
 
+function publicSiteOriginForApplicationHost(host: string) {
+  const fallback =
+    host === "apply.localhost:3000"
+      ? "http://localhost:3000"
+      : "https://keeperfinancial.ca";
+  try {
+    const candidate = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? fallback);
+    const isLocalPublicSite =
+      candidate.protocol === "http:" &&
+      ["localhost", "127.0.0.1"].includes(candidate.hostname) &&
+      candidate.port === "3000";
+    const isProductionPublicSite =
+      candidate.protocol === "https:" &&
+      candidate.hostname === "keeperfinancial.ca" &&
+      !candidate.port;
+    if (
+      (!isLocalPublicSite && !isProductionPublicSite) ||
+      candidate.username ||
+      candidate.password ||
+      candidate.search ||
+      candidate.hash
+    ) {
+      return fallback;
+    }
+    return candidate.origin;
+  } catch {
+    return fallback;
+  }
+}
+
 function normalizedHost(value: string | null) {
   return value?.trim().toLowerCase() ?? "";
 }
@@ -48,13 +78,21 @@ export async function proxy(request: NextRequest) {
       return NextResponse.rewrite(target);
     }
 
-    const target = request.nextUrl.clone();
-    target.pathname = "/mortgage-application";
-    target.search = "";
+    const target = new URL(
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      publicSiteOriginForApplicationHost(host),
+    );
     return NextResponse.redirect(target);
   }
 
   const forwardedHeaders = new Headers(request.headers);
+  if (
+    !request.nextUrl.pathname.startsWith("/candidate") &&
+    !request.nextUrl.pathname.startsWith("/admin") &&
+    !request.nextUrl.pathname.startsWith("/auth")
+  ) {
+    return NextResponse.next({ request: { headers: forwardedHeaders } });
+  }
   let response = NextResponse.next({ request: { headers: forwardedHeaders } });
   const supabase = createServerClient(
     process.env.SUPABASE_INTERNAL_URL ??
@@ -99,11 +137,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/",
-    "/mortgage-application",
-    "/api/v1/borrower-applications/:path*",
-    "/candidate/:path*",
-    "/admin/:path*",
-    "/auth/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 };

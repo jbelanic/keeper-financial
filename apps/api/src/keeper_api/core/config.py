@@ -171,7 +171,11 @@ class Settings(BaseSettings):
                 errors.append("wildcard CORS is prohibited")
             for origin in [self.web_origin, *self.cors_origin_list]:
                 parsed = urlparse(origin)
-                if parsed.scheme != "http" or parsed.hostname not in {"localhost", "127.0.0.1"}:
+                if parsed.scheme != "http" or parsed.hostname not in {
+                    "localhost",
+                    "127.0.0.1",
+                    "apply.localhost",
+                }:
                     errors.append("live web origins must use local-host HTTP")
                     break
             database = urlparse(self.database_url)

@@ -2,6 +2,8 @@ import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
 
+from keeper_api.core.config import Settings
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SUPABASE_CONFIG_PATH = PROJECT_ROOT / "supabase" / "config.toml"
 
@@ -152,6 +154,37 @@ def test_compose_api_waits_for_clamav_and_uses_internal_fail_closed_scanner() ->
     assert "CLAMAV_READ_TIMEOUT_SECONDS: 15" in api_service
     assert "clamav:\n        condition: service_healthy" in api_service
     assert "MALWARE_SCANNER_BACKEND: disabled" not in api_service
+
+
+def test_local_compose_allows_application_subdomain_for_contact_cors() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
+
+    assert "http://apply.localhost:3000" in api_service
+    settings = Settings(  # type: ignore[call-arg]
+        _env_file=None,
+        app_env="production",
+        debug=False,
+        dev_auth_enabled=False,
+        require_admin_mfa=True,
+        web_origin="http://localhost:3000",
+        cors_origins="http://localhost:3000,http://apply.localhost:3000",
+        database_url="postgresql+psycopg://keeper:secret@db:5432/keeper",
+        supabase_issuer="http://127.0.0.1:54321/auth/v1",
+        supabase_jwks_url=("http://host.docker.internal:54321/auth/v1/.well-known/jwks.json"),
+        supabase_user_url="http://host.docker.internal:54321/auth/v1/user",
+        supabase_anon_key="synthetic-local-anon-key",
+        storage_backend="s3",
+        malware_scanner_backend="clamav",
+        clamav_host="clamav",
+        clamav_port=3310,
+        s3_endpoint_url="http://minio:9000",
+        s3_public_endpoint_url="http://localhost:9000",
+        s3_access_key_id="synthetic-local-access-id",
+        s3_secret_access_key="synthetic-local-secret",
+        s3_bucket="keeper-private",
+    )
+    assert "http://apply.localhost:3000" in settings.cors_origin_list
 
 
 def test_compose_routes_documenso_through_loopback_only_tls_with_explicit_trust() -> None:
