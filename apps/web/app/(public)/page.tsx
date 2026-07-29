@@ -3,7 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { SectionHeading } from "@keeper/ui";
 import { CtaBand, Icon, PageHero, ServiceCard } from "@/lib/public-components";
-import { mortgageServices, processSteps } from "@/lib/public-content";
+import {
+  mortgageServices,
+  processSteps,
+  recruitmentContent,
+} from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -145,20 +149,19 @@ export default function HomePage() {
       <section className="recruitment-feature">
         <div className="container recruitment-grid">
           <div className="recruitment-copy">
-            <p className="eyebrow eyebrow-light">Join Keeper Financial</p>
-            <h2>Explore currently published opportunities.</h2>
-            <p>
-              Each posting describes its own responsibilities, requirements and
-              application process. You do not need an account to browse.
+            <p className="eyebrow eyebrow-light">
+              {recruitmentContent.home.eyebrow}
             </p>
+            <h2>{recruitmentContent.home.heading}</h2>
+            <p>{recruitmentContent.home.body}</p>
             <Link className="button-link" href="/careers">
-              Join Keeper Financial
+              {recruitmentContent.home.ctaLabel}
             </Link>
           </div>
           <div className="recruitment-image">
             <Image
               src="/images/recruitment-team.png"
-              alt="Three mortgage professionals talking in a modern office"
+              alt={recruitmentContent.hero.imageAlt}
               fill
               sizes="(max-width: 832px) 100vw, 52vw"
             />

@@ -387,6 +387,97 @@ export const processSteps = [
   },
 ] as const;
 
+export const recruitmentContent = {
+  hero: {
+    eyebrow: "Mortgage agent careers in Ontario",
+    title: "Build your mortgage business. Keep more control.",
+    lead: "Keeper offers competitive compensation, more earning potential, access to lead opportunities and the autonomy to run your business your way, backed by hands-on coaching, mentorship and dedicated brokerage support.",
+    imageAlt:
+      "An editorial image of three professionals in conversation in a modern office setting",
+    ctaLabel: "Explore the current opportunity",
+    ctaNote: "Review the role before creating an account.",
+  },
+  benefits: {
+    eyebrow: "Why Keeper",
+    heading: "What you can build with Keeper",
+    lead: "A brokerage relationship designed to give ambitious mortgage professionals room to grow, backed by practical support.",
+    items: [
+      {
+        heading: "More room to earn",
+        body: "Competitive compensation creates more room to grow your earning potential.",
+      },
+      {
+        heading: "Run your business your way",
+        body: "Keep autonomy over how you build client relationships, with brokerage responsibilities and support clearly in place.",
+      },
+      {
+        heading: "Leads available",
+        body: "Access lead opportunities alongside the business and relationships you develop yourself.",
+      },
+      {
+        heading: "Hands-on support",
+        body: "Build with coaching, mentorship and dedicated brokerage support behind you.",
+      },
+      {
+        heading: "Broader lender access",
+        body: "Work with access to a broad lender network and support navigating available options.",
+      },
+    ],
+  },
+  journey: {
+    eyebrow: "Candidate journey",
+    heading: "What the candidate journey looks like",
+    lead: "Start by understanding the opportunity. An account is only needed when you choose to apply.",
+    steps: [
+      {
+        heading: "Review the published opportunity",
+        body: "Read the role details without creating an account.",
+      },
+      {
+        heading: "Create an account and save a draft",
+        body: "Begin a posting-specific application and return to your saved draft in the candidate portal.",
+      },
+      {
+        heading: "Follow your application",
+        body: "View candidate-visible status updates and messages through the portal.",
+      },
+      {
+        heading: "Complete onboarding if selected",
+        body: "Selected candidates move into Keeper's controlled onboarding process.",
+      },
+    ],
+  },
+  home: {
+    eyebrow: "Mortgage agent careers in Ontario",
+    heading: "Build your mortgage business. Keep more control.",
+    body: "Explore a Keeper career with competitive compensation, autonomy, lead opportunities and hands-on brokerage support.",
+    ctaLabel: "Explore careers at Keeper",
+  },
+  application: {
+    eyebrow: "Application process",
+    heading: "How the application works",
+    lead: "Choose the entry path that fits you. Both options keep your application tied to this exact opportunity.",
+    steps: [
+      {
+        heading: "Choose your account path",
+        body: "Create an account or sign in with an existing account from this opportunity.",
+      },
+      {
+        heading: "Prepare your application",
+        body: "Save a posting-specific draft and submit it when the required sections are complete.",
+      },
+      {
+        heading: "Follow status and messages",
+        body: "Candidate-visible updates stay available through the portal.",
+      },
+      {
+        heading: "Onboard if selected",
+        body: "Selection may lead to Keeper's controlled onboarding process.",
+      },
+    ],
+  },
+} as const;
+
 export function getMortgageService(slug: string) {
   return mortgageServices.find((service) => service.slug === slug);
 }

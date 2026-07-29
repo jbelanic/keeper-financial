@@ -993,7 +993,7 @@ p {
   object-position: 58% center;
 }
 .recruitment-image img {
-  object-position: center;
+  object-position: 72% center;
 }
 .page-lead {
   font-size: clamp(1.05rem, 1.6vw, 1.22rem);
@@ -1270,6 +1270,175 @@ p {
   overflow: hidden;
   position: relative;
   width: 100%;
+}
+.opportunity-page {
+  padding-bottom: clamp(3.5rem, 8vw, 6.5rem);
+}
+.opportunity-header {
+  background:
+    radial-gradient(
+      circle at 88% 16%,
+      rgb(182 120 24 / 10%),
+      transparent 24rem
+    ),
+    linear-gradient(110deg, var(--color-surface), var(--color-paper));
+  border-bottom: 1px solid var(--color-border);
+}
+.opportunity-header-inner {
+  padding-block: clamp(2.5rem, 7vw, 5.5rem);
+}
+.opportunity-header .breadcrumbs {
+  font-size: 0.86rem;
+  margin: 0 0 clamp(2rem, 5vw, 4rem);
+}
+.opportunity-header h1,
+.opportunity-header .page-lead {
+  overflow-wrap: anywhere;
+}
+.opportunity-content {
+  display: grid;
+  gap: clamp(2.5rem, 7vw, 5rem);
+  max-width: 64rem;
+  padding-top: clamp(3rem, 7vw, 5.5rem);
+}
+.posting-content {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+}
+.posting-body {
+  color: var(--color-ink-soft);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.application-steps .section-heading {
+  margin-bottom: 2rem;
+}
+.opportunity-step-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.opportunity-step-grid li {
+  border-top: 3px solid var(--color-accent);
+  padding: 1.4rem 1.2rem 0;
+}
+.opportunity-step-grid li > span {
+  color: var(--color-accent-strong);
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+.posting-warnings {
+  background: var(--color-surface);
+  border-left: 4px solid var(--color-accent);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+.posting-warnings p:last-child {
+  margin-bottom: 0;
+}
+.opportunity-actions {
+  background: var(--color-charcoal);
+  border-radius: var(--radius-md);
+  color: white;
+  padding: clamp(1.5rem, 5vw, 3rem);
+}
+.opportunity-actions h2,
+.opportunity-actions p {
+  color: white;
+}
+.opportunity-actions .eyebrow {
+  color: #f0c47c;
+}
+.opportunity-actions .text-link {
+  color: #f0c47c;
+  margin-top: 1.5rem;
+}
+.opportunity-actions .button-secondary {
+  border-color: white;
+  color: var(--color-ink);
+}
+.recruitment-hero .page-hero-media {
+  aspect-ratio: 5 / 4;
+}
+.recruitment-hero .page-hero-media img {
+  object-position: 72% center;
+}
+.hero-microcopy {
+  font-size: 0.88rem;
+  margin-bottom: 0;
+  margin-top: 0.8rem;
+}
+.recruitment-benefits {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.recruitment-benefits article {
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  grid-column: span 2;
+  min-height: 15rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+.recruitment-benefits article:nth-last-child(-n + 2) {
+  grid-column: span 3;
+}
+.recruitment-benefits .line-icon {
+  color: var(--color-accent);
+  height: 2.4rem;
+  margin-bottom: 1.5rem;
+  width: 2.4rem;
+}
+.recruitment-benefits h3 {
+  font-family: var(--font-display);
+}
+.recruitment-state {
+  max-width: 58rem;
+}
+.featured-opportunity {
+  background: linear-gradient(
+    120deg,
+    var(--color-charcoal),
+    var(--color-charcoal-soft)
+  );
+  border-radius: var(--radius-md);
+  color: white;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+}
+.featured-opportunity h2,
+.featured-opportunity p {
+  color: white;
+}
+.featured-opportunity h2 {
+  overflow-wrap: anywhere;
+}
+.featured-opportunity .eyebrow {
+  color: #f0c47c;
+}
+
+.posting-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+.posting-card {
+  display: flex;
+  flex-direction: column;
+}
+.posting-card h3,
+.posting-card p {
+  overflow-wrap: anywhere;
+}
+.recruitment-journey .section-heading {
+  margin-bottom: 0;
 }
 .cta-band {
   align-items: center;
@@ -1621,8 +1790,17 @@ p {
   }
   .service-grid,
   .numbered-cards,
-  .value-grid.four-up {
+  .value-grid.four-up,
+  .recruitment-benefits {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .recruitment-benefits article,
+  .recruitment-benefits article:nth-last-child(-n + 2) {
+    grid-column: auto;
+  }
+
+  .recruitment-hero .page-hero-media {
+    aspect-ratio: 4 / 3;
   }
   .service-card {
     min-height: 16rem;
@@ -1665,9 +1843,12 @@ p {
   .service-grid,
   .numbered-cards,
   .value-grid.four-up,
+  .recruitment-benefits,
+  .opportunity-step-grid,
   .footer-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
   .trust-strip > div,
   .trust-strip > div:nth-child(even),
   .trust-strip > div:nth-child(n + 3) {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@keeper/ui";
+import { recruitmentContent } from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
 import { getPublishedPosting } from "@/lib/recruitment-api";
 
@@ -39,23 +40,60 @@ export default async function CareerOpportunityPage({ params }: Props) {
     notFound();
   }
   if (!posting) notFound();
+
   return (
-    <article className="section">
-      <div className="container reading-layout">
-        <Breadcrumbs
-          items={[
-            { label: "Careers", href: "/careers" },
-            { label: posting.title },
-          ]}
-        />
-        <header className="foundation-header">
+    <article className="opportunity-page">
+      <header className="opportunity-header">
+        <div className="container opportunity-header-inner">
+          <Breadcrumbs
+            items={[
+              { label: "Careers", href: "/careers" },
+              { label: posting.title },
+            ]}
+          />
           <p className="eyebrow">Current opportunity</p>
           <h1>{posting.title}</h1>
-          <p>{posting.summary}</p>
-        </header>
-        <div className="posting-body">{posting.body}</div>
-        <section className="posting-warnings" aria-label="Before you apply">
-          <h2>Before you apply</h2>
+          <p className="page-lead">{posting.summary}</p>
+        </div>
+      </header>
+
+      <div className="container opportunity-content">
+        <section
+          className="posting-content"
+          aria-labelledby="opportunity-details-heading"
+        >
+          <p className="eyebrow">Role overview</p>
+          <h2 id="opportunity-details-heading">Opportunity details</h2>
+          <div className="posting-body">{posting.body}</div>
+        </section>
+
+        <section
+          className="application-steps"
+          aria-labelledby="application-steps-heading"
+        >
+          <div className="section-heading">
+            <p className="eyebrow">{recruitmentContent.application.eyebrow}</p>
+            <h2 id="application-steps-heading">
+              {recruitmentContent.application.heading}
+            </h2>
+            <p>{recruitmentContent.application.lead}</p>
+          </div>
+          <ol className="opportunity-step-grid">
+            {recruitmentContent.application.steps.map((step, index) => (
+              <li key={step.heading}>
+                <span aria-hidden="true">{index + 1}</span>
+                <h3>{step.heading}</h3>
+                <p>{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section
+          className="posting-warnings"
+          aria-labelledby="before-apply-heading"
+        >
+          <h2 id="before-apply-heading">Before you apply</h2>
           <p>
             Submitting an application does not guarantee an interview,
             selection, onboarding, engagement or employment.
@@ -70,23 +108,37 @@ export default async function CareerOpportunityPage({ params }: Props) {
             Financial before submitting your application.
           </p>
         </section>
-        <div className="button-row">
-          <Link
-            className="button-link"
-            href={`/auth/register?posting=${encodeURIComponent(posting.slug)}`}
-          >
-            Create an account
-          </Link>
-          <Link
-            className="button-link button-secondary"
-            href={`/auth/sign-in?posting=${encodeURIComponent(posting.slug)}`}
-          >
-            Sign in with an existing account
-          </Link>
+
+        <section
+          className="opportunity-actions"
+          aria-labelledby="apply-heading"
+        >
+          <div>
+            <p className="eyebrow">Your next step</p>
+            <h2 id="apply-heading">Choose how to continue</h2>
+            <p>
+              New candidates can create an account. Returning candidates can
+              sign in. Both paths remain tied to this opportunity.
+            </p>
+          </div>
+          <div className="button-row">
+            <Link
+              className="button-link"
+              href={`/auth/register?posting=${encodeURIComponent(posting.slug)}`}
+            >
+              Create an account
+            </Link>
+            <Link
+              className="button-link button-secondary"
+              href={`/auth/sign-in?posting=${encodeURIComponent(posting.slug)}`}
+            >
+              Sign in with an existing account
+            </Link>
+          </div>
           <Link className="text-link" href="/careers">
             Back to opportunities
           </Link>
-        </div>
+        </section>
       </div>
     </article>
   );
