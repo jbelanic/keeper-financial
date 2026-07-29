@@ -115,25 +115,27 @@ duplicate subject, inactive user, or missing admin role. It never grants a
 role, creates a Supabase Auth user, uses service-role credentials, or links an
 identity merely because email addresses match.
 
-1. Confirm the loopback-only Supabase stack and application services are healthy and that the local application fixtures have been seeded. Open local Studio at `http://127.0.0.1:54323` from the continuation host only.
+1. Confirm the loopback-only Supabase stack and application services are healthy and that the local application fixtures have been seeded with `make seed`. The seed wrapper runs inside the API container so it uses the same Docker database URL and `/run/secrets` borrower key mounts as the running API. Open local Studio at `http://127.0.0.1:54323` from the continuation host only.
 2. In **Authentication → Users**, create the synthetic Auth user `admin@example.test` with an operator-controlled local-only password and **Auto Confirm User** enabled. Do not use a real person's email or credential.
 3. Open that Auth user and copy only its **User UID**. Do not copy a token, cookie, provider payload, confirmation link, service-role key, JWT secret, or password.
-4. From the repository root, pass that UUID explicitly to one of these equivalent commands. Do not store it in `.env` or source control:
+4. If `admin@example.test` was previously linked to the wrong local Auth UID, reset only that synthetic administrator mapping back to the seeded placeholder. This is a local-only operator recovery command; it does not grant roles, create users, or affect any other identity:
 
    ```bash
-   APP_ENV=local .venv/bin/python apps/api/scripts/link_local_admin_identity.py \
-     --email admin@example.test \
-     --subject '<SUPABASE_USER_UUID>'
+   make reset-local-admin
+   ```
 
+5. From the repository root, pass the current local Auth user UUID explicitly to the supported Docker wrapper. It runs inside the API container so the command uses the same Compose database URL and `/run/secrets` borrower key mounts as the running API. Do not store the UUID in `.env` or source control:
+
+   ```bash
    make link-local-admin SUPABASE_SUBJECT='<SUPABASE_USER_UUID>'
    ```
 
    The expected bounded result is either `The local administrator identity was linked successfully.` or the idempotent `The local administrator identity is already linked.` Any refusal is a stop condition; do not edit application or Auth tables by hand.
 
-5. Open `http://localhost:3000/auth/sign-in?returnTo=/admin` and sign in as the synthetic Auth user. The return path supplies navigation intent only and cannot grant application authorization.
-6. Continue at `/auth/mfa?returnTo=/admin`. Select **Begin TOTP enrollment**, scan the displayed QR code (or privately enter its one-time setup key), enter the current six-digit code, and select **Verify authenticator**. Do not put the setup key or codes in logs, screenshots, shell history, or reports.
-7. Select **Continue to administration**. Loading `/admin` invokes `GET /api/v1/auth/access?area=admin` server-side; reaching the authorized shell proves that the access probe returned success for the current AAL2 session. To retain bounded operational evidence without exporting a token, run `docker compose logs --since=2m api` and confirm the access request completed with status `200`. Do not enable verbose authorization-header logging. A denial must return to sign-in or MFA and must not be bypassed.
-8. Open `http://localhost:3000/admin/candidates` and `http://localhost:3000/admin/onboarding`. Both routes repeat server/API authorization; navigation visibility alone is not evidence of access.
+6. Open `http://localhost:3000/auth/sign-in?returnTo=/admin` and sign in as the synthetic Auth user. The return path supplies navigation intent only and cannot grant application authorization.
+7. Continue at `/auth/mfa?returnTo=/admin`. Select **Begin TOTP enrollment**, scan the displayed QR code (or privately enter its one-time setup key), enter the current six-digit code, and select **Verify authenticator**. Do not put the setup key or codes in logs, screenshots, shell history, or reports.
+8. Select **Continue to administration**. Loading `/admin` invokes `GET /api/v1/auth/access?area=admin` server-side; reaching the authorized shell proves that the access probe returned success for the current AAL2 session. To retain bounded operational evidence without exporting a token, run `docker compose logs --since=2m api` and confirm the access request completed with status `200`. Do not enable verbose authorization-header logging. A denial must return to sign-in or MFA and must not be bypassed.
+9. Open `http://localhost:3000/admin/candidates` and `http://localhost:3000/admin/onboarding`. Both routes repeat server/API authorization; navigation visibility alone is not evidence of access.
 
 No shell command can safely reproduce the browser's cookie-bound TOTP session
 without exporting an access token, so the supported access check is the exact

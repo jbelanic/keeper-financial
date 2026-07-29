@@ -189,6 +189,30 @@ def test_host_run_api_uses_loopback_clamav_and_minio_endpoints() -> None:
     assert "S3_ENDPOINT_URL=http://minio:9000" not in launcher
 
 
+def test_local_operator_database_commands_run_inside_api_container() -> None:
+    makefile = (PROJECT_ROOT / "Makefile").read_text()
+    seed = makefile.split("\nseed:\n", maxsplit=1)[1].split("\n\nADMIN_EMAIL", maxsplit=1)[0]
+    reset_local_admin = makefile.split("\nreset-local-admin:\n", maxsplit=1)[1].split(
+        "\n\nADMIN_EMAIL", maxsplit=1
+    )[0]
+    link_local_admin = makefile.split("\nlink-local-admin:\n", maxsplit=1)[1].split(
+        "\n\nopenapi:", maxsplit=1
+    )[0]
+
+    assert "docker compose run --rm --build -e APP_ENV=local api python scripts/seed_local.py" in seed
+    assert ".venv/bin/python apps/api/scripts/seed_local.py" not in seed
+    assert (
+        "docker compose run --rm --build -e APP_ENV=local api python "
+        "scripts/link_local_admin_identity.py --reset-admin-placeholder"
+    ) in reset_local_admin
+    assert ".venv/bin/python apps/api/scripts/link_local_admin_identity.py" not in reset_local_admin
+    assert (
+        "docker compose run --rm --build -e APP_ENV=local api python "
+        "scripts/link_local_admin_identity.py"
+    ) in link_local_admin
+    assert ".venv/bin/python apps/api/scripts/link_local_admin_identity.py" not in link_local_admin
+
+
 def test_compose_web_uses_internal_server_routes_and_public_browser_routes() -> None:
     compose = (PROJECT_ROOT / "compose.yaml").read_text()
     web_service = compose.split("\n  web:\n", maxsplit=1)[1].split("\nvolumes:", maxsplit=1)[0]

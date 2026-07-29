@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from keeper_api.models.domain import Role, User, UserIdentity, UserRole
 
 SEEDED_ADMIN_SUBJECT = "00000000-0000-4000-8000-000000000002"
+SEEDED_ADMIN_EMAIL = "admin@example.test"
 
 
 class LocalAdminIdentityLinkError(ValueError):
@@ -121,12 +122,80 @@ def link_local_admin_identity(
     return LinkResult(changed=True)
 
 
+def _load_single_local_admin_identity(db: Session) -> UserIdentity:
+    user = db.scalar(select(User).where(User.email == SEEDED_ADMIN_EMAIL).with_for_update())
+    if user is None:
+        raise LocalAdminIdentityLinkError("The local administrator account was not found.")
+    if not user.is_active:
+        raise LocalAdminIdentityLinkError("The local administrator account is inactive.")
+
+    roles = set(
+        db.scalars(
+            select(Role.code)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == user.id)
+        ).all()
+    )
+    if "brokerage_admin" not in roles:
+        raise LocalAdminIdentityLinkError(
+            "The local account does not have the brokerage_admin role."
+        )
+
+    identities = list(
+        db.scalars(
+            select(UserIdentity)
+            .where(
+                UserIdentity.user_id == user.id,
+                UserIdentity.provider == "supabase",
+            )
+            .with_for_update()
+        ).all()
+    )
+    if len(identities) != 1:
+        raise LocalAdminIdentityLinkError(
+            "Exactly one existing Supabase identity is required for the local administrator."
+        )
+    return identities[0]
+
+
+def reset_local_admin_identity(db: Session, *, app_env: str) -> LinkResult:
+    """Reset only the synthetic local administrator to the seeded placeholder."""
+    if app_env != "local":
+        raise LocalAdminIdentityLinkError("Local administrator reset requires APP_ENV=local.")
+
+    identity = _load_single_local_admin_identity(db)
+    if identity.provider_subject == SEEDED_ADMIN_SUBJECT:
+        return LinkResult(changed=False)
+
+    duplicate = db.scalar(
+        select(UserIdentity).where(
+            UserIdentity.provider == "supabase",
+            UserIdentity.provider_subject == SEEDED_ADMIN_SUBJECT,
+            UserIdentity.user_id != identity.user_id,
+        )
+    )
+    if duplicate is not None:
+        raise LocalAdminIdentityLinkError(
+            "The seeded administrator placeholder is already linked to another local account."
+        )
+
+    identity.provider_subject = SEEDED_ADMIN_SUBJECT
+    identity.verified_at = None
+    db.flush()
+    return LinkResult(changed=True)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Link a real local Supabase subject to a seeded local brokerage admin."
     )
-    parser.add_argument("--email", required=True, help="Existing local administrator email")
-    parser.add_argument("--subject", required=True, help="Local Supabase Auth user UUID")
+    parser.add_argument("--email", help="Existing local administrator email")
+    parser.add_argument("--subject", help="Local Supabase Auth user UUID")
+    parser.add_argument(
+        "--reset-admin-placeholder",
+        action="store_true",
+        help="Reset only admin@example.test to the seeded local Supabase placeholder.",
+    )
     return parser
 
 
@@ -147,12 +216,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     try:
         with SessionLocal.begin() as db:
-            result = link_local_admin_identity(
-                db,
-                app_env=settings.app_env,
-                email=args.email,
-                subject=args.subject,
-            )
+            if args.reset_admin_placeholder:
+                if args.email or args.subject:
+                    print(
+                        "The reset command does not accept --email or --subject.",
+                        file=sys.stderr,
+                    )
+                    return 2
+                result = reset_local_admin_identity(db, app_env=settings.app_env)
+            else:
+                if not args.email or not args.subject:
+                    print("--email and --subject are required for linking.", file=sys.stderr)
+                    return 2
+                result = link_local_admin_identity(
+                    db,
+                    app_env=settings.app_env,
+                    email=args.email,
+                    subject=args.subject,
+                )
     except LocalAdminIdentityLinkError as exc:
         print(str(exc), file=sys.stderr)
         return 1
@@ -160,7 +241,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("The local administrator identity update could not be completed.", file=sys.stderr)
         return 1
 
-    if result.changed:
+    if args.reset_admin_placeholder and result.changed:
+        print("The local administrator identity was reset to the seeded placeholder.")
+    elif args.reset_admin_placeholder:
+        print("The local administrator identity is already the seeded placeholder.")
+    elif result.changed:
         print("The local administrator identity was linked successfully.")
     else:
         print("The local administrator identity is already linked.")
