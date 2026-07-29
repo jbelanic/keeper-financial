@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { siteConfig } from "@/lib/site-config";
+
+function publicPath(path: string) {
+  return new URL(path, siteConfig.siteUrl).toString();
+}
 
 export default function BorrowerApplicationLayout({
   children,
@@ -19,9 +24,14 @@ export default function BorrowerApplicationLayout({
               <span>Financial</span>
             </span>
           </span>
-          <span className="borrower-security-label">
-            <span aria-hidden="true">●</span> Private application
-          </span>
+          <div className="borrower-header-actions">
+            <span className="borrower-security-label">
+              <span aria-hidden="true">●</span> Private application
+            </span>
+            <Link className="borrower-exit-link" href={publicPath("/apply")}>
+              Exit application
+            </Link>
+          </div>
         </div>
       </header>
       <main id="main-content" className="borrower-main">
@@ -31,8 +41,8 @@ export default function BorrowerApplicationLayout({
         <div className="container">
           <p>
             Need general help? Return to the{" "}
-            <Link href="/apply">Get started page</Link>. Do not send application
-            answers by email.
+            <Link href={publicPath("/apply")}>Get started page</Link>. Do not
+            send application answers by email.
           </p>
         </div>
       </footer>

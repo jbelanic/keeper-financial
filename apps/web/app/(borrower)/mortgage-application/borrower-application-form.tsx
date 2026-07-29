@@ -705,28 +705,20 @@ export function BorrowerApplicationForm({
   return (
     <div className="container borrower-page">
       <header className="borrower-intro">
-        <p className="eyebrow">Same-browser private draft</p>
         <h1>Mortgage application</h1>
-        <p>
-          Save one section at a time. Your answers stay in encrypted server
-          state; this page does not place them in browser storage, URLs,
-          analytics, or server-rendered markup.
-        </p>
-        <p className="notice">
-          Do not use a shared device. This draft can resume only while this
-          browser retains its secure capability cookie. Final submission and
-          this browser retains its secure capability cookie.
-        </p>
         {recovered ? (
           restoredData ? (
-            <p className="save-feedback save-feedback-saved" role="status">
+            <p
+              className="borrower-inline-status save-feedback-saved"
+              role="status"
+            >
               Existing private draft recovered. Saved non-SIN answers have been
               restored; SIN remains provided/masked only.
             </p>
           ) : (
-            <p className="notice" role="status">
-              We found your saved draft, but no previous answers were recovered
-              yet. Continue where you left off.
+            <p className="borrower-inline-status" role="status">
+              Saved draft found. No previous answers were restored yet; continue
+              where you left off.
             </p>
           )
         ) : null}
@@ -769,7 +761,11 @@ export function BorrowerApplicationForm({
         </section>
       ) : null}
       <section aria-labelledby="borrower-step-heading">
-        <h2 id="borrower-step-heading" tabIndex={-1}>
+        <h2
+          className="visually-hidden"
+          id="borrower-step-heading"
+          tabIndex={-1}
+        >
           {steps[step]}
         </h2>
         {section}
@@ -835,6 +831,12 @@ export function BorrowerApplicationForm({
                 : ""}
         </p>
       </div>
+      <p className="borrower-privacy-note">
+        Your draft is saved section by section in Keeper&apos;s encrypted server
+        state, not in browser storage, URLs, analytics, or server-rendered
+        markup. Use a private device; this browser needs its secure capability
+        cookie to resume the draft.
+      </p>
     </div>
   );
 }

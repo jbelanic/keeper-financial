@@ -190,13 +190,6 @@ export function MortgagePurposeSection({
           Add a down-payment source
         </Button>
       ) : null}
-      {value.preferred_agent_slug ? (
-        <p className="notice">
-          Agent preference received:{" "}
-          <strong>{value.preferred_agent_slug}</strong>. Keeper verifies
-          eligibility on the server; this is not an assignment guarantee.
-        </p>
-      ) : null}
     </fieldset>
   );
 }

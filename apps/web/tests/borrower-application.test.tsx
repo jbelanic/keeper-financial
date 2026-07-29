@@ -43,6 +43,15 @@ describe("accountless borrower application form", () => {
     expect(
       await screen.findByRole("heading", { name: "Mortgage application" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Same-browser private draft"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Save one section at a time/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Your draft is saved section by section/i),
+    ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Mortgage purpose (required)"), {
       target: { value: "purchase" },
     });
@@ -187,7 +196,7 @@ describe("accountless borrower application form", () => {
 
     expect(
       await screen.findByText(
-        "We found your saved draft, but no previous answers were recovered yet. Continue where you left off.",
+        "Saved draft found. No previous answers were restored yet; continue where you left off.",
       ),
     ).toBeInTheDocument();
     expect(
