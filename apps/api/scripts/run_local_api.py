@@ -28,6 +28,16 @@ def main() -> None:
     if os.environ.get("MINIO_BUCKET", "").strip():
         os.environ["S3_BUCKET"] = os.environ["MINIO_BUCKET"]
 
+    # Host-run mode has no /run/secrets mount; remap the borrower secret files
+    # to the local ./secrets directory so the API can start without Docker.
+    local_secrets_dir = Path(__file__).resolve().parents[3] / "secrets"
+    for env_var, filename in (
+        ("BORROWER_ENCRYPTION_KEYRING_FILE", "borrower_encryption_keyring"),
+        ("BORROWER_CAPABILITY_HMAC_KEY_FILE", "borrower_capability_hmac_key"),
+    ):
+        if os.environ.get(env_var, "").strip():
+            os.environ[env_var] = str(local_secrets_dir / filename)
+
     uvicorn.run(
         "keeper_api.main:app",
         app_dir="apps/api/src",

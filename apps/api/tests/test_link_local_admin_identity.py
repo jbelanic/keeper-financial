@@ -83,6 +83,41 @@ def test_replaces_only_known_placeholder_and_is_idempotent(db: Session) -> None:
     assert identity.verified_at == first_verified_at
 
 
+def test_reset_local_admin_identity_restores_only_admin_placeholder(db: Session) -> None:
+    _admin, admin_identity = make_admin(db, subject=str(uuid.uuid4()))
+    _other, other_identity = make_admin(
+        db,
+        email="other-admin@example.test",
+        subject=str(uuid.uuid4()),
+    )
+    other_subject = other_identity.provider_subject
+
+    result = linker.reset_local_admin_identity(db, app_env="local")
+    db.commit()
+
+    assert result.changed is True
+    assert admin_identity.provider_subject == linker.SEEDED_ADMIN_SUBJECT
+    assert admin_identity.verified_at is None
+    assert other_identity.provider_subject == other_subject
+
+
+def test_reset_local_admin_identity_is_idempotent_for_placeholder(db: Session) -> None:
+    _admin, admin_identity = make_admin(db, subject=linker.SEEDED_ADMIN_SUBJECT)
+
+    result = linker.reset_local_admin_identity(db, app_env="local")
+    db.commit()
+
+    assert result.changed is False
+    assert admin_identity.provider_subject == linker.SEEDED_ADMIN_SUBJECT
+
+
+def test_reset_local_admin_identity_refuses_non_local_environment(db: Session) -> None:
+    make_admin(db, subject=str(uuid.uuid4()))
+
+    with pytest.raises(linker.LocalAdminIdentityLinkError, match="APP_ENV=local"):
+        linker.reset_local_admin_identity(db, app_env="production")
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [

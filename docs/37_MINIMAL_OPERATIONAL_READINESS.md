@@ -22,8 +22,11 @@ read-only files (or an equivalent deployment secret mount):
   capabilities.
 
 ### Local bootstrap (already performed for the local stack)
-Secrets are generated into `storage/local-secrets/` (gitignored) and bind-mounted into the
-API container at `/run/secrets` via `compose.override.yaml`. They are never committed.
+Secrets are generated into `secrets/` (gitignored) and bind-mounted into the API container
+at `/run/secrets` by the tracked Compose API service. Local operator commands that need the
+application database, including `make seed` and `make link-local-admin`, run inside the API
+container so they use the same Docker database URL and secret mounts as the running API. The
+secret files are never committed.
 
 ### Backup / restore (free)
 - Copy both files to an encrypted offline location. Treat them as the crown jewels: anyone
