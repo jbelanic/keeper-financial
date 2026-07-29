@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import ApplyPage, { ApplyPaths } from "@/app/(public)/apply/page";
+import { ApplyPaths } from "@/app/(public)/apply/apply-paths";
+import ApplyPage from "@/app/(public)/apply/page";
 import { safeAgentAttribution } from "@/lib/lead-attribution";
 import { getPublicSiteConfig } from "@/lib/site-config";
 
