@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
+from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
 from keeper_api.models.domain import ConsentRecord
 from keeper_api.schemas.leads import (
@@ -19,6 +20,7 @@ from keeper_api.services.consent_registry import (
     MARKETING_CONSENT,
     SERVICE_CONTACT_CONSENT,
 )
+from keeper_api.services.lead_notifications import send_lead_notification_emails
 from keeper_api.services.leads import (
     InvalidLeadAttribution,
     LeadMarketingConsentNotFound,
@@ -41,6 +43,7 @@ def submit_lead(
     payload: LeadInquiryCreate,
     request: Request,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> LeadInquiryCreated:
     try:
         lead, marketing_recorded = create_lead(db, payload, request_id=request.state.request_id)
@@ -48,6 +51,7 @@ def submit_lead(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
+    send_lead_notification_emails(db, settings=settings, lead=lead)
     return LeadInquiryCreated(
         id=lead.id,
         status=lead.status,

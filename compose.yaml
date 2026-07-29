@@ -129,6 +129,14 @@ services:
       SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
       SUPABASE_USER_URL: http://host.docker.internal:54321/auth/v1/user
       SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
+      SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-host.docker.internal}
+      SMTP_PORT: ${SMTP_PORT:-54324}
+      SMTP_FROM: ${SMTP_FROM:-keeper@keeperfinancial.ca}
+      LEAD_NOTIFICATION_EMAIL_ENABLED: ${LEAD_NOTIFICATION_EMAIL_ENABLED:-false}
+      LEAD_NOTIFICATION_ADMIN_EMAIL: ${LEAD_NOTIFICATION_ADMIN_EMAIL:-}
+      LEAD_NOTIFICATION_BROKER_EMAIL: ${LEAD_NOTIFICATION_BROKER_EMAIL:-}
+      LEAD_NOTIFICATION_SUBJECT: ${LEAD_NOTIFICATION_SUBJECT:-New Keeper contact request received}
     ports:
       - "127.0.0.1:8000:8000"
     extra_hosts:

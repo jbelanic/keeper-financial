@@ -103,6 +103,10 @@ class Settings(BaseSettings):
     smtp_from: str = "no-reply@keeperfinancial.ca"
     smtp_use_tls: bool = False
     smtp_notification_subject: str = "A borrower application has been assigned to you"
+    lead_notification_email_enabled: bool = False
+    lead_notification_admin_email: str | None = None
+    lead_notification_broker_email: str | None = None
+    lead_notification_subject: str = "New Keeper contact request received"
     borrower_max_total_document_bytes: int = Field(
         default=250 * 1024 * 1024, ge=1, le=250 * 1024 * 1024
     )
