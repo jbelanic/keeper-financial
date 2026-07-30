@@ -13,6 +13,7 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export type ConsentState = components["schemas"]["ConsentState"];
 export type AdminLead = components["schemas"]["LeadListItem"];
 export type AdminLeadList = components["schemas"]["LeadListResponse"];
+export type LeadStatusUpdated = components["schemas"]["LeadStatusUpdated"];
 
 type QueueParams = { page: number; status?: LeadStatus };
 
@@ -77,6 +78,34 @@ export async function adminMarketingWithdrawalRequest(
   return (await response.json()) as ConsentState;
 }
 
+export async function adminLeadStatusRequest(
+  token: string,
+  leadId: string,
+  status: LeadStatus,
+  fetcher: typeof fetch = fetch,
+): Promise<LeadStatusUpdated> {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      leadId,
+    )
+  ) {
+    throw new Error("invalid lead identifier");
+  }
+  if (!LEAD_STATUSES.includes(status)) throw new Error("invalid lead status");
+  const baseUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8000";
+  const response = await fetcher(`${baseUrl}/api/v1/leads/${leadId}/status`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("lead status update unavailable");
+  return (await response.json()) as LeadStatusUpdated;
+}
+
 async function adminToken(): Promise<string> {
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase.auth.getSession();
@@ -95,4 +124,11 @@ export async function withdrawAdminLeadMarketing(
   leadId: string,
 ): Promise<ConsentState> {
   return adminMarketingWithdrawalRequest(await adminToken(), leadId);
+}
+
+export async function updateAdminLeadStatus(
+  leadId: string,
+  status: LeadStatus,
+): Promise<LeadStatusUpdated> {
+  return adminLeadStatusRequest(await adminToken(), leadId, status);
 }

@@ -200,7 +200,7 @@ export function ApplyForm({
             required
             minLength={7}
             maxLength={32}
-            pattern="[0-9+().\- x]+"
+            pattern="[0-9+\.\(\) x\-]+"
           />
         </FormField>
         <FormField

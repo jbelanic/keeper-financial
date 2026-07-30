@@ -78,6 +78,14 @@ describe("minimal contact form", () => {
     expect(screen.queryByLabelText(/bank account/i)).not.toBeInTheDocument();
   });
 
+  it("uses a browser-valid telephone pattern under the Unicode Sets flag", () => {
+    render(<ApplyForm />);
+    const pattern = screen.getByLabelText("Telephone").getAttribute("pattern");
+
+    expect(pattern).toBe("[0-9+\\.\\(\\) x\\-]+");
+    expect(() => new RegExp(pattern!, "v")).not.toThrow();
+  });
+
   it("submits safe attribution as hidden controlled data and resets only on success", async () => {
     const fetcher = vi.fn().mockResolvedValue(response(201));
     vi.stubGlobal("fetch", fetcher);

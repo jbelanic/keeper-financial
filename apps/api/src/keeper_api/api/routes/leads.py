@@ -14,6 +14,8 @@ from keeper_api.schemas.leads import (
     LeadListItem,
     LeadListQuery,
     LeadListResponse,
+    LeadStatusUpdate,
+    LeadStatusUpdated,
 )
 from keeper_api.services.auth import Principal, require_admin
 from keeper_api.services.consent_registry import (
@@ -23,9 +25,11 @@ from keeper_api.services.consent_registry import (
 from keeper_api.services.lead_notifications import send_lead_notification_emails
 from keeper_api.services.leads import (
     InvalidLeadAttribution,
+    LeadInquiryNotFound,
     LeadMarketingConsentNotFound,
     create_lead,
     list_leads,
+    update_lead_status,
     withdraw_marketing_consent,
 )
 
@@ -150,3 +154,38 @@ def withdraw_lead_marketing_consent(
             headers=NO_STORE,
         ) from exc
     return _consent_state(consent)
+
+
+@router.post(
+    "/{lead_id}/status",
+    response_model=LeadStatusUpdated,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Administrator access denied"},
+        404: {"description": "Lead unavailable"},
+    },
+)
+def update_admin_lead_status(
+    lead_id: uuid.UUID,
+    payload: LeadStatusUpdate,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> LeadStatusUpdated:
+    response.headers.update(NO_STORE)
+    try:
+        lead = update_lead_status(
+            db,
+            lead_id=lead_id,
+            status=payload.status,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except LeadInquiryNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="lead is unavailable",
+            headers=NO_STORE,
+        ) from exc
+    return LeadStatusUpdated(id=lead.id, status=lead.status)

@@ -90,6 +90,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/leads/{lead_id}/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Update Admin Lead Status */
+    post: operations["update_admin_lead_status_api_v1_leads__lead_id__status_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/integrations/mortgage-application": {
     parameters: {
       query?: never;
@@ -2638,6 +2655,27 @@ export interface components {
       /** Offset */
       offset: number;
     };
+    /** LeadStatusUpdate */
+    LeadStatusUpdate: {
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "new" | "assigned" | "contacted" | "closed";
+    };
+    /** LeadStatusUpdated */
+    LeadStatusUpdated: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "new" | "assigned" | "contacted" | "closed";
+    };
     /** ManualGateEvidenceCreate */
     ManualGateEvidenceCreate: {
       /**
@@ -3276,6 +3314,65 @@ export interface operations {
         content?: never;
       };
       /** @description Lead or marketing consent unavailable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_admin_lead_status_api_v1_leads__lead_id__status_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        lead_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadStatusUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadStatusUpdated"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Administrator access denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Lead unavailable */
       404: {
         headers: {
           [name: string]: unknown;
