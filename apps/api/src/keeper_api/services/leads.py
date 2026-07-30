@@ -25,6 +25,10 @@ class LeadMarketingConsentNotFound(ValueError):
     pass
 
 
+class LeadInquiryNotFound(ValueError):
+    pass
+
+
 def create_lead(
     db: Session,
     payload: LeadInquiryCreate,
@@ -164,6 +168,37 @@ def withdraw_marketing_consent(
             db.commit()
             db.refresh(consent)
         return consent
+    except Exception:
+        db.rollback()
+        raise
+
+
+def update_lead_status(
+    db: Session,
+    *,
+    lead_id: uuid.UUID,
+    status: str,
+    actor_user_id: uuid.UUID,
+    request_id: str | None,
+) -> LeadInquiry:
+    try:
+        lead = db.scalar(select(LeadInquiry).where(LeadInquiry.id == lead_id).with_for_update())
+        if lead is None:
+            raise LeadInquiryNotFound
+        previous_status = lead.status
+        if previous_status != status:
+            lead.status = status
+            AuditService(db).record(
+                "lead.status_changed",
+                "lead_inquiry",
+                lead.id,
+                actor_user_id=actor_user_id,
+                request_id=request_id,
+                safe_metadata={"from_status": previous_status, "to_status": status},
+            )
+            db.commit()
+            db.refresh(lead)
+        return lead
     except Exception:
         db.rollback()
         raise

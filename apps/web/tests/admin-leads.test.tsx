@@ -11,6 +11,7 @@ import { WithdrawalControl } from "@/app/(admin)/admin/leads/withdrawal-control"
 import {
   adminLeadListRequest,
   adminMarketingWithdrawalRequest,
+  adminLeadStatusRequest,
   parseLeadQueueSearchParams,
   type AdminLeadList,
 } from "@/lib/admin-leads";
@@ -114,9 +115,45 @@ describe("admin lead queue", () => {
     expect(fetchMock.mock.calls[0][1]).not.toHaveProperty("body");
   });
 
+  it("updates lead status through the authenticated no-store API boundary", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "00000000-0000-4000-8000-000000000001",
+        status: "contacted",
+      }),
+    });
+    const fetcher = fetchMock as unknown as typeof fetch;
+    await adminLeadStatusRequest(
+      "synthetic-token",
+      "00000000-0000-4000-8000-000000000001",
+      "contacted",
+      fetcher,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/leads/00000000-0000-4000-8000-000000000001/status",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer synthetic-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "contacted" }),
+        cache: "no-store",
+      },
+    );
+  });
+
   it("renders necessary lead details, text consent states, and bounded pagination", () => {
     render(
-      <LeadQueue data={data} page={1} status="new" withdrawAction={vi.fn()} />,
+      <LeadQueue
+        data={data}
+        page={1}
+        status="new"
+        withdrawAction={vi.fn()}
+        statusAction={vi.fn()}
+      />,
     );
     expect(
       screen.getByRole("heading", { name: "Synthetic Lead" }),
@@ -133,6 +170,12 @@ describe("admin lead queue", () => {
     expect(
       screen.queryByRole("link", { name: "Previous page" }),
     ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Set status for Synthetic Lead")).toHaveValue(
+      "new",
+    );
+    expect(
+      screen.getByRole("button", { name: "Update status for Synthetic Lead" }),
+    ).toBeInTheDocument();
   });
 
   it("renders a useful empty state", () => {

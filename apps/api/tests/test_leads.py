@@ -367,7 +367,7 @@ def _admin_headers(subject: str = "lead-admin", aal: str = "aal2") -> dict[str, 
         ("admin-aal2", 200),
     ],
 )
-@pytest.mark.parametrize("operation", ["list", "withdraw"])
+@pytest.mark.parametrize("operation", ["list", "withdraw", "status"])
 def test_admin_lead_operations_enforce_full_denial_matrix(
     client: TestClient,
     db: Session,
@@ -407,9 +407,15 @@ def test_admin_lead_operations_enforce_full_denial_matrix(
 
     if operation == "list":
         response = client.get("/api/v1/leads", headers=headers)
-    else:
+    elif operation == "withdraw":
         response = client.post(
             f"/api/v1/leads/{lead.id}/marketing-consent/withdrawal", headers=headers
+        )
+    else:
+        response = client.post(
+            f"/api/v1/leads/{lead.id}/status",
+            headers=headers,
+            json={"status": "contacted"},
         )
 
     assert response.status_code == expected
@@ -506,6 +512,64 @@ def test_marketing_withdrawal_is_idempotent_and_preserves_service_consent(
     assert audit.safe_metadata == {"capture_source": "website_apply"}
 
 
+def test_admin_can_update_lead_status_with_safe_audit_and_no_store(
+    client: TestClient, db: Session, settings: Settings
+) -> None:
+    settings.require_admin_mfa = True
+    admin, _ = create_user(db, subject="lead-status-admin", role_code="brokerage_admin")
+    lead = _lead(db, suffix="status", created_at=datetime.now(UTC), status="new")
+
+    first = client.post(
+        f"/api/v1/leads/{lead.id}/status",
+        headers={**_admin_headers("lead-status-admin"), "X-Request-ID": "lead-status-change"},
+        json={"status": "contacted"},
+    )
+
+    assert first.status_code == 200
+    assert first.headers["Cache-Control"] == "no-store"
+    assert first.json() == {"id": str(lead.id), "status": "contacted"}
+    db.expire_all()
+    assert db.get(LeadInquiry, lead.id).status == "contacted"  # type: ignore[union-attr]
+    audit = db.query(AuditEvent).filter(AuditEvent.event_type == "lead.status_changed").one()
+    assert audit.actor_user_id == admin.id
+    assert audit.target_type == "lead_inquiry"
+    assert audit.target_id == lead.id
+    assert audit.request_id == "lead-status-change"
+    assert audit.safe_metadata == {"from_status": "new", "to_status": "contacted"}
+
+    second = client.post(
+        f"/api/v1/leads/{lead.id}/status",
+        headers=_admin_headers("lead-status-admin"),
+        json={"status": "contacted"},
+    )
+    assert second.status_code == 200
+    assert db.query(AuditEvent).filter(AuditEvent.event_type == "lead.status_changed").count() == 1
+
+
+def test_admin_lead_status_update_rejects_unknown_lead_or_status(
+    client: TestClient, db: Session, settings: Settings
+) -> None:
+    settings.require_admin_mfa = True
+    create_user(db, subject="lead-status-admin", role_code="brokerage_admin")
+    lead = _lead(db, suffix="status-invalid", created_at=datetime.now(UTC), status="new")
+
+    invalid_status = client.post(
+        f"/api/v1/leads/{lead.id}/status",
+        headers=_admin_headers("lead-status-admin"),
+        json={"status": "pending"},
+    )
+    missing = client.post(
+        "/api/v1/leads/00000000-0000-4000-8000-000000000001/status",
+        headers=_admin_headers("lead-status-admin"),
+        json={"status": "closed"},
+    )
+
+    assert invalid_status.status_code == 422
+    assert missing.status_code == 404
+    assert missing.headers["Cache-Control"] == "no-store"
+    assert db.get(LeadInquiry, lead.id).status == "new"  # type: ignore[union-attr]
+
+
 @pytest.mark.parametrize("marketing", [False, True])
 def test_marketing_withdrawal_unknown_or_absent_consent_fails_safely(
     client: TestClient, db: Session, settings: Settings, marketing: bool
@@ -568,6 +632,7 @@ def test_contact_lead_notifies_selected_agent_and_admin_without_pii(
     client: TestClient, db: Session, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_lead_notifications(settings)
+    settings.smtp_port = 1025
     FakeLeadSMTP.messages = []
     monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
     agent = User(email="agent@example.test", display_name="Synthetic Agent")
@@ -607,12 +672,94 @@ def test_contact_lead_notifies_broker_and_admin_when_no_agent_selected(
     client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_lead_notifications(settings)
+    settings.smtp_port = 1025
     FakeLeadSMTP.messages = []
     monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
 
     response = client.post("/api/v1/leads", json=valid_payload())
 
     assert response.status_code == 201
+    assert [message["To"] for message in FakeLeadSMTP.messages] == [
+        "broker@example.test",
+        "admin@example.test",
+    ]
+
+
+def test_contact_lead_notification_uses_local_mailpit_http_api(
+    client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+    settings.smtp_host = "host.docker.internal"
+    FakeLeadSMTP.messages = []
+    attempted_urls: list[str] = []
+    sent_payloads: list[dict[str, object]] = []
+
+    class LocalMailpitResponse:
+        status = 200
+
+        def __enter__(self) -> "LocalMailpitResponse":
+            return self
+
+        def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+            return None
+
+    def fake_urlopen(api_request: object, timeout: int) -> LocalMailpitResponse:
+        attempted_urls.append(api_request.full_url)  # type: ignore[attr-defined]
+        if api_request.full_url.startswith("http://host.docker.internal"):  # type: ignore[attr-defined]
+            raise OSError("synthetic host gateway is unavailable on host API")
+        sent_payloads.append(json.loads(api_request.data.decode("utf-8")))  # type: ignore[attr-defined]
+        return LocalMailpitResponse()
+
+    monkeypatch.setattr("keeper_api.services.lead_notifications.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
+
+    response = client.post("/api/v1/leads", json=valid_payload())
+
+    assert response.status_code == 201
+    assert attempted_urls == [
+        "http://host.docker.internal:54324/api/v1/send",
+        "http://127.0.0.1:54324/api/v1/send",
+        "http://host.docker.internal:54324/api/v1/send",
+        "http://127.0.0.1:54324/api/v1/send",
+    ]
+    assert [payload["To"] for payload in sent_payloads] == [
+        [{"Email": "broker@example.test"}],
+        [{"Email": "admin@example.test"}],
+    ]
+    assert [payload["Tags"] for payload in sent_payloads] == [
+        ["keeper-local-lead-notification"],
+        ["keeper-local-lead-notification"],
+    ]
+    assert FakeLeadSMTP.messages == []
+
+
+def test_contact_lead_notification_falls_back_to_loopback_smtp_for_host_api(
+    client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+    settings.smtp_host = "host.docker.internal"
+    settings.smtp_port = 1025
+    FakeLeadSMTP.messages = []
+    attempted_hosts: list[str] = []
+
+    class LocalFallbackSMTP(FakeLeadSMTP):
+        def __init__(self, host: str, port: int, timeout: int) -> None:
+            attempted_hosts.append(host)
+            if host == "host.docker.internal":
+                raise OSError("synthetic host gateway is unavailable on host API")
+            super().__init__(host, port, timeout)
+
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", LocalFallbackSMTP)
+
+    response = client.post("/api/v1/leads", json=valid_payload())
+
+    assert response.status_code == 201
+    assert attempted_hosts == [
+        "host.docker.internal",
+        "127.0.0.1",
+        "host.docker.internal",
+        "127.0.0.1",
+    ]
     assert [message["To"] for message in FakeLeadSMTP.messages] == [
         "broker@example.test",
         "admin@example.test",

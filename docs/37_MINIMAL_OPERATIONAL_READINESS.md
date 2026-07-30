@@ -107,8 +107,10 @@ firewall evidence are `docs/26` RF-04/RF-06 items requiring separate execution a
 ### Transactional email (SMTP added)
 - `SMTP_ENABLED`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM`, `SMTP_PASSWORD`
   (see `docs/11_ENVIRONMENT_VARIABLES.md` and `.env.example`) configure outbound mail.
-- The local stack can use Supabase's `local_smtp` on `127.0.0.1:54324` (Inbucket captures
-  mail) with no new service. Production uses a configured transactional provider.
+- The local stack can use Supabase Mailpit on `127.0.0.1:54324` / `host.docker.internal:54324`
+  with no new service. That endpoint is Mailpit's HTTP capture/API surface; local lead
+  notifications use Mailpit's HTTP send API before SMTP fallback. Production uses a configured
+  transactional provider.
 - Borrower notifications (`services/borrower_notifications.py`) never include PII in the
   message body and fail non-fatally (email delivery is best-effort and never blocks a
   submission or assignment).

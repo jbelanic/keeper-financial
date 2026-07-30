@@ -96,7 +96,10 @@ async def request_context(
     if (request.method == "GET" and request.url.path == "/api/v1/leads") or (
         request.method == "POST"
         and request.url.path.startswith("/api/v1/leads/")
-        and request.url.path.endswith("/marketing-consent/withdrawal")
+        and (
+            request.url.path.endswith("/marketing-consent/withdrawal")
+            or request.url.path.endswith("/status")
+        )
     ):
         response.headers["Cache-Control"] = "no-store"
     if request.url.path.startswith("/api/v1/admin/"):

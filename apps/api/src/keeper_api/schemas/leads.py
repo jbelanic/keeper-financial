@@ -70,6 +70,16 @@ class LeadInquiryCreated(BaseModel):
 LeadStatus = Literal["new", "assigned", "contacted", "closed"]
 
 
+class LeadStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: LeadStatus
+
+
+class LeadStatusUpdated(BaseModel):
+    id: uuid.UUID
+    status: LeadStatus
+
+
 class LeadListQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
     limit: int = Field(default=25, ge=1, le=100)

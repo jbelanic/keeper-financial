@@ -8,7 +8,7 @@ import {
   type AdminLeadList,
   type LeadStatus,
 } from "@/lib/admin-leads";
-import { withdrawMarketingConsent } from "./actions";
+import { updateLeadStatus, withdrawMarketingConsent } from "./actions";
 import { WithdrawalControl } from "./withdrawal-control";
 
 export const metadata: Metadata = { title: "Lead queue" };
@@ -27,16 +27,22 @@ function pageHref(page: number, status?: LeadStatus): string {
   return `/admin/leads?${query.toString()}`;
 }
 
+function statusLabel(status: LeadStatus): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 export function LeadQueue({
   data,
   page,
   status,
   withdrawAction = withdrawMarketingConsent,
+  statusAction = updateLeadStatus,
 }: {
   data: AdminLeadList;
   page: number;
   status?: LeadStatus;
   withdrawAction?: (formData: FormData) => Promise<void>;
+  statusAction?: (formData: FormData) => Promise<void>;
 }) {
   if (data.items.length === 0) {
     return (
@@ -110,6 +116,29 @@ export function LeadQueue({
               {lead.marketing_consent?.state === "granted" ? (
                 <WithdrawalControl leadId={lead.id} action={withdrawAction} />
               ) : null}
+            </section>
+            <section aria-label="Lead status action" className="lead-actions">
+              <h3>Lead status</h3>
+              <form action={statusAction} className="inline-form">
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <label htmlFor={`lead-${lead.id}-status`}>
+                  Set status for {lead.name}
+                </label>
+                <select
+                  id={`lead-${lead.id}-status`}
+                  name="status"
+                  defaultValue={lead.status}
+                >
+                  {LEAD_STATUSES.map((item) => (
+                    <option key={item} value={item}>
+                      {statusLabel(item)}
+                    </option>
+                  ))}
+                </select>
+                <button className="button" type="submit">
+                  Update status for {lead.name}
+                </button>
+              </form>
             </section>
           </article>
         ))}
