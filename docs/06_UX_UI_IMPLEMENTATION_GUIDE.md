@@ -111,7 +111,7 @@ The owner-approved 2026-07-29 recruitment direction makes `/careers` the main pu
 - Preserve honest zero-posting and API-unavailable states. If more than one posting is returned, show every published posting rather than silently selecting one.
 - Keep the brokerage story visible when no posting can be shown, but do not add a general-interest form, résumé inbox, newsletter, or new candidate-data path.
 - Explain the implemented journey factually: review the role without an account, create a posting-specific application and save a draft, follow candidate-visible updates, and complete controlled onboarding only if selected.
-- The existing recruitment image is approved for use. Its alternative text and surrounding copy must not present the generated scene as real Keeper employees, premises, or a testimonial.
+- The recruitment image is generated editorial artwork. Its alternative text and surrounding copy must not present the scene as real Keeper employees, premises, or a testimonial. The 2026-07-29 replacement uses a centred working scene and an 8:5 presentation crop to avoid the placeholder-like blank area in the original asset.
 
 ## Admin portal
 

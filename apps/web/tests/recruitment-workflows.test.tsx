@@ -36,7 +36,7 @@ describe("public recruitment postings", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(
       screen.getByRole("img", {
-        name: /editorial image of three professionals in conversation/i,
+        name: /four professionals collaborating around a table/i,
       }),
     ).toBeInTheDocument();
     expect(
