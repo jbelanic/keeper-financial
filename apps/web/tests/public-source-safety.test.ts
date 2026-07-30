@@ -48,6 +48,12 @@ describe("public source safety and reflow guardrails", () => {
     expect(css).toContain("aspect-ratio: 6 / 5");
   });
 
+  it("keeps public image assets outside proxy processing", () => {
+    const proxy = readFileSync(join(process.cwd(), "proxy.ts"), "utf8");
+
+    expect(proxy).toContain("_next/image|images/");
+  });
+
   it("does not stream a global loading shell for hard navigations", () => {
     expect(existsSync(join(process.cwd(), "app/loading.tsx"))).toBe(false);
     expect(existsSync(join(process.cwd(), "app/(public)/loading.tsx"))).toBe(
