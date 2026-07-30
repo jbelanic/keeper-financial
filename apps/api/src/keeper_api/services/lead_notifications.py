@@ -94,7 +94,10 @@ def _smtp_host_candidates(settings: Settings) -> list[str]:
 def _mailpit_http_urls(settings: Settings) -> list[str]:
     if settings.app_env != "local" or settings.smtp_port != 54324:
         return []
-    return [f"http://{host}:{settings.smtp_port}/api/v1/send" for host in _smtp_host_candidates(settings)]
+    return [
+        f"http://{host}:{settings.smtp_port}/api/v1/send"
+        for host in _smtp_host_candidates(settings)
+    ]
 
 
 def _message_body(message: EmailMessage, content_type: str) -> str:
@@ -141,9 +144,7 @@ def _send_via_mailpit_http_api(
     return False
 
 
-def _send_message(
-    *, settings: Settings, recipient_email: str, message: EmailMessage
-) -> None:
+def _send_message(*, settings: Settings, recipient_email: str, message: EmailMessage) -> None:
     if _send_via_mailpit_http_api(
         settings=settings, recipient_email=recipient_email, message=message
     ):
