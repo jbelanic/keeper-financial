@@ -55,6 +55,8 @@ Supabase CLI 2.109.1 reads a configured signing-key file before first generation
 
 `make infra` starts healthchecked PostgreSQL, MinIO, and ClamAV plus the idempotent private-bucket initializer. The first ClamAV start with an empty named signature volume may take several minutes. `make migrate` explicitly rebuilds the current API image before running the non-destructive-by-default Alembic upgrade, preventing an older local image from reporting or applying a stale migration head. Migrations never run automatically on service startup. The web container uses internal API and Supabase routes for server rendering while retaining loopback-only browser URLs. Open `http://localhost:3000`; the tracked Compose configuration binds application, database, object, and clamd ports to loopback. Recreate older containers before assuming their live bindings match the current file.
 
+The default Compose stack is safe for side-by-side validation beside an existing public web server: it does not bind loopback `443` and does not require the Documenso TLS bridge while `ESIGN_PROVIDER=disabled`. If an approved Documenso ceremony is required, include the opt-in overlay explicitly with `docker compose -f compose.yaml -f compose.documenso.yaml ...`. See `docs/DEPLOYMENT_SIDE_BY_SIDE.md` for pre-cutover `.env` values, SSH-tunnel validation, and the separate Caddy cutover step.
+
 The source baseline for the borrower Phase A decision is `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`, merged through PR #9. It includes candidate authentication and posting-bound provisioning, candidate/administrator MFA, exact-application review/onboarding completion, agent eligibility/profile workflows, strict ClamAV/MinIO candidate-document handling, migrations through `20260722_0010`, and approved public-content updates.
 
 The current baseline has one Alembic head at `20260722_0010`; historical migration and contract evidence for earlier checkpoints remains preserved in the dated reports. Neither source acceptance nor Git publication authorizes deployment, shared-database migration, production/pilot operation, real-person activation, credential/external-service changes, or legal/privacy/regulatory/claims/accessibility approval. Current limitations are tracked in `docs/15_KNOWN_LIMITATIONS.md`.
@@ -95,4 +97,4 @@ npx supabase stop
 
 These commands preserve named data volumes. Do not add `--volumes` unless permanent local PostgreSQL/MinIO deletion is intentional.
 
-See [local operations](docs/LOCAL_DEVELOPMENT.md), [environment variables](docs/11_ENVIRONMENT_VARIABLES.md), and [known limitations](docs/15_KNOWN_LIMITATIONS.md).
+See [side-by-side deployment](docs/DEPLOYMENT_SIDE_BY_SIDE.md), [local operations](docs/LOCAL_DEVELOPMENT.md), [environment variables](docs/11_ENVIRONMENT_VARIABLES.md), and [known limitations](docs/15_KNOWN_LIMITATIONS.md).
