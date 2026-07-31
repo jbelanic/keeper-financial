@@ -7,8 +7,11 @@
 This document records the minimal, free implementations for the five operational-readiness
 items requested on 2026-07-27. Each item is intentionally the smallest safe step; the
 comprehensive evidence work in `docs/26` remains the path to a controlled pilot or production
-decision. Real-borrower submission and production deployment remain separate explicit owner
-approvals.
+evidence package. On 2026-07-30 the owner provided explicit deploy/release and "deploy now"
+approval for the self-hosted Keeper replacement on target Ubuntu host `inspiron`. That approval
+removes the prior missing-owner-approval deployment gate; it does not weaken the secure-runtime,
+firewall, TLS, private MinIO, fail-closed ClamAV, local Supabase Auth, backup/restore, logging,
+or non-destructive cutover requirements below.
 
 ## 1. Key custody (borrower encryption keyring + capability HMAC key)
 
@@ -100,7 +103,10 @@ local testing. Approved production topology (owner decision 2026-07-24, `OD-04`)
   mitigation required before public exposure.
 
 These remain documented requirements; the operational DNS/TLS/Caddy configuration and
-firewall evidence are `docs/26` RF-04/RF-06 items requiring separate execution authority.
+firewall evidence are `docs/26` RF-04/RF-06 items. The approved side-by-side and cutover
+runbook is `docs/DEPLOYMENT_SIDE_BY_SIDE.md`; it keeps WordPress public until cutover,
+keeps Keeper internals loopback-only, and uses the reviewed Caddy template at
+`infrastructure/caddy/Caddyfile` only during the explicit cutover step.
 
 ## 5. Production Auth email + logging / PII safety
 
@@ -141,7 +147,10 @@ RF-17), consistent with the owner's separate deploy decision.
 
 On 2026-07-27 the owner directed that mandatory pilot go/no-go criteria are not required as
 a gate before the owner's separate deployment decision. The comprehensive pilot criteria in
-`docs/26` §9 remain available as a planning aid but are not enforced as blockers. Real-borrower
-submission and production deployment still require the owner's explicit "deploy now"; approved
-wording, minimal readiness, and accessibility incorporation do not by themselves enable
-submission or deployment.
+`docs/26` §9 remain available as a planning aid but are not enforced as blockers. On 2026-07-30
+the owner provided explicit "deploy now" approval for the self-hosted replacement on target host
+`inspiron`. Approved wording, minimal readiness, accessibility incorporation, and deploy approval
+permit deployment execution, but real-borrower submission still requires successful deployed
+runtime evidence and the implemented release controls: borrower application enabled, real-data
+enabled, and the active consent-catalog row's server-owned `real_data_approved=true` marker for
+the exact approved consent version/digest.

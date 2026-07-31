@@ -43,7 +43,7 @@ CLI 2.109.1 is verified through `npx`; no global `supabase` binary is required o
 
 The Supabase CLI database on port `54322` is internal to Auth and remains separate from application PostgreSQL on Compose service `db`/host port `5432`. The tracked Auth stack enables email confirmation and local Mailpit capture, exact loopback callbacks, ES256 signing, and TOTP enrollment/verification. Supabase Studio may be enabled only for local operator use. Supabase Storage and its S3 protocol, Analytics, Edge Runtime/functions, Realtime, and vector services remain disabled. The `[api]` switch stays enabled because CLI 2.109.1 otherwise removes the gateway that exposes the browser-facing Auth route.
 
-The one-shot `minio-init` service waits for healthy MinIO, creates `MINIO_BUCKET` with `--ignore-existing`, and enforces anonymous access `none`. MinIO API CORS is configured directly on the server with `MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:3000`; no bucket CORS XML or unsupported `mc cors set` step is used. ClamAV persists signatures in `keeper_clamav` at `/var/lib/clamav`; a new volume may require several minutes for initial definitions. Its healthcheck sends a real clamd `PING` and requires `PONG`. The API waits for healthy PostgreSQL, MinIO, and ClamAV plus successful bucket initialization. No service runs Alembic automatically: migration remains a deliberate operator command after infrastructure health and before normal application startup.
+The one-shot `minio-init` service waits for healthy MinIO, creates `MINIO_BUCKET` with `--ignore-existing`, and enforces anonymous access `none`. MinIO API CORS is configured directly on the server with `MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:3000`; no bucket CORS XML or unsupported `mc cors set` step is used. ClamAV persists signatures in `keeper_clamav` at `/var/lib/clamav`; a new volume may require several minutes for initial definitions. Its healthcheck sends a real clamd `PING` and requires `PONG`. The API waits for healthy PostgreSQL, MinIO, and ClamAV plus successful bucket initialization. The default stack intentionally does not start `documenso-tls` or bind loopback `443`, so it can run beside an existing WordPress server that owns public `80/443`; use `compose.documenso.yaml` only for an approved Documenso ceremony. No service runs Alembic automatically: migration remains a deliberate operator command after infrastructure health and before normal application startup.
 
 ## Validation
 
@@ -172,11 +172,11 @@ Certificates → Authorities → Import**, select
 The CA private key and all generated TLS material remain under the ignored
 `storage/local-documenso-tls/` directory and must never be committed or shared.
 
-Start the loopback-only TLS proxy and recreate the API so it receives the exact
-provider URL and combined CA bundle:
+Start the loopback-only TLS proxy with the opt-in Compose overlay and recreate
+the API so it receives the exact provider URL and combined CA bundle:
 
 ```bash
-docker compose up -d documenso-tls api
+docker compose -f compose.yaml -f compose.documenso.yaml up -d documenso-tls api
 ```
 
 Verify TLS without printing the API token or provider response body:

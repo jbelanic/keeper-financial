@@ -106,7 +106,7 @@ def test_compose_uses_supported_minio_cors_configuration() -> None:
         "\n  minio-init:\n", maxsplit=1
     )[0]
     minio_init_service = compose.split("\n  minio-init:\n", maxsplit=1)[1].split(
-        "\n  api:\n", maxsplit=1
+        "\n  clamav:\n", maxsplit=1
     )[0]
 
     assert "MINIO_API_CORS_ALLOW_ORIGIN: http://localhost:3000" in minio_service
@@ -201,12 +201,23 @@ def test_compose_exposes_opt_in_lead_notification_settings() -> None:
     assert "LEAD_NOTIFICATION_BROKER_EMAIL: ${LEAD_NOTIFICATION_BROKER_EMAIL:-}" in api_service
 
 
-def test_compose_routes_documenso_through_loopback_only_tls_with_explicit_trust() -> None:
+def test_base_compose_does_not_bind_loopback_443_or_require_documenso() -> None:
     compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
+
+    assert "\n  documenso-tls:\n" not in compose
+    assert '"127.0.0.1:443:443"' not in compose
+    assert "documenso-tls:" not in api_service
+    assert "/etc/ssl/certs/keeper-local-documenso-ca-bundle.crt:ro" not in api_service
+    assert "documenso_default" not in compose
+
+
+def test_documenso_overlay_routes_through_loopback_only_tls_with_explicit_trust() -> None:
+    compose = (PROJECT_ROOT / "compose.documenso.yaml").read_text()
     proxy_service = compose.split("\n  documenso-tls:\n", maxsplit=1)[1].split(
         "\n  api:\n", maxsplit=1
     )[0]
-    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\n  web:\n", maxsplit=1)[0]
+    api_service = compose.split("\n  api:\n", maxsplit=1)[1].split("\nnetworks:", maxsplit=1)[0]
 
     assert '"127.0.0.1:443:443"' in proxy_service
     assert "sign.keeperfinancial.ca" in proxy_service
@@ -270,7 +281,10 @@ def test_compose_web_uses_internal_server_routes_and_public_browser_routes() -> 
     # Browser reaches the API on 127.0.0.1 to match the page origin and
     # avoid a localhost/127.0.0.1 CORS split. localhost:3000 stays
     # allowed via CORS_ORIGINS so either host works.
-    assert "NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000" in web_service
+    assert (
+        "NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:8000}"
+        in web_service
+    )
     assert "SUPABASE_INTERNAL_URL: http://host.docker.internal:54321" in web_service
     assert (
         "NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}"

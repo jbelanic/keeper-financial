@@ -133,9 +133,17 @@ and credit-use disclosure wording and immutably versioned it
 the borrower MVP. The approved text is recorded verbatim in `docs/28` §6 and is
 deliberately distinct from the Phase 1C candidate privacy disclosure
 (`docs/19`) — recruitment/candidate scope and borrower scope coexist. Real-data
-borrower submission remains disabled until the separate owner release/deploy
-approval and secure-deployment evidence exist; approved wording alone does not
-enable submission. The owner directed the candidate disclosure not be reused
+borrower submission remained disabled until the separate owner release/deploy
+approval and secure-deployment evidence existed; approved wording alone did not
+enable submission. On 2026-07-30 the owner provided explicit deploy/release and
+"deploy now" approval for the self-hosted Keeper replacement on the target
+Ubuntu host `inspiron`. That approval removes the missing-owner-approval gate
+for deployment and release execution, but it does not weaken the required secure
+deployment evidence, runtime feature gates, consent-catalog approval marker,
+backup/restore, firewall, TLS, private MinIO, fail-closed ClamAV, local Supabase
+Auth boundary, AAL2, logging minimization, non-destructive WordPress preservation
+during side-by-side testing, or separate approval for destructive rollback/restore
+or credential/external-service changes. The owner directed the candidate disclosure not be reused
 verbatim for borrowers; the adopted text was corrected to match the approved
 borrower collection set (SIN and financial data are collected and specially
 protected; résumé, cover letter, education/training, referral source, applicant
@@ -156,7 +164,7 @@ Phase 1 is releasable only when:
 - Audit events are generated for high-risk actions.
 - Environment validation fails closed.
 - Required privacy, complaints, accessibility, and consent pages exist. The public accessibility statement (`apps/web/app/(public)/accessibility/page.tsx`) is approved site content and is not a standalone release blocker (a formal specialist accessibility review remains a deferred production item per `docs/26`).
-- Real-borrower submission remains disabled until the owner's explicit "deploy now." The borrower privacy/credit-use disclosure wording was approved 2026-07-27 (`borrower-privacy-credit-disclosure-2026-07-27-v1`); the minimal operational-readiness baseline (`docs/37`) and accessibility incorporation are complete. Pilot go/no-go criteria are not a gate before the owner's separate deployment decision.
+- The owner provided explicit "deploy now" approval on 2026-07-30 for the self-hosted Keeper replacement on target host `inspiron`. The borrower privacy/credit-use disclosure wording was approved 2026-07-27 (`borrower-privacy-credit-disclosure-2026-07-27-v1`); the minimal operational-readiness baseline (`docs/37`) and accessibility incorporation are complete. Pilot go/no-go criteria are not a gate before deployment execution. Real-borrower submission still requires the deployed runtime evidence and the implemented release controls: `BORROWER_APPLICATION_ENABLED=true`, `BORROWER_REAL_DATA_ENABLED=true`, and the active consent-catalog row's server-owned `real_data_approved=true` marker for the exact approved consent version/digest.
 
 ## 12. Change-control rule
 
