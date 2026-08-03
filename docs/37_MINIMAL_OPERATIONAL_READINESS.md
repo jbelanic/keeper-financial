@@ -91,8 +91,8 @@ local testing. Approved production topology (owner decision 2026-07-24, `OD-04`)
 
 - `https://keeperfinancial.ca/apply` — public entry/choice page.
 - `https://apply.keeperfinancial.ca` — dedicated borrower origin from the same release.
-- Caddy is the approved self-hosted ingress: exact-host routing, HTTPS termination,
-  HTTP→HTTPS redirect.
+- On target host `inspiron`, the owner-approved existing Nginx/Let's Encrypt ingress provides
+  exact-host routing, HTTPS termination, and HTTP→HTTPS redirect; Caddy is not deployed there.
 - Only the ingress exposes public 80/443. API, PostgreSQL, MinIO, ClamAV, Supabase Studio,
   MinIO Console, and provider admin surfaces stay on private container networks or loopback.
 - CORS/CSRF origins are exact; wildcards and reflected origins prohibited.
@@ -102,11 +102,11 @@ local testing. Approved production topology (owner decision 2026-07-24, `OD-04`)
 - Security headers, `no-store`, request-size limits, timeouts, rate limits, and bot
   mitigation required before public exposure.
 
-These remain documented requirements; the operational DNS/TLS/Caddy configuration and
+These remain documented requirements; the operational DNS/TLS/Nginx configuration and
 firewall evidence are `docs/26` RF-04/RF-06 items. The approved side-by-side and cutover
 runbook is `docs/DEPLOYMENT_SIDE_BY_SIDE.md`; it keeps WordPress public until cutover,
-keeps Keeper internals loopback-only, and uses the reviewed Caddy template at
-`infrastructure/caddy/Caddyfile` only during the explicit cutover step.
+keeps Keeper internals loopback-only, and uses the reviewed Nginx template at
+`infrastructure/nginx/keeper-financial.conf` only during the explicit cutover step.
 
 ## 5. Production Auth email + logging / PII safety
 

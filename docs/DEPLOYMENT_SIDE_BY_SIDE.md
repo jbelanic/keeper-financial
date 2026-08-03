@@ -4,7 +4,7 @@
 - **Owner deploy approval:** 2026-07-30
 - **Purpose:** run and validate the Keeper stack beside the existing WordPress production site before any DNS or public-port cutover
 
-This runbook separates safe side-by-side validation from the final Caddy cutover. It preserves the repository boundary: local Docker Compose services, local Supabase CLI/Auth, private MinIO, fail-closed ClamAV, no hosted Supabase, and no public exposure of internal service ports.
+This runbook separates safe side-by-side validation from the final host-managed Nginx cutover. It preserves the repository boundary: local Docker Compose services, local Supabase CLI/Auth, private MinIO, fail-closed ClamAV, no hosted Supabase, and no public exposure of internal service ports.
 
 ## 1. Confirmed deployment modes
 
@@ -27,10 +27,10 @@ Use this before replacing WordPress.
 
 Use this only after side-by-side validation passes and the existing WordPress site is backed up.
 
-- Stop or move the WordPress server that owns public `80/443`.
-- Install/load the reviewed Caddy config from `infrastructure/caddy/Caddyfile`.
-- Caddy is the only public ingress on `80/443`.
-- Caddy proxies public web traffic to `127.0.0.1:3000` and same-origin API traffic to `127.0.0.1:8000`.
+- Retain the existing host-managed Nginx/Let's Encrypt service that owns public `80/443`.
+- Install/load the reviewed Keeper server-block template from `infrastructure/nginx/keeper-financial.conf`, adapted only to the host's established certificate and ACME include conventions.
+- Nginx is the only public ingress on `80/443`.
+- Nginx proxies public web traffic to `127.0.0.1:3000` and same-origin API traffic to `127.0.0.1:8000` without stripping the `/api/` prefix.
 - Internal service ports remain loopback/firewall-protected.
 
 ## 2. Supabase boundary
@@ -104,8 +104,8 @@ BORROWER_APPLICATION_ORIGIN=https://apply.keeperfinancial.ca
 
 Notes:
 
-- `NEXT_PUBLIC_API_BASE_URL=https://keeperfinancial.ca` makes public browser API calls same-origin through Caddy rather than to the user's own `localhost`.
-- The API production validator intentionally keeps `WEB_ORIGIN`/`CORS_ORIGINS` loopback because Caddy is the trusted public ingress and server-side browser-facing borrower requests are same-origin.
+- `NEXT_PUBLIC_API_BASE_URL=https://keeperfinancial.ca` makes public browser API calls same-origin through Nginx rather than to the user's own `localhost`.
+- The API production validator intentionally keeps `WEB_ORIGIN`/`CORS_ORIGINS` loopback because Nginx is the trusted public ingress and server-side browser-facing borrower requests are same-origin.
 - `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321` is valid for local/SSH-tunneled validation. If public remote candidate/admin Auth is required at launch, define and review a local-Supabase Auth proxy route and callback allow-list as a separate explicit change; do not use hosted Supabase.
 
 ## 5. Side-by-side startup
@@ -195,28 +195,26 @@ docker compose -f compose.yaml -f compose.documenso.yaml up -d documenso-tls api
 
 Do not enable this overlay merely to make the API start; the base API no longer depends on the Documenso TLS bridge while `ESIGN_PROVIDER=disabled`.
 
-## 7. Caddy cutover
+## 7. Nginx cutover
 
 Do not perform this step until WordPress files/database are backed up and side-by-side validation has passed.
 
-Install Caddy, copy the reviewed template, then validate:
+Back up the host's existing Nginx configuration. Copy the reviewed Keeper template into the host's established `sites-available`/include layout, adapting certificate paths and ACME challenge handling only to match the existing working WordPress/Certbot convention. Do not replace the global Nginx configuration or alter unrelated virtual hosts.
 
 ```bash
-sudo install -d /etc/caddy
-sudo cp infrastructure/caddy/Caddyfile /etc/caddy/Caddyfile
-sudo caddy validate --config /etc/caddy/Caddyfile
+sudo cp -a /etc/nginx /root/keeper-cutover-backup/nginx-before-keeper
+sudo install -m 0644 infrastructure/nginx/keeper-financial.conf /etc/nginx/sites-available/keeper-financial.conf
+sudo ln -s /etc/nginx/sites-available/keeper-financial.conf /etc/nginx/sites-enabled/keeper-financial.conf
+sudo nginx -t
 ```
 
-Stop the current public WordPress web server only at cutover time:
+Reload Nginx only after `nginx -t` succeeds. A reload preserves existing working WordPress/Immich virtual hosts; do not stop Nginx or start Caddy:
 
 ```bash
-sudo systemctl stop apache2 2>/dev/null || true
-sudo systemctl stop nginx 2>/dev/null || true
-sudo systemctl enable --now caddy
-sudo systemctl reload caddy
+sudo systemctl reload nginx
 ```
 
-Verify only Caddy owns public `80/443` and internal Keeper services remain loopback:
+Verify only Nginx owns public `80/443` and internal Keeper services remain loopback:
 
 ```bash
 sudo ss -ltnp | grep -E ':(80|443|3000|8000|5432|54321|54322|54323|54324|9000|9001|3310)\b'
@@ -232,9 +230,9 @@ Negative probes from an external network should fail for every internal port exc
 
 Stop deployment or cutover if:
 
-- any internal service is externally reachable outside Caddy `80/443`;
+- any internal service is externally reachable outside Nginx `80/443`;
 - WordPress backup is missing before cutover;
-- Caddy TLS fails for `keeperfinancial.ca` or `apply.keeperfinancial.ca`;
+- Nginx/Let's Encrypt TLS fails for `keeperfinancial.ca` or `apply.keeperfinancial.ca`;
 - `docker compose config --quiet`, Alembic head/check, API health, DB health, MinIO health, or ClamAV verification fails;
 - Supabase Storage or its S3 protocol is enabled;
 - hosted Supabase, Cloudflare R2, or another unapproved hosted replacement appears;

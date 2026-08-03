@@ -171,3 +171,7 @@ Phase 1 is releasable only when:
 Any approved change to scope, architecture, security boundaries, lifecycle states, systems of record, or compliance assumptions must update this file and all affected supporting documents in the same branch.
 
 The deployment and borrower-application decisions above supersede contradictory external-application, prohibited-borrower-data, hosted-service, and undecided-hosting language in historical implementation reports and bootstrap prompts; those files remain historical evidence rather than current instructions.
+On 2026-07-31 the owner additionally approved retaining the target host's existing
+Nginx/Let's Encrypt ingress rather than replacing it with Caddy. The repository-managed
+Nginx template and runbook are authoritative for the target host; Nginx is the sole
+public ingress on `80/443`, while Keeper services remain loopback/private.

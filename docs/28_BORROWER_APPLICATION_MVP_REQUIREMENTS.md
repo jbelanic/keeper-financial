@@ -259,7 +259,7 @@ Retries return the same completed submission result. If object creation succeeds
 
 - `https://keeperfinancial.ca/apply` is the public choice/entry page.
 - `https://apply.keeperfinancial.ca` is the dedicated borrower origin served from the Keeper web application.
-- Caddy is the approved self-hosted ingress recommendation for exact-host routing, HTTPS, and HTTP-to-HTTPS redirect.
+- On target host `inspiron`, the owner-approved existing Nginx/Let's Encrypt ingress provides exact-host routing, HTTPS, and HTTP-to-HTTPS redirect. Caddy is not deployed on that host.
 - Only the ingress exposes public ports 80/443.
 - API, PostgreSQL, MinIO, ClamAV, Supabase Studio, MinIO Console, and administrative provider surfaces remain on private container networks or explicit loopback operator bindings.
 - CORS and CSRF origin allow-lists are exact; wildcards and reflected origins are prohibited.
