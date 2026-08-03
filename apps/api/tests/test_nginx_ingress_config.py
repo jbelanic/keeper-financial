@@ -18,7 +18,9 @@ def test_nginx_ingress_uses_exact_public_hosts_and_loopback_upstreams() -> None:
 
 def test_nginx_api_proxy_preserves_fastapi_api_prefix_and_forwards_https_host() -> None:
     config = NGINX_CONFIG.read_text()
-    api_location = config.split("    location /api/ {", maxsplit=1)[1].split("\n    }", maxsplit=1)[0]
+    api_location = config.split("    location /api/ {", maxsplit=1)[1].split("\n    }", maxsplit=1)[
+        0
+    ]
 
     assert "proxy_pass http://127.0.0.1:8000;" in api_location
     assert "proxy_pass http://127.0.0.1:8000/;" not in api_location
