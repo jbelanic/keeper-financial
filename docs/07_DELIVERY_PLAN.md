@@ -161,7 +161,7 @@ At the Phase 1C checkpoint, candidate review/onboarding, agent profiles, and the
 ### Phase F — Retention and self-hosted readiness
 
 - The corrective borrower-review hardening is implemented on `feat/borrower-phase-f-readiness-lifecycle`; the Phase E merge remains historical and is not rewritten.
-- Thirty-day draft purge, seven-year submitted retention, legal holds, Caddy exact-host TLS ingress, backup/restore, incident/monitoring controls, and genuine synthetic browser evidence remain bounded Phase F work.
+- Thirty-day draft purge, seven-year submitted retention, legal holds, target-host Nginx exact-host TLS ingress, backup/restore, incident/monitoring controls, and genuine synthetic browser evidence remain bounded Phase F work.
 
 ### Phase G — Cutover and legacy archive
 

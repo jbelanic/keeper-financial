@@ -8,7 +8,7 @@
 
 **Architecture:** Reimplement the approved MortgageApp workflow in Keeper’s existing Next.js/FastAPI modular monolith; do not deploy or vendor the legacy Ktor service. Store mutable encrypted drafts and lifecycle/authorization metadata in PostgreSQL. On submission, create an immutable, versioned, application-encrypted canonical application snapshot in private MinIO; store borrower documents as separately encrypted private MinIO objects after strict validation and fail-closed ClamAV scanning. Present the workflow at `https://apply.keeperfinancial.ca` through the same self-hosted release and an exact-host reverse proxy.
 
-**Tech Stack:** Next.js 16, React 19, TypeScript, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL, MinIO/S3, ClamAV, Supabase Auth for internal staff, AES-256-GCM application encryption, Docker Compose, Caddy reverse proxy, OpenAPI-generated TypeScript contracts, Vitest, Pytest, Ruff, mypy, Playwright/real-browser evidence where already supported.
+**Tech Stack:** Next.js 16, React 19, TypeScript, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL, MinIO/S3, ClamAV, Supabase Auth for internal staff, AES-256-GCM application encryption, Docker Compose, and the target host's Nginx/Let's Encrypt reverse proxy, OpenAPI-generated TypeScript contracts, Vitest, Pytest, Ruff, mypy, Playwright/real-browser evidence where already supported.
 
 **Planning baseline:** `keeper-financial` `main` at `5f8a41f34bb3586c59d613848fafc9435a86b50d`; legacy `MortgageApp` `main` at `251077177315ade4a94d12eb62df750684ed2bb7`.
 
@@ -74,8 +74,8 @@ Internal brokerage access remains identity-based. Active `brokerage_admin` users
 
 - Production application origin: `https://apply.keeperfinancial.ca`.
 - Public site origin: `https://keeperfinancial.ca` with optional `www` redirect.
-- Add one pinned Caddy container as the only public ingress on ports 80/443.
-- Caddy routes both domains to the existing Next.js web container and routes same-origin `/api/*` requests to FastAPI. The API, web container port, PostgreSQL, MinIO, MinIO console, ClamAV, Supabase Studio, and local operator services remain internal or loopback-only.
+- Retain the target host's existing Nginx/Let's Encrypt service as the only public ingress on ports 80/443; do not add a Caddy container.
+- Nginx routes both domains to the existing Next.js web container and routes same-origin `/api/*` requests to FastAPI without stripping the `/api/` prefix. The API, web container port, PostgreSQL, MinIO, MinIO console, ClamAV, Supabase Studio, and local operator services remain internal or loopback-only.
 - Next.js middleware rewrites requests received for the exact application host to the borrower application route group. It rejects unexpected forwarded hosts rather than trusting arbitrary proxy headers.
 - Application browser calls are same-origin. No wildcard CORS is introduced. Exact production and local origins are configured separately.
 - Capability cookies are host-only and are not shared with the public site.
@@ -392,12 +392,12 @@ The exact required/optional matrix must be enumerated in `docs/28_BORROWER_APPLI
 - `apps/api/src/keeper_api/services/borrower_retention.py`
 - `apps/api/scripts/purge_borrower_records.py`
 - `apps/api/tests/test_borrower_retention.py`
-- `infrastructure/caddy/Caddyfile`
+- `infrastructure/nginx/keeper-financial.conf`
 - Approved backup/restore and purge runbooks under `docs/operations/`.
 
 **Modify:**
 
-- `compose.yaml` to add pinned Caddy, private service networking, borrower bucket init, read-only encryption-key mounts, and health dependencies.
+- `compose.yaml` to preserve private service networking, borrower bucket init, read-only encryption-key mounts, and health dependencies; host-managed Nginx remains outside Compose.
 - `apps/api/src/keeper_api/core/config.py` for production fail-closed validation.
 - `Makefile` for safe dry-run/run/verification commands where appropriate.
 - Current readiness, environment, local-development, threat, test, and limitation documents.
@@ -410,7 +410,7 @@ The exact required/optional matrix must be enumerated in `docs/28_BORROWER_APPLI
 4. Purge due records in bounded idempotent batches; partial MinIO/database failures retry safely.
 5. Produce non-personal purge tombstones only.
 6. Prove backup key/data pairing, encrypted backup, 30-day backup expiry, isolated restore, object/metadata reconciliation, and post-restore due purge.
-7. Prove only Caddy exposes public 80/443; internal services fail from untrusted interfaces.
+7. Prove only host-managed Nginx exposes public 80/443; internal services fail from untrusted interfaces.
 8. Prove exact TLS hosts, forwarded-host handling, local/production origin separation, cookie attributes, CSRF, and no wildcard CORS.
 9. Exercise ClamAV freshness/failure alerts, MinIO privacy, key-file absence/wrong key, database/MinIO restore, and fail-closed startup.
 10. Run genuine synthetic browser journeys from public Get Started through agent review without real borrower data.
