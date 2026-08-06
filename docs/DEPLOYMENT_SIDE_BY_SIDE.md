@@ -6,6 +6,10 @@
 
 This runbook separates safe side-by-side validation from the final host-managed Nginx cutover. It preserves the repository boundary: local Docker Compose services, local Supabase CLI/Auth, private MinIO, fail-closed ClamAV, no hosted Supabase, and no public exposure of internal service ports.
 
+For the from-scratch, command-by-command Ubuntu installation checklist, use
+`docs/DEPLOYMENT_INSPIRON_STEP_BY_STEP.md`. This document remains the shorter
+architecture, security-boundary, environment-mode, and cutover reference.
+
 ## 1. Confirmed deployment modes
 
 ### 1.1 Side-by-side validation mode
