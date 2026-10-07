@@ -102,7 +102,9 @@ def test_admin_profile_accepts_photo_url_without_manual_alt_text(
     client: TestClient, db: Session
 ) -> None:
     created = _create_profile(client, db)
-    payload = {"photo_url": "https://thispersonnotexist.org/downloadimage/Ac3RhdGljL3dvbWFuL3NlZWQxMzM5MC5qcGVn"}
+    payload = {
+        "photo_url": "https://thispersonnotexist.org/downloadimage/Ac3RhdGljL3dvbWFuL3NlZWQxMzM5MC5qcGVn"
+    }
     response = client.patch(
         f"/api/v1/admin/agent-profiles/{created['id']}",
         json=payload,
