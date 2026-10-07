@@ -175,11 +175,14 @@ def update_profile(
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise AgentProfileConflict("at least one profile field must change")
-    if "photo_url" in changes and changes["photo_url"] is not None:
-        if changes.get("photo_alt_text") is None:
-            changes["photo_alt_text"] = _default_photo_alt_text(
-                changes.get("licensed_name") or profile.licensed_name
-            )
+    if (
+        "photo_url" in changes
+        and changes["photo_url"] is not None
+        and changes.get("photo_alt_text") is None
+    ):
+        changes["photo_alt_text"] = _default_photo_alt_text(
+            changes.get("licensed_name") or profile.licensed_name
+        )
     if profile.slug_locked_at is not None and "slug" in changes and changes["slug"] != profile.slug:
         raise AgentProfileConflict("published profile slugs cannot be changed")
     nonnullable = {

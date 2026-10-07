@@ -162,10 +162,6 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
         code: trimmed,
       });
       if (result.error) {
-        // Log the provider error for debugging and surface a clearer message
-        // for common cases such as an invalid/expired code (often 422).
-        // Sanitize any sensitive enrollment secret from provider error output.
-        // eslint-disable-next-line no-console
         const safeErrorString = (() => {
           try {
             let s = JSON.stringify(result.error);
@@ -178,7 +174,14 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
           }
         })();
         console.error("MFA challengeAndVerify error:", safeErrorString);
-        if ((result.error as any)?.status === 422) {
+        const errorStatus =
+          typeof result.error === "object" &&
+          result.error !== null &&
+          "status" in result.error &&
+          typeof result.error.status === "number"
+            ? result.error.status
+            : undefined;
+        if (errorStatus === 422) {
           setError(
             "The verification code was invalid or expired. Try again or re-enrol the authenticator.",
           );
