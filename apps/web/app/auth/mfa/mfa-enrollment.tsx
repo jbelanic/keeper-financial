@@ -151,18 +151,34 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
   async function verify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (!factorId || !/^\d{6}$/.test(code)) {
+    const trimmed = code.trim();
+    if (!factorId || !/^\d{6}$/.test(trimmed)) {
       setError("Enter the six-digit code from your authenticator app.");
       return;
     }
     try {
       const result = await supabase.auth.mfa.challengeAndVerify({
         factorId,
-        code,
+        code: trimmed,
       });
-      if (result.error || !result.data?.access_token) {
+      if (result.error) {
+        // Log the provider error for debugging and surface a clearer message
+        // for common cases such as an invalid/expired code (often 422).
+        // eslint-disable-next-line no-console
+        console.error("MFA challengeAndVerify error:", result.error);
+        if ((result.error as any)?.status === 422) {
+          setError(
+            "The verification code was invalid or expired. Try again or re-enrol the authenticator.",
+          );
+          // force a refreshed enrollment/inspection flow in case the factor is stale
+          setEnrollment(null);
+          setFactorId(null);
+          setStage("enroll");
+          return;
+        }
         throw new Error("verification failed");
       }
+      if (!result.data?.access_token) throw new Error("verification failed");
       const refreshed = await supabase.auth.refreshSession();
       if (refreshed.error || !refreshed.data.session) {
         throw new Error("session refresh failed");
