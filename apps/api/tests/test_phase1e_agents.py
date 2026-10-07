@@ -98,6 +98,23 @@ def test_admin_create_list_get_and_update_profile(client: TestClient, db: Sessio
     assert updated.json()["version"] == 2
 
 
+def test_admin_profile_accepts_photo_url_without_manual_alt_text(
+    client: TestClient, db: Session
+) -> None:
+    created = _create_profile(client, db)
+    payload = {
+        "photo_url": "https://thispersonnotexist.org/downloadimage/Ac3RhdGljL3dvbWFuL3NlZWQxMzM5MC5qcGVn"
+    }
+    response = client.patch(
+        f"/api/v1/admin/agent-profiles/{created['id']}",
+        json=payload,
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["photo_url"] == payload["photo_url"]
+    assert response.json()["photo_alt_text"] == "Synthetic Agent profile photo"
+
+
 @pytest.mark.parametrize(
     ("headers", "expected"),
     [

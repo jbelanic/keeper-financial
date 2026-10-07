@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { requestUrl } from "@/lib/request-url";
+import { KEEPER_AUTH_COOKIE } from "@/lib/supabase-keys";
 
 const applicationHosts = new Set([
   "apply.localhost:3000",
@@ -100,6 +101,7 @@ export async function proxy(request: NextRequest) {
       "http://127.0.0.1:54321",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
     {
+      cookieOptions: { name: KEEPER_AUTH_COOKIE },
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (items) => {

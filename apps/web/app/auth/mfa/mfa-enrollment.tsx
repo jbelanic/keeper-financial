@@ -151,18 +151,49 @@ export function MfaEnrollment({ returnTo }: { returnTo: MfaReturnTo }) {
   async function verify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (!factorId || !/^\d{6}$/.test(code)) {
+    const trimmed = code.trim();
+    if (!factorId || !/^\d{6}$/.test(trimmed)) {
       setError("Enter the six-digit code from your authenticator app.");
       return;
     }
     try {
       const result = await supabase.auth.mfa.challengeAndVerify({
         factorId,
-        code,
+        code: trimmed,
       });
-      if (result.error || !result.data?.access_token) {
+      if (result.error) {
+        const safeErrorString = (() => {
+          try {
+            let s = JSON.stringify(result.error);
+            if (enrollment?.secret && typeof enrollment.secret === "string") {
+              s = s.split(enrollment.secret).join("[REDACTED]");
+            }
+            return s;
+          } catch {
+            return String(result.error);
+          }
+        })();
+        console.error("MFA challengeAndVerify error:", safeErrorString);
+        const errorStatus =
+          typeof result.error === "object" &&
+          result.error !== null &&
+          "status" in result.error &&
+          typeof result.error.status === "number"
+            ? result.error.status
+            : undefined;
+        if (errorStatus === 422) {
+          setError(
+            "The verification code was invalid or expired. Try again or re-enrol the authenticator.",
+          );
+          // force a refreshed enrollment/inspection flow in case the factor is stale
+          setEnrollment(null);
+          setFactorId(null);
+          setStage("enroll");
+          return;
+        }
         throw new Error("verification failed");
       }
+      if (!result.data?.access_token) throw new Error("verification failed");
       const refreshed = await supabase.auth.refreshSession();
       if (refreshed.error || !refreshed.data.session) {
         throw new Error("session refresh failed");
