@@ -24,7 +24,26 @@
     "next": {
       "postcss": "8.5.25"
     },
-    "sharp": "0.35.5"
+    "sharp": "0.35.5",
+    "eslint-config-next": "16.2.11",
+    "@next/eslint-plugin-next": "16.2.11",
+    "fast-glob": "3.2.12",
+    "micromatch": "4.0.5",
+    "braces": "3.0.3",
+    "minimatch": "3.1.5",
+    "@eslint/config-array": "0.21.2",
+    "@eslint/eslintrc": "3.3.6",
+    "@typescript-eslint/eslint-plugin": "8.37.0",
+    "@typescript-eslint/parser": "8.37.0",
+    "@typescript-eslint/type-utils": "8.37.0",
+    "@typescript-eslint/typescript-estree": "8.37.0",
+    "@typescript-eslint/utils": "8.37.0",
+    "brace-expansion": "1.1.16",
+    "eslint": "9.39.4",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "typescript-eslint": "8.37.0"
   },
   "devDependencies": {
     "prettier": "3.6.2"
