@@ -1,12 +1,12 @@
 # Local Docker Operations
 
-The local Linux Docker deployment is the live/production target. PostgreSQL (`db`) is the application database, MinIO (`minio`) is the private object store, ClamAV (`clamav`) scans documents before persistence, and the checked-in Supabase CLI configuration supplies Auth because the current browser session and API JWT code requires Supabase semantics. The Supabase stack's internal database remains separate from the application database.
+The local Linux Docker deployment is the live/production target. PostgreSQL (`db`) is the application database, MinIO (`minio`) is the private object store, ClamAV (`clamav`) scans documents before persistence, and Supabase supplies Auth because the current browser session and API JWT code requires Supabase semantics. Production identity uses owner-hosted Supabase (decision 46); this document's checked-in `supabase/config.toml` CLI stack is the dev/test identity path. The local Supabase stack's internal database remains separate from the application database.
 
 Compose publishes PostgreSQL, MinIO, clamd, API, and web ports on loopback only. Clamd TCP has no authentication or encryption, so port 3310 must remain loopback-only. The Supabase CLI manages its own port bindings; protect them with the Linux host firewall and do not expose any stack service to an untrusted network. [Upstream Supabase documentation](https://supabase.com/docs/guides/local-development/cli-workflows) describes its CLI stack as development-only rather than production-hardened; this is an explicit limitation of the owner-selected local-only model, not an implied security certification. [ClamAV's Docker documentation](https://docs.clamav.net/manual/Installing/Docker.html) documents the official image, `/var/lib/clamav` signature database, TCP 3310, and daemon health behavior.
 
 ## Linux Mint continuation and portability
 
-The current checkpoint has been reconstructed and operated successfully on Linux Mint. Use Docker Engine with the Compose plugin, not assumptions tied to Docker Desktop. Run from the repository checkout on the Linux filesystem, confirm the current user can access the Docker socket, and retain the `host.docker.internal:host-gateway` mapping used by the API to reach local Supabase JWKS.
+The current checkpoint has been reconstructed and operated successfully on Linux Mint. Use Docker Engine with the Compose plugin, not assumptions tied to Docker Desktop. Run from the repository checkout on the Linux filesystem, confirm the current user can access the Docker socket, and retain the `host.docker.internal:host-gateway` mapping used by the API to reach local Supabase JWKS for dev/test identity (production uses the hosted Supabase JWKS).
 
 Linux Mint portability requirements:
 

@@ -83,7 +83,7 @@ The API verifies the Supabase JWT and maps the subject to:
 
 No active application relationship means no portal entry.
 
-The current web and API code genuinely depends on Supabase Auth token/session semantics. The supported live approach is therefore the checked-in `supabase/config.toml` started locally on the same Linux host. Hosted Supabase is prohibited. The API reaches its JWKS endpoint through the Docker host gateway while validating the issuer embedded by the local Auth service.
+The web and API code depends on Supabase Auth token/session semantics. Production identity now uses owner-hosted Supabase (decision 46, ES256 asymmetric JWKS) because the target `inspiron` host cannot run the local Supabase CLI container stack; dev/test retains the checked-in `supabase/config.toml` started locally on the same Linux host. The API accepts exactly two identity shapes — the exact local CLI endpoint (`http://127.0.0.1:54321/auth/v1` issuer, with JWKS/user through the Docker host gateway) or an exact HTTPS `.supabase.co` endpoint whose host matches `NEXT_PUBLIC_SUPABASE_URL` — and fails closed on anything else. This is identity scope only: application data, object bytes, and malware decisions stay on the local Compose services, and Supabase Storage remains disabled.
 
 Supabase Studio is optional local-operator tooling only and must not be exposed as a public, shared, or application-facing service. Supabase Storage and its S3 protocol remain disabled; they are not application storage and must not replace MinIO.
 

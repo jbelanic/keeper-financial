@@ -4,7 +4,7 @@
 - **Owner deploy approval:** 2026-07-30
 - **Purpose:** run and validate the Keeper stack beside the existing WordPress production site before any DNS or public-port cutover
 
-This runbook separates safe side-by-side validation from the final host-managed Nginx cutover. It preserves the repository boundary: local Docker Compose services, local Supabase CLI/Auth, private MinIO, fail-closed ClamAV, no hosted Supabase, and no public exposure of internal service ports.
+This runbook separates safe side-by-side validation from the final host-managed Nginx cutover. It preserves the repository boundary: local Docker Compose services, owner-hosted Supabase for production identity (decision 46; dev/test uses the local Supabase CLI/Auth stack), private MinIO, fail-closed ClamAV, and no public exposure of internal service ports.
 
 For the from-scratch, command-by-command Ubuntu installation checklist, use
 `docs/DEPLOYMENT_INSPIRON_STEP_BY_STEP.md`. This document remains the shorter
@@ -23,7 +23,7 @@ Use this before replacing WordPress.
   - PostgreSQL: `127.0.0.1:5432`
   - MinIO: `127.0.0.1:9000` and `127.0.0.1:9001`
   - ClamAV: `127.0.0.1:3310`
-  - Supabase Auth/API, Studio, and Mailpit stay host-local/firewall-protected on their configured CLI ports.
+  - No local Supabase CLI stack runs on the target host; production identity is owner-hosted Supabase (decision 46). A local CLI stack is used only for dev/test on a separate workstation or dev host.
 - The default Compose file does **not** start the Documenso TLS bridge and does not bind loopback `443`.
 - Test from the host shell or through SSH tunnels. Do not publish temporary internal ports.
 
@@ -39,16 +39,17 @@ Use this only after side-by-side validation passes and the existing WordPress si
 
 ## 2. Supabase boundary
 
-Use the repository-tracked local Supabase CLI/Auth stack. Do **not** set up hosted Supabase for this deployment.
+Production identity uses the owner-hosted Supabase project (decision 46) because the target host cannot run the local Supabase CLI container stack (SIGILL/exit 132). The repository-tracked local Supabase CLI/Auth stack (`supabase/config.toml`) is retained for dev/test only and is not started on the target host.
 
 Required facts:
 
-- `supabase/config.toml` keeps Supabase Storage and its S3 protocol disabled.
+- The API accepts exactly two identity shapes and fails closed otherwise: the exact local CLI endpoint (issuer `http://127.0.0.1:54321/auth/v1`, JWKS/user via `host.docker.internal`), or an exact HTTPS `.supabase.co` endpoint whose host matches `NEXT_PUBLIC_SUPABASE_URL` (issuer `/auth/v1`, JWKS `/auth/v1/.well-known/jwks.json`, user `/auth/v1/user`, default/`443` port).
+- `SUPABASE_ISSUER`, `SUPABASE_JWKS_URL`, and `SUPABASE_USER_URL` derive from the hosted project base URL (`NEXT_PUBLIC_SUPABASE_URL`).
+- The hosted project keeps Supabase Storage and its S3 protocol disabled.
 - Supabase Auth proves identity only; application PostgreSQL relationships/roles/lifecycle still authorize access.
-- The browser-safe anon key from `npx supabase status` may be copied into `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`.
-- Never copy the service-role key, signing key, JWT secret, confirmation links, access tokens, or refresh tokens into `.env`, Git, shell history, screenshots, or evidence.
-
-Public remote candidate/admin Auth requires a separately reviewed exact Auth routing choice if those flows must be used from outside the host. Do not solve that by switching to hosted Supabase. For side-by-side validation, use loopback or SSH-tunneled local Supabase URLs.
+- Only the hosted project's browser-safe anon key may be copied into `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_ANON_KEY`.
+- Never copy the service-role key, secret key, signing key, JWT secret, confirmation links, access tokens, or refresh tokens into `.env`, Git, shell history, screenshots, or evidence.
+- ES256 asymmetric JWKS only; never enable HS256 or `none`.
 
 ## 3. Pre-cutover `.env` values
 
@@ -65,7 +66,10 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://apply.localhost:
 
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=https://hdzmlwhubkecegrhptdd.supabase.co
+SUPABASE_ISSUER=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1
+SUPABASE_JWKS_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_USER_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user
 NEXT_PUBLIC_MORTGAGE_APPLICATION_URL=http://apply.localhost:3000/
 
 MORTGAGE_APPLICATION_PROVIDER=keeper_secure_application
@@ -94,7 +98,10 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://apply.localhost:
 
 NEXT_PUBLIC_SITE_URL=https://keeperfinancial.ca
 NEXT_PUBLIC_API_BASE_URL=https://keeperfinancial.ca
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=https://hdzmlwhubkecegrhptdd.supabase.co
+SUPABASE_ISSUER=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1
+SUPABASE_JWKS_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_USER_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user
 NEXT_PUBLIC_MORTGAGE_APPLICATION_URL=https://apply.keeperfinancial.ca/
 
 MORTGAGE_APPLICATION_PROVIDER=keeper_secure_application
@@ -110,7 +117,7 @@ Notes:
 
 - `NEXT_PUBLIC_API_BASE_URL=https://keeperfinancial.ca` makes public browser API calls same-origin through Nginx rather than to the user's own `localhost`.
 - The API production validator intentionally keeps `WEB_ORIGIN`/`CORS_ORIGINS` loopback because Nginx is the trusted public ingress and server-side browser-facing borrower requests are same-origin.
-- `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321` is valid for local/SSH-tunneled validation. If public remote candidate/admin Auth is required at launch, define and review a local-Supabase Auth proxy route and callback allow-list as a separate explicit change; do not use hosted Supabase.
+- `NEXT_PUBLIC_SUPABASE_URL` is the owner-hosted Supabase project base (`https://hdzmlwhubkecegrhptdd.supabase.co`) per decision 46, so remote candidate/admin Auth no longer needs a local-Supabase proxy. The API still fails closed unless the issuer/JWKS/user are the exact hosted `.supabase.co` endpoints on that same host.
 
 ## 5. Side-by-side startup
 
@@ -119,14 +126,12 @@ From the repository root on the target host:
 ```bash
 cp .env.example .env
 ${EDITOR:-vi} .env
-
-(umask 077 && test -e supabase/signing_keys.json || printf '[]\n' > supabase/signing_keys.json)
-npx supabase gen signing-key --algorithm ES256
-npx supabase start
-npx supabase status
 ```
 
-Copy only the anon key into `.env`, then generate borrower key files outside Git if they do not already exist:
+The target host runs no local Supabase CLI stack (decision 46). Set the hosted project's
+`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_ISSUER`, `SUPABASE_JWKS_URL`, and
+`SUPABASE_USER_URL` in `.env` and copy only its browser-safe anon key. Then generate
+borrower key files outside Git if they do not already exist:
 
 ```bash
 mkdir -p secrets
@@ -169,8 +174,8 @@ curl --fail http://127.0.0.1:8000/health
 curl --fail http://127.0.0.1:8000/health/db
 curl --fail http://127.0.0.1:9000/minio/health/live
 curl --fail http://127.0.0.1:3000/
-curl --fail http://127.0.0.1:54321/auth/v1/health
-curl --fail http://127.0.0.1:54321/auth/v1/.well-known/jwks.json
+curl --fail "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json" >/dev/null
+curl --fail "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/health" >/dev/null
 ```
 
 For workstation browser validation without exposing ports, use SSH tunnels:
@@ -179,9 +184,6 @@ For workstation browser validation without exposing ports, use SSH tunnels:
 ssh \
   -L 3000:127.0.0.1:3000 \
   -L 8000:127.0.0.1:8000 \
-  -L 54321:127.0.0.1:54321 \
-  -L 54323:127.0.0.1:54323 \
-  -L 54324:127.0.0.1:54324 \
   user@inspiron
 ```
 
@@ -221,7 +223,7 @@ sudo systemctl reload nginx
 Verify only Nginx owns public `80/443` and internal Keeper services remain loopback:
 
 ```bash
-sudo ss -ltnp | grep -E ':(80|443|3000|8000|5432|54321|54322|54323|54324|9000|9001|3310)\b'
+sudo ss -ltnp | grep -E ':(80|443|3000|8000|5432|9000|9001|3310)\b'
 curl -I https://keeperfinancial.ca/
 curl -I https://www.keeperfinancial.ca/
 curl -I https://apply.keeperfinancial.ca/
@@ -239,7 +241,7 @@ Stop deployment or cutover if:
 - Nginx/Let's Encrypt TLS fails for `keeperfinancial.ca` or `apply.keeperfinancial.ca`;
 - `docker compose config --quiet`, Alembic head/check, API health, DB health, MinIO health, or ClamAV verification fails;
 - Supabase Storage or its S3 protocol is enabled;
-- hosted Supabase, Cloudflare R2, or another unapproved hosted replacement appears;
+- identity is not one of the two approved shapes (the exact local CLI endpoint, or the exact hosted `.supabase.co` host matching `NEXT_PUBLIC_SUPABASE_URL`), or Cloudflare R2 or another unapproved hosted replacement appears;
 - public browser API calls still target `localhost` after final cutover env values are set;
 - tokens, secrets, capability values, key material, document contents, SIN, or raw borrower payloads appear in logs/evidence;
 - real-data submission is enabled without deployed runtime evidence and the consent-catalog `real_data_approved=true` marker.

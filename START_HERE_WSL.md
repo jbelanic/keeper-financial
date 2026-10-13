@@ -68,11 +68,11 @@ Preferred default:
 - FastAPI for the application API.
 - PostgreSQL for application data.
 - SQLAlchemy and Alembic.
-- Repository-tracked local Supabase CLI/Auth stack for identity.
+- Owner-hosted Supabase for production identity (decision 46); repository-tracked local Supabase CLI/Auth stack for dev/test.
 - Private local S3-compatible MinIO for candidate documents.
 - Docker Compose on the local Linux host as the live/production environment.
 
-This deployment list reflects the current owner decision and supersedes the original hosted-service proposal retained elsewhere in this historical bootstrap record.
+This deployment list reflects the current owner decision; production identity is owner-hosted Supabase per decision 46, while dev/test uses the local Supabase CLI stack. It supersedes the original hosted-service proposal retained elsewhere in this historical bootstrap record.
 
 Reason: the public site, recruiting pages, and agent profile pages need reliable SEO and social previews. A client-only Vite SPA should not be the default public-site architecture. If the final approved UI implementation requires Vite, Codex must document the SEO/pre-rendering strategy before changing this decision.
 

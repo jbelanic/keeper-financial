@@ -156,7 +156,7 @@ MinIO, and metadata is committed only after the private object write.
 
 ## Live data services
 
-The authoritative live environment is the local Linux Docker Compose stack. Application/authorization data uses durable `db` PostgreSQL, private object bytes use durable `minio`, and malware decisions use healthchecked local `clamav` with persistent signatures. Metadata remains in PostgreSQL. The local Supabase CLI stack supplies identity only and has its own separate internal database. No hosted Supabase or Cloudflare R2 inventory exists.
+The authoritative live environment is the local Linux Docker Compose stack. Application/authorization data uses durable `db` PostgreSQL, private object bytes use durable `minio`, and malware decisions use healthchecked local `clamav` with persistent signatures. Metadata remains in PostgreSQL. Production identity is supplied by the owner-hosted Supabase project (decision 46) and, for dev/test, by the local Supabase CLI stack, which has its own separate internal database. No Cloudflare R2 inventory exists; hosted Supabase exists only as the identity provider.
 
 ## Database models
 
