@@ -6,6 +6,7 @@ from typing import ClassVar
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy.orm import Session
 
 from conftest import create_user
@@ -592,6 +593,7 @@ def test_marketing_withdrawal_unknown_or_absent_consent_fails_safely(
 
 class FakeLeadSMTP:
     messages: ClassVar[list[EmailMessage]] = []
+    login_attempts: ClassVar[list[tuple[str, str]]] = []
 
     def __init__(self, host: str, port: int, timeout: int = 10) -> None:
         self.host = host
@@ -606,6 +608,9 @@ class FakeLeadSMTP:
 
     def starttls(self) -> None:
         return None
+
+    def login(self, user: str, password: str) -> None:
+        self.login_attempts.append((user, password))
 
     def send_message(self, message: EmailMessage) -> None:
         self.messages.append(message)
@@ -764,6 +769,46 @@ def test_contact_lead_notification_falls_back_to_loopback_smtp_for_host_api(
         "broker@example.test",
         "admin@example.test",
     ]
+
+
+def test_contact_lead_notification_authenticates_when_smtp_credentials_set(
+    client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+    settings.smtp_port = 587
+    settings.smtp_use_tls = True
+    settings.smtp_username = "smtp2go-user"
+    settings.smtp_password = SecretStr("smtp2go-password")
+    FakeLeadSMTP.messages = []
+    FakeLeadSMTP.login_attempts = []
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
+
+    response = client.post("/api/v1/leads", json=valid_payload())
+
+    assert response.status_code == 201
+    assert FakeLeadSMTP.login_attempts == [
+        ("smtp2go-user", "smtp2go-password"),
+        ("smtp2go-user", "smtp2go-password"),
+    ]
+
+
+def test_contact_lead_notification_skips_login_without_credentials(
+    client: TestClient, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_lead_notifications(settings)
+    settings.smtp_port = 1025
+    settings.smtp_use_tls = True
+    settings.smtp_username = None
+    settings.smtp_password = None
+    FakeLeadSMTP.messages = []
+    FakeLeadSMTP.login_attempts = []
+    monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
+
+    response = client.post("/api/v1/leads", json=valid_payload())
+
+    assert response.status_code == 201
+    assert FakeLeadSMTP.login_attempts == []
+    assert len(FakeLeadSMTP.messages) == 2
 
 
 def test_contact_lead_submission_succeeds_when_notification_smtp_fails(

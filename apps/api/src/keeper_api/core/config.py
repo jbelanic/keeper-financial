@@ -106,6 +106,8 @@ class Settings(BaseSettings):
     smtp_port: int = Field(default=54324, ge=1, le=65535)
     smtp_from: str = "no-reply@keeperfinancial.ca"
     smtp_use_tls: bool = False
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
     smtp_notification_subject: str = "A borrower application has been assigned to you"
     lead_notification_email_enabled: bool = False
     lead_notification_admin_email: str | None = None

@@ -155,6 +155,13 @@ def _send_message(*, settings: Settings, recipient_email: str, message: EmailMes
             with smtplib.SMTP(smtp_host, settings.smtp_port, timeout=10) as server:
                 if settings.smtp_use_tls:
                     server.starttls()
+                password = (
+                    settings.smtp_password.get_secret_value()
+                    if settings.smtp_password is not None
+                    else None
+                )
+                if settings.smtp_username and password:
+                    server.login(settings.smtp_username, password)
                 server.send_message(message)
             return
         except (OSError, smtplib.SMTPException):
