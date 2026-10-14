@@ -1,6 +1,6 @@
 # Keeper Financial
 
-Keeper Financial is a Next.js/FastAPI modular monolith. The owner-approved live/production environment is Docker on the local Linux host: Compose PostgreSQL for application data, Compose MinIO for private objects, Compose ClamAV for pre-persistence document scanning, and the repository-tracked local Supabase CLI stack for Auth. Hosted Supabase, Cloudflare R2, and remote cloud infrastructure are not supported.
+Keeper Financial is a Next.js/FastAPI modular monolith. The owner-approved live/production environment is Docker on the local Linux host: Compose PostgreSQL for application data, Compose MinIO for private objects, Compose ClamAV for pre-persistence document scanning, and owner-hosted Supabase for production identity (decision 46; dev/test uses the repository-tracked local Supabase CLI stack). Cloudflare R2 and remote cloud infrastructure are not supported.
 
 `docs/00_PROJECT_SOURCE_OF_TRUTH.md` is authoritative. On 2026-07-24 the owner approved Keeper becoming the MVP system of record for borrower application intake and supporting documents under `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`. That workflow is not implemented at the Phase A documentation checkpoint. Credit-bureau connectivity, automated underwriting/approval, lender submission, deal compliance, custom e-signature, commissions, payroll, and a full client CRM remain excluded.
 
@@ -12,7 +12,7 @@ apps/api             FastAPI, SQLAlchemy, and Alembic
 packages/ui          Accessible components and design tokens
 packages/contracts   Generated OpenAPI/TypeScript contract boundary
 infrastructure       Application Dockerfiles
-supabase              Local Supabase CLI/Auth configuration
+supabase              Local Supabase CLI/Auth configuration (dev/test; production identity is owner-hosted)
 docs                  Governing architecture and operations documentation
 ```
 
@@ -51,7 +51,7 @@ curl --fail http://localhost:9000/minio/health/live
 .venv/bin/python apps/api/scripts/verify_clamav.py --host 127.0.0.1 --port 3310
 ```
 
-Supabase CLI 2.109.1 reads a configured signing-key file before first generation, so the preceding guarded command creates a private-permission, non-secret empty JSON key array only when the ignored file is absent. The exact generation command then replaces it with ES256 key material; never print, inspect, copy, stage, or commit that file. Replace all `.env` `change-me` values, then manually copy only the browser-safe local anon key reported by `npx supabase status` into `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Never put the service-role key, secret key, JWT secret, or signing key in a `NEXT_PUBLIC_*` variable. Rebuild `web` whenever a public value changes because Next.js embeds it during the image build.
+Supabase CLI 2.109.1 reads a configured signing-key file before first generation, so the preceding guarded command creates a private-permission, non-secret empty JSON key array only when the ignored file is absent. The exact generation command then replaces it with ES256 key material; never print, inspect, copy, stage, or commit that file. Replace all `.env` `change-me` values, then manually copy only the browser-safe local anon key reported by `npx supabase status` into `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Never put the service-role key, secret key, JWT secret, or signing key in a `NEXT_PUBLIC_*` variable. Rebuild `web` whenever a public value changes because Next.js embeds it during the image build. For the production target host, identity uses the owner-hosted Supabase project (decision 46): set `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_ISSUER`, `SUPABASE_JWKS_URL`, and `SUPABASE_USER_URL` to that project's exact `.supabase.co` endpoints and copy only its hosted browser-safe anon key.
 
 `make infra` starts healthchecked PostgreSQL, MinIO, and ClamAV plus the idempotent private-bucket initializer. The first ClamAV start with an empty named signature volume may take several minutes. `make migrate` explicitly rebuilds the current API image before running the non-destructive-by-default Alembic upgrade, preventing an older local image from reporting or applying a stale migration head. Migrations never run automatically on service startup. The web container uses internal API and Supabase routes for server rendering while retaining loopback-only browser URLs. Open `http://localhost:3000`; the tracked Compose configuration binds application, database, object, and clamd ports to loopback. Recreate older containers before assuming their live bindings match the current file.
 

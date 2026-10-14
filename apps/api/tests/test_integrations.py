@@ -190,6 +190,97 @@ def test_safe_local_docker_production_configuration_is_accepted() -> None:
     assert settings.malware_scanner_fail_closed is True
 
 
+def test_safe_hosted_supabase_production_configuration_is_accepted() -> None:
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        debug=False,
+        dev_auth_enabled=False,
+        require_admin_mfa=True,
+        web_origin="http://localhost:3000",
+        cors_origins="http://localhost:3000",
+        database_url="postgresql+psycopg://keeper:secret@db:5432/keeper",
+        next_public_supabase_url="https://hdzmlwhubkecegrhptdd.supabase.co",
+        supabase_issuer="https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1",
+        supabase_jwks_url=(
+            "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json"
+        ),
+        supabase_user_url="https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user",
+        supabase_anon_key="synthetic-hosted-anon-key",
+        storage_backend="s3",
+        malware_scanner_backend="clamav",
+        clamav_host="clamav",
+        clamav_port=3310,
+        s3_endpoint_url="http://minio:9000",
+        s3_public_endpoint_url="http://localhost:9000",
+        s3_access_key_id="synthetic-local-access-id",
+        s3_secret_access_key="synthetic-local-secret",
+        s3_bucket="keeper-private",
+    )
+    assert settings.app_env == "production"
+
+
+@pytest.mark.parametrize(
+    "identity_overrides",
+    [
+        # Hosted base but loopback issuer: mixed shape must fail closed.
+        {
+            "next_public_supabase_url": "https://hdzmlwhubkecegrhptdd.supabase.co",
+            "supabase_issuer": "http://127.0.0.1:54321/auth/v1",
+        },
+        # http:// public base can never satisfy the hosted shape.
+        {
+            "next_public_supabase_url": "http://hdzmlwhubkecegrhptdd.supabase.co",
+        },
+        # Hosted issuer on a different host than NEXT_PUBLIC_SUPABASE_URL.
+        {
+            "next_public_supabase_url": "https://hdzmlwhubkecegrhptdd.supabase.co",
+            "supabase_issuer": "https://evil.supabase.co/auth/v1",
+        },
+        # Non-443 port on a hosted endpoint.
+        {
+            "supabase_user_url": "https://hdzmlwhubkecegrhptdd.supabase.co:8443/auth/v1/user",
+        },
+        # Wrong issuer path.
+        {
+            "supabase_issuer": "https://hdzmlwhubkecegrhptdd.supabase.co/not-auth/v1",
+        },
+    ],
+)
+def test_hosted_supabase_mixed_or_malformed_shapes_fail_closed(
+    identity_overrides: dict[str, str],
+) -> None:
+    values: dict[str, object] = {
+        "_env_file": None,
+        "app_env": "production",
+        "debug": False,
+        "dev_auth_enabled": False,
+        "require_admin_mfa": True,
+        "web_origin": "http://localhost:3000",
+        "cors_origins": "http://localhost:3000",
+        "database_url": "postgresql+psycopg://keeper:secret@db:5432/keeper",
+        "next_public_supabase_url": "https://hdzmlwhubkecegrhptdd.supabase.co",
+        "supabase_issuer": "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1",
+        "supabase_jwks_url": (
+            "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json"
+        ),
+        "supabase_user_url": "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user",
+        "supabase_anon_key": "synthetic-hosted-anon-key",
+        "storage_backend": "s3",
+        "malware_scanner_backend": "clamav",
+        "clamav_host": "clamav",
+        "clamav_port": 3310,
+        "s3_endpoint_url": "http://minio:9000",
+        "s3_public_endpoint_url": "http://localhost:9000",
+        "s3_access_key_id": "synthetic-local-access-id",
+        "s3_secret_access_key": "synthetic-local-secret",
+        "s3_bucket": "keeper-private",
+    }
+    values.update(identity_overrides)
+    with pytest.raises(ValidationError, match="live Supabase identity"):
+        Settings(**values)  # type: ignore[arg-type]
+
+
 def test_s3_storage_uses_internal_minio_and_public_path_style_presigning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

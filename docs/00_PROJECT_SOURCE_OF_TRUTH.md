@@ -64,13 +64,13 @@ Preferred foundation:
 - API: FastAPI.
 - Database: PostgreSQL.
 - ORM/migrations: SQLAlchemy and Alembic.
-- Identity: the repository-tracked local Supabase CLI/Auth stack; no hosted Supabase.
+- Identity: owner-hosted Supabase for production (decision 46, `https://hdzmlwhubkecegrhptdd.supabase.co`, ES256 asymmetric JWKS) and the repository-tracked local Supabase CLI/Auth stack for dev/test. The API validates exactly those two identity shapes and fails closed otherwise.
 - Authorization authority: application database roles and lifecycle state.
 - Object storage: private local S3-compatible MinIO with path-style addressing.
 - Malware scanning: local ClamAV `clamd` in Docker Compose; validation and a clean scan are required before private-object persistence.
 - Local file storage: test/development fallback only; never the live object store.
 - Live/production runtime: Docker Compose on the local Linux host. The local containers are the deployment targets.
-- Infrastructure boundary: no hosted Supabase, Cloudflare R2, or external cloud infrastructure keys/services.
+- Infrastructure boundary: owner-hosted Supabase is permitted for identity only (decision 46); Cloudflare R2 and external cloud infrastructure keys/services remain excluded.
 - Email: transactional provider selected later.
 - E-signature: self-hosted Documenso behind a configured server-side adapter; no custom signature system. Provider status refresh is authoritative, uses one configured API origin, rejects redirects, and fails closed.
 
@@ -175,3 +175,14 @@ On 2026-07-31 the owner additionally approved retaining the target host's existi
 Nginx/Let's Encrypt ingress rather than replacing it with Caddy. The repository-managed
 Nginx template and runbook are authoritative for the target host; Nginx is the sole
 public ingress on `80/443`, while Keeper services remain loopback/private.
+
+On 2026-10-13 the owner moved production identity to the owner-hosted Supabase
+project `https://hdzmlwhubkecegrhptdd.supabase.co` (decision 46) because the
+target `inspiron` host cannot run the local Supabase CLI container stack
+(SIGILL / exit 132). This supersedes the hosted-Supabase prohibition in decision
+14 and the "local Supabase Auth boundary" clause of decision 44 and of the
+2026-07-30 paragraph above. Identity scope only: application data, object bytes,
+and malware decisions stay on the local Compose PostgreSQL/MinIO/ClamAV services;
+Supabase Storage stays disabled; borrowers remain accountless; and dev/test
+retains the local Supabase CLI stack. Decisions 47 and 48 record the pinned
+legacy MinIO image and the accepted below-baseline CPU risk.

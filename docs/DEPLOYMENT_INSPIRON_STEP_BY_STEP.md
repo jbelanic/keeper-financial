@@ -31,7 +31,7 @@ The merged source can be installed, migrated, and smoke-tested side by side with
 
 The following are **not solved by installation commands** and must not be guessed:
 
-1. **Public candidate/administrator authentication:** the tracked local Supabase URL is loopback-only. Public Auth proxy routing, production callback URLs, and remote-browser evidence require a separately reviewed configuration change. Candidate/admin sign-in is not ready for public use until that change is merged and tested.
+1. **Public candidate/administrator authentication:** production identity uses the owner-hosted Supabase project (decision 46) and the API validates the exact hosted `.supabase.co` shape. Remote candidate/admin sign-in still requires the hosted project's URL/key and email/redirect configuration plus genuine remote-browser evidence before it is claimed ready.
 2. **First production administrator:** `seed_local.py` and `link_local_admin_identity.py` are deliberately local/synthetic-only. There is no approved production administrator-bootstrap command. Do not run them with production data or weaken their guards.
 3. **Real borrower data:** keep `BORROWER_REAL_DATA_ENABLED=false`. Real submission also requires deployed evidence and the exact approved consent-catalog marker.
 4. **Transactional email:** Mailpit captures local mail only. No production email provider/configuration has been approved.
@@ -65,7 +65,7 @@ Do not stop, recreate, rename, or prune unrelated WordPress, Immich, database, p
 | Nginx | Only public listener on `80/443`; keeps unrelated virtual hosts intact |
 | Certbot/Let's Encrypt | Existing certificate issuance and renewal |
 | Git | Fetches merged source from GitHub |
-| Node.js/npm | Launches the pinned Supabase CLI through `npx` |
+| Node.js/npm | Dev/test only: launches the pinned Supabase CLI through `npx` (no Supabase CLI runs on the target host; decision 46) |
 | DNS | `keeperfinancial.ca`, `www`, and `apply` records |
 | Backup storage | WordPress, Nginx, Keeper PostgreSQL, MinIO, Auth, and key backups |
 
@@ -82,11 +82,19 @@ Do not stop, recreate, rename, or prune unrelated WordPress, Immich, database, p
 
 The `keeper_postgres`, `keeper_minio`, and `keeper_clamav` named volumes hold durable state. Do not delete them.
 
-### 1.3 Supabase CLI-managed Docker services
+### 1.3 Supabase identity services
 
-The repository-tracked `supabase/config.toml` starts local Auth/API, a separate internal PostgreSQL database, Studio, and Mailpit. Supabase Storage and its S3 protocol are disabled. These containers are managed with `npx supabase`, not `docker compose` from `compose.yaml`.
+The target host runs **no** local Supabase CLI stack (decision 46). Production identity
+uses the owner-hosted Supabase project (`https://hdzmlwhubkecegrhptdd.supabase.co`,
+region `us-east-2`, ES256 asymmetric JWKS), configured through `NEXT_PUBLIC_SUPABASE_URL`
+and the derived `SUPABASE_ISSUER`/`SUPABASE_JWKS_URL`/`SUPABASE_USER_URL`. The
+repository-tracked `supabase/config.toml` remains for dev/test only and is not started here.
 
-Studio, Mailpit, the Supabase database, and Auth internals must not be public. They are available only on the host/approved SSH tunnel during side-by-side validation.
+The API accepts only the exact hosted `.supabase.co` shape (same host as
+`NEXT_PUBLIC_SUPABASE_URL`, exact `/auth/v1` paths, default/`443` port) or the exact local
+CLI shape, and fails closed otherwise. The hosted project keeps Supabase Storage and its
+S3 protocol disabled. No local Supabase, Studio, Mailpit, or Supabase database port exists
+on this host, so there is nothing here to expose or firewall.
 
 ## 2. Phase A — host inspection and go/no-go
 
@@ -144,7 +152,7 @@ Expected before Keeper starts:
 
 - Nginx owns public `80/443`;
 - WordPress and Immich continue to run;
-- Keeper ports `3000`, `8000`, `5432`, `9000`, `9001`, `3310`, and Supabase ports `54320`–`54324` are unused.
+- Keeper ports `3000`, `8000`, `5432`, `9000`, `9001`, and `3310` are unused; no local Supabase CLI ports (`54320`–`54324`) are needed on this host because production identity is hosted (decision 46).
 
 If any intended Keeper port is occupied, stop. Do not stop its owner. Record the conflict and make a reviewed port-binding change instead.
 
@@ -286,23 +294,13 @@ sudo docker compose version
 
 Docker-published ports can bypass ordinary UFW assumptions. Keeper's tracked ports are bound to `127.0.0.1`, but the son must still inspect the effective `iptables`/`DOCKER-USER` policy and perform external negative probes before cutover.
 
-### 4.3 Node.js 22 for the Supabase CLI
+### 4.3 Node.js 22 (dev/test only — not required on the target host)
 
-Check first:
+The target host no longer runs the Supabase CLI (decision 46): production identity is owner-hosted, and the web application builds inside the tracked Node 22 Docker image. No host Node/npm install is required for the Keeper deployment itself.
 
-**`[SON/ROOT]`**
+Node.js 22 with the pinned Supabase CLI is needed only on a **dev/test workstation** that runs the local Supabase CLI stack. If such a workstation lacks Node 22, first confirm that no other workload depends on the installed host Node version, then install from the NodeSource APT repository:
 
-```bash
-node --version 2>/dev/null || true
-npm --version 2>/dev/null || true
-```
-
-If Node is not major version 22, first confirm that no existing host workload
-depends on the installed host Node version. Do not replace a shared runtime
-silently. When the host runtime is unused or absent, install Node 22 from the
-NodeSource APT repository:
-
-**`[SON/ROOT]`**
+**`[WORKSTATION]`**
 
 ```bash
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/nodesource.gpg >/dev/null
@@ -314,7 +312,7 @@ npm --version
 npx --yes supabase@2.109.1 --version
 ```
 
-Expected: Node `v22.x` and Supabase CLI `2.109.1`. The web application itself builds inside the tracked Node 22 Docker image.
+Expected: Node `v22.x` and Supabase CLI `2.109.1`.
 
 ## 5. Phase D — create the restricted account and clone `main`
 
@@ -414,7 +412,10 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://apply.localhost:
 
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=https://hdzmlwhubkecegrhptdd.supabase.co
+SUPABASE_ISSUER=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1
+SUPABASE_JWKS_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_USER_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user
 NEXT_PUBLIC_MORTGAGE_APPLICATION_URL=http://apply.localhost:3000/
 
 MORTGAGE_APPLICATION_PROVIDER=keeper_secure_application
@@ -429,109 +430,45 @@ ESIGN_PROVIDER=disabled
 
 `BORROWER_APPLICATION_ENABLED=false` is intentional during this production-mode loopback smoke test. Production borrower cryptography accepts only the exact HTTPS `apply.keeperfinancial.ca` origin, so do not combine production mode, borrower enablement, and a loopback borrower origin.
 
-## 7. Phase F — start local Supabase/Auth
+## 7. Phase F — configure hosted Supabase identity
 
-### 7.1 Generate the ignored ES256 signing key
+Decision 46 moves production identity to the owner-hosted Supabase project. The target host runs **no** local Supabase CLI stack, generates **no** signing key, and starts **no** Supabase containers. The repository-tracked `supabase/config.toml` remains for dev/test and must keep `[storage].enabled = false` and `[storage.s3_protocol].enabled = false`.
 
-**`[SON/ROOT]`**
-
-```bash
-cd /srv/keeper-financial
-if sudo test -e supabase/signing_keys.json; then
-  echo 'Existing Supabase signing key preserved; rotation is not part of deployment.'
-else
-  sudo sh -c "umask 077; printf '[]\n' > supabase/signing_keys.json"
-  sudo -H npx --yes supabase@2.109.1 gen signing-key --algorithm ES256 >/dev/null 2>&1
-fi
-sudo chown root:root supabase/signing_keys.json
-sudo chmod 0600 supabase/signing_keys.json
-sudo test "$(sudo stat -c '%a' supabase/signing_keys.json)" = 600
-```
-
-Never print, inspect, copy, or commit `supabase/signing_keys.json`.
-
-### 7.2 Start Supabase and copy only the anon key into `.env`
+### 7.1 Set the hosted identity values
 
 **`[SON/ROOT]`**
 
 ```bash
 cd /srv/keeper-financial
-if ! sudo -H npx --yes supabase@2.109.1 start >/dev/null 2>&1; then
-  echo 'STOP: local Supabase failed to start; inspect locally without sharing credentials' >&2
-  exit 1
-fi
+sudoedit .env
 ```
 
-Capture status to a root-only temporary file and update only the two anon-key settings without displaying any key:
+Set (all non-secret except the anon key, which is browser-visible, not authorization):
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://hdzmlwhubkecegrhptdd.supabase.co
+SUPABASE_ISSUER=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1
+SUPABASE_JWKS_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_USER_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user
+SUPABASE_JWT_ALGORITHMS=ES256
+```
+
+Copy only the hosted project's browser-safe anon key into `SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Never copy the hosted service-role key, secret key, JWT secret, or signing key into `.env`, Git, shell history, screenshots, or evidence.
+
+### 7.2 Validate the hosted identity boundary
 
 **`[SON/ROOT]`**
 
 ```bash
 cd /srv/keeper-financial
-# Extract ANON_KEY from local Supabase status and inject into .env
-# Uses a Python script written to a temp file for reliable quote handling
-TMP_PY=/tmp/keeper-anon-extract.$$.py
-cat > "$TMP_PY" << 'PYEOF'
-import os, re, subprocess
-from pathlib import Path
-
-result = subprocess.run(
-    ["npx", "--yes", "supabase@2.109.1", "status", "-o", "env"],
-    cwd="/srv/keeper-financial",
-    check=True,
-    capture_output=True,
-    text=True,
-    env={**os.environ, "HOME": "/root"},
-)
-match = re.search(r"^ANON_KEY="?([^"
-]+)"?$", result.stdout, re.MULTILINE)
-if not match:
-    raise SystemExit("STOP: local Supabase ANON_KEY was not found")
-anon = match.group(1)
-env_path = Path("/srv/keeper-financial/.env")
-lines = env_path.read_text(encoding="utf-8").splitlines()
-keys = {"SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY"}
-seen = set()
-out = []
-for line in lines:
-    key = line.split("=", 1)[0] if "=" in line else ""
-    if key in keys:
-        out.append(f"{key}={anon}")
-        seen.add(key)
-    else:
-        out.append(line)
-if seen != keys:
-    raise SystemExit("STOP: expected anon-key settings are missing from .env")
-tmp = env_path.with_name(".env.tmp")
-tmp.write_text("
-".join(out) + "
-", encoding="utf-8")
-os.chmod(tmp, 0o600)
-os.replace(tmp, env_path)
-PYEOF
-sudo python3 "$TMP_PY"
-rm -f "$TMP_PY"
-```
-
-This code captures but never prints Supabase status. It writes only the browser-safe anon key to the expected variables. It does not store service-role, secret, JWT, or signing keys.
-
-### 7.3 Validate the Supabase boundary
-
-**`[SON/ROOT]`**
-
-```bash
-curl --fail --silent --show-error http://127.0.0.1:54321/auth/v1/health >/dev/null
-curl --fail --silent --show-error http://127.0.0.1:54321/auth/v1/.well-known/jwks.json >/dev/null
-sudo ss -ltnp | grep -E ':(54320|54321|54322|54323|54324)\b'
+curl --fail --silent --show-error https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json >/dev/null
+curl --fail --silent --show-error https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/health >/dev/null
+sudo ss -ltnp | grep -E ':(54320|54321|54322|54323|54324)\b' || echo 'no local Supabase listeners (expected)'
 grep -A4 '^\[storage\]' supabase/config.toml
 grep -A2 '^\[storage.s3_protocol\]' supabase/config.toml
 ```
 
-Both storage settings must remain `enabled = false`. Do not expose Studio (`54323`) or Mailpit (`54324`) through Nginx.
-If any Supabase listener is on `0.0.0.0` or `[::]`, stop unless an already
-reviewed host firewall/`DOCKER-USER` rule demonstrably blocks it from every
-untrusted interface. Loopback binding is preferred; a hopeful UFW rule is not
-proof because Docker-published ports can bypass ordinary UFW handling.
+Both storage settings must remain `enabled = false` in the tracked config. No local Supabase Studio, Mailpit, or Supabase database runs on this host, so there is nothing to expose or firewall. The API fails closed at startup unless the identity endpoints are the exact hosted `.supabase.co` shape above (or the exact local CLI shape on a dev/test host).
 
 ## 8. Phase G — generate borrower key files
 
@@ -697,7 +634,7 @@ At this stage the public request must still reach the existing WordPress site.
 **`[SON/ROOT]`**
 
 ```bash
-sudo ss -ltnp | grep -E ':(80|443|3000|8000|5432|54320|54321|54322|54323|54324|9000|9001|3310)\b'
+sudo ss -ltnp | grep -E ':(80|443|3000|8000|5432|9000|9001|3310)\b'
 ```
 
 Only Nginx should listen publicly on `80/443`; every Keeper/Supabase listener must be loopback-only or otherwise blocked by the reviewed host firewall.
@@ -710,9 +647,6 @@ Only Nginx should listen publicly on `80/443`; every Keeper/Supabase listener mu
 ssh -N \
   -L 3000:127.0.0.1:3000 \
   -L 8000:127.0.0.1:8000 \
-  -L 54321:127.0.0.1:54321 \
-  -L 54323:127.0.0.1:54323 \
-  -L 54324:127.0.0.1:54324 \
   server-user@inspiron
 ```
 
@@ -727,7 +661,7 @@ Checklist:
 - [ ] navigation and contact form load without console/network errors;
 - [ ] API requests target the SSH-tunneled loopback API, not an unrelated host;
 - [ ] `apply.localhost` renders the borrower host journey but submission remains unavailable while borrower intake is disabled;
-- [ ] Studio/Mailpit are reachable only through the tunnel and are never shared publicly;
+- [ ] no local Supabase/Studio/Mailpit runs on the target host; production identity is owner-hosted (decision 46);
 - [ ] no secrets, tokens, borrower answers, SIN, object keys, or filenames appear in screenshots or evidence.
 
 ## 12. Phase K — reboot persistence test before cutover
@@ -747,10 +681,6 @@ After reconnecting:
 ```bash
 sudo systemctl is-active docker nginx
 cd /srv/keeper-financial
-if ! sudo -H npx --yes supabase@2.109.1 start >/dev/null 2>&1; then
-  echo 'STOP: local Supabase failed to start; inspect locally without sharing credentials' >&2
-  exit 1
-fi
 sudo docker compose up -d
 sudo docker compose ps --all
 curl --fail --silent --show-error http://127.0.0.1:8000/health >/dev/null
@@ -775,7 +705,7 @@ All boxes must be checked before changing public Nginx routing:
 - [ ] external negative port probes are arranged;
 - [ ] borrower encryption/HMAC keys have an encrypted offline recovery copy;
 - [ ] `BORROWER_REAL_DATA_ENABLED=false` remains set;
-- [ ] owner accepts that public candidate/admin Auth remains unavailable, **or** the separately reviewed Auth change has merged and passed;
+- [ ] hosted Supabase identity (decision 46) is configured and its exact issuer/JWKS/user endpoints are validated;
 - [ ] a rollback operator is present.
 
 ## 14. Phase M — DNS and certificate preparation
@@ -886,7 +816,10 @@ Set:
 ```dotenv
 NEXT_PUBLIC_SITE_URL=https://keeperfinancial.ca
 NEXT_PUBLIC_API_BASE_URL=https://keeperfinancial.ca
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=https://hdzmlwhubkecegrhptdd.supabase.co
+SUPABASE_ISSUER=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1
+SUPABASE_JWKS_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_USER_URL=https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user
 NEXT_PUBLIC_MORTGAGE_APPLICATION_URL=https://apply.keeperfinancial.ca/
 
 MORTGAGE_APPLICATION_PROVIDER=keeper_secure_application
@@ -902,7 +835,7 @@ ESIGN_PROVIDER=disabled
 Important:
 
 - `NEXT_PUBLIC_*` values are embedded at image build time; a restart alone is insufficient.
-- `NEXT_PUBLIC_SUPABASE_URL` remains loopback because public Auth routing is unresolved. Candidate/admin login from remote browsers will not work in this configuration.
+- `NEXT_PUBLIC_SUPABASE_URL` is the owner-hosted Supabase project base (decision 46); remote candidate/admin login uses the hosted Auth service. Confirm the hosted project's redirect/email settings before relying on it.
 - Do not set public HTTPS values in `WEB_ORIGIN`/`CORS_ORIGINS`; the current production validator requires the approved local-host values and borrower traffic is same-origin through the Next/Nginx boundary.
 
 Validate secrets and render without printing values:
@@ -1050,7 +983,7 @@ From a separate network, every port below must be closed/filtered except public 
 **`[WORKSTATION]`**
 
 ```bash
-for port in 3000 8000 5432 54320 54321 54322 54323 54324 9000 9001 3310; do
+for port in 3000 8000 5432 9000 9001 3310; do
   nc -vz -w 3 inspiron-public-address "$port"
 done
 ```
@@ -1138,14 +1071,13 @@ sudo test -d "/var/backups/keeper-minio/keeper-$STAMP"
 
 Object backups remain encrypted borrower ciphertext for borrower documents, but candidate objects and metadata still require restricted backup custody. Restore into an isolated bucket and reconcile against PostgreSQL metadata.
 
-### 20.3 Keys and Supabase Auth
+### 20.3 Keys and hosted Supabase Auth
 
 - Keep encrypted offline copies of both borrower key files. Never store them beside unencrypted backups.
-- Back up the Supabase Auth database/configuration under an approved procedure before real candidate/admin use.
-- Do not assume `supabase stop` is a backup.
-- Do not use `supabase stop --no-backup`.
+- Auth is owner-hosted Supabase (decision 46), so the Supabase Auth database is a vendor-side concern: confirm the hosted project's backup/PITR posture and record recovery ownership. No local Supabase database exists on this host to back up.
+- Do not assume a local `supabase stop` is a backup (this host has no local Supabase stack).
 
-No real data should be accepted until PostgreSQL, MinIO, Auth, keys, and required host configuration have a successful isolated restore exercise.
+No real data should be accepted until PostgreSQL, MinIO, hosted Auth, keys, and required host configuration have a successful isolated restore exercise.
 
 ## 21. Updating to a later merged release
 
@@ -1214,21 +1146,21 @@ Alembic downgrade is not the default rollback. If a forward migration has writte
 - [ ] host capacity and swap reviewed;
 - [ ] existing service/listener inventory stored root-only;
 - [ ] WordPress/Nginx backups verified;
-- [ ] Docker and Node/Supabase CLI versions verified;
+- [ ] Docker Engine/Compose versions verified (no host Node/Supabase CLI required on the target; decision 46);
 - [ ] restricted account has no sudo/Docker access;
 - [ ] exact merged `main` revision recorded;
 - [ ] `.env`, borrower keys, and signing key are ignored and root-restricted;
 - [ ] Supabase Storage/S3 disabled;
 - [ ] Compose render and loopback bindings verified;
 - [ ] migrations reached one head and `alembic check` passed;
-- [ ] PostgreSQL, MinIO, ClamAV, API, web, Auth, and JWKS probes passed;
+- [ ] PostgreSQL, MinIO, ClamAV, API, web, and hosted Supabase JWKS probes passed;
 - [ ] clean and EICAR ClamAV verification passed;
 - [ ] SSH-tunnel browser smoke passed;
 - [ ] WordPress and Immich remained healthy.
 
 ### Public cutover
 
-- [ ] unresolved public Auth/admin-bootstrap boundary explicitly accepted or closed;
+- [ ] hosted Supabase identity (decision 46) configured and validated; public Auth/admin-bootstrap boundary explicitly accepted or closed;
 - [ ] DNS and exact certificates verified;
 - [ ] final public build-time variables set and web rebuilt;
 - [ ] production borrower keys load as the non-root API user;
@@ -1239,6 +1171,6 @@ Alembic downgrade is not the default rollback. If a forward migration has writte
 - [ ] external internal-port probes failed as required;
 - [ ] logs passed PII/secret review;
 - [ ] WordPress rollback was proven and remains immediately available;
-- [ ] PostgreSQL, MinIO, Auth, and key backup/restore ownership recorded.
+- [ ] PostgreSQL, MinIO, hosted-Auth, and key backup/restore ownership recorded.
 
 Any unchecked item is a documented gap, not an implied pass.

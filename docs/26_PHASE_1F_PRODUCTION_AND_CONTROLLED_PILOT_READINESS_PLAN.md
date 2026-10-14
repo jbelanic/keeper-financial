@@ -334,7 +334,7 @@ All entries are unresolved unless an approved repository decision cites the deci
 - **Evidence artifact:** `docs/evidence/phase-1f/RF-14-deployment-guardrails.md` with approved topology/data-flow diagrams, image/version inventory, configuration manifest with values redacted, rendered Compose check, host baseline, startup/shutdown order, dependency health, rebuild procedure, and drift review.
 - **Execution procedure or future runbook:** Pin and review service/image versions; define host prerequisites and patching; render configuration from a sanitized reference; prove production validation rejects debug, dev auth, local files, public objects, wildcard/remote origins, wrong database/storage/scanner hosts, disabled MFA, and non-fail-closed scanning; define explicit migration-before-app startup; reconstruct on an isolated host/target; compare runtime to approved topology.
 - **Pass/fail criterion:** Pass when reconstruction is repeatable, every dependency becomes healthy in approved order, migration remains explicit, configuration fails closed on every prohibited setting, runtime matches the approved topology, no unapproved cloud/service key exists, and drift is detectable.
-- **Stop condition:** Unpinned/unreviewed critical dependency, unresolved host patching, startup bypasses migrations/health, prohibited configuration starts, topology differs, hosted Supabase/R2/Supabase Storage appears, or recovery depends on undocumented manual state.
+- **Stop condition:** Unpinned/unreviewed critical dependency, unresolved host patching, startup bypasses migrations/health, prohibited configuration starts, topology differs, hosted identity other than the approved decision-46 Supabase shape appears, Cloudflare R2 or Supabase Storage appears, or recovery depends on undocumented manual state.
 - **Rollback or recovery boundary:** Stop the new environment, retain the last approved environment unchanged, restore only from verified backups, and require architecture/security review before another attempt.
 - **Blocks:** Both.
 
@@ -457,7 +457,7 @@ The following remain deferred or separately gated and must not be smuggled into 
 - automated FSRA/FINTRAC or other regulatory-verification claims;
 - Documenso webhooks unless a separate approved decision/specification defines the exact deployed-version behavior and security model;
 - multi-region architecture, high availability, or disaster-recovery topology not approved in the owner-decision register;
-- new cloud vendors, hosted Supabase, Cloudflare R2, Supabase Storage, sensitive-data classes beyond the approved borrower requirements, or new external integrations;
+- new cloud vendors beyond the approved decision-46 hosted Supabase identity provider, Cloudflare R2, Supabase Storage, sensitive-data classes beyond the approved borrower requirements, or new external integrations;
 - customer-facing data-rights automation, immutable audit export/tamper-evidence system, or other production enhancements not separately approved.
 
 Deprecation remediation for Starlette `TestClient` and Alembic configuration should be tracked as bounded maintenance. It is not an accepted-suite failure, and it does not supersede the operational blockers above.

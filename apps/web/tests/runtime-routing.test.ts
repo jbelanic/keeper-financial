@@ -30,6 +30,26 @@ describe("container-aware server routing", () => {
     expect(supabaseServerUrl()).toBe("http://host.docker.internal:54321");
   });
 
+  it("falls back to the hosted public Supabase URL when no internal URL is set", () => {
+    vi.stubEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "https://hdzmlwhubkecegrhptdd.supabase.co",
+    );
+
+    expect(supabaseServerUrl()).toBe(
+      "https://hdzmlwhubkecegrhptdd.supabase.co",
+    );
+  });
+
+  it("fails closed when no Supabase URL is configured", () => {
+    vi.stubEnv("SUPABASE_INTERNAL_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+
+    expect(() => supabaseServerUrl()).toThrow(
+      /Supabase server URL is not configured/,
+    );
+  });
+
   it("does not freeze a build-time API failure into the careers page", () => {
     expect(careersRendering).toBe("force-dynamic");
   });
