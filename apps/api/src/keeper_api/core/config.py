@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     supabase_audience: str = "authenticated"
     supabase_jwks_url: str = "http://127.0.0.1:54321/auth/v1/.well-known/jwks.json"
     supabase_user_url: str = "http://127.0.0.1:54321/auth/v1/user"
+    # Browser-visible hosted project base URL. Production identity must be either
+    # the exact local CLI endpoint or an exact HTTPS .supabase.co host that
+    # matches this value; see validate_tier_safety.
+    next_public_supabase_url: str | None = None
     supabase_anon_key: SecretStr | None = None
     # The local web client already needs this browser-safe public key. Accepting
     # the same value avoids a second local secret-shaped setting while keeping
@@ -202,27 +206,60 @@ class Settings(BaseSettings):
             issuer = urlparse(self.supabase_issuer)
             jwks = urlparse(self.supabase_jwks_url)
             user_endpoint = urlparse(self.supabase_user_url)
-            if (
-                issuer.scheme != "http"
-                or issuer.hostname not in {"localhost", "127.0.0.1"}
-                or issuer.port != 54321
-                or issuer.path.rstrip("/") != "/auth/v1"
-            ):
-                errors.append("live Supabase issuer must be the local CLI Auth endpoint")
-            if (
-                jwks.scheme != "http"
-                or jwks.hostname != "host.docker.internal"
-                or jwks.port != 54321
-                or jwks.path != "/auth/v1/.well-known/jwks.json"
-            ):
-                errors.append("live Supabase JWKS must use the local CLI host gateway")
-            if (
-                user_endpoint.scheme != "http"
-                or user_endpoint.hostname != "host.docker.internal"
-                or user_endpoint.port != 54321
-                or user_endpoint.path != "/auth/v1/user"
-            ):
-                errors.append("live Supabase user verification must use the local CLI host gateway")
+            public_base = urlparse(self.next_public_supabase_url or "")
+
+            # Exactly two permitted identity shapes; anything else fails closed.
+            # (a) The local CLI endpoint (dev/test / side-by-side).
+            local_shape = (
+                issuer.scheme == "http"
+                and issuer.hostname in {"localhost", "127.0.0.1"}
+                and issuer.port == 54321
+                and issuer.path.rstrip("/") == "/auth/v1"
+                and jwks.scheme == "http"
+                and jwks.hostname == "host.docker.internal"
+                and jwks.port == 54321
+                and jwks.path == "/auth/v1/.well-known/jwks.json"
+                and user_endpoint.scheme == "http"
+                and user_endpoint.hostname == "host.docker.internal"
+                and user_endpoint.port == 54321
+                and user_endpoint.path == "/auth/v1/user"
+            )
+
+            # (b) An exact hosted Supabase HTTPS endpoint on the same host as
+            # NEXT_PUBLIC_SUPABASE_URL, all three paths exact, no non-443 port.
+            # The browser-facing base itself must also be HTTPS with no port,
+            # credentials, query, or fragment, so an http:// public base can
+            # never satisfy the hosted shape (dev/test uses the loopback base).
+            hosted_host = public_base.hostname
+            hosted_shape = (
+                hosted_host is not None
+                and hosted_host.endswith(".supabase.co")
+                and public_base.scheme == "https"
+                and public_base.port in {None, 443}
+                and not public_base.username
+                and not public_base.password
+                and not public_base.query
+                and not public_base.fragment
+                and issuer.scheme == "https"
+                and issuer.hostname == hosted_host
+                and issuer.port in {None, 443}
+                and issuer.path.rstrip("/") == "/auth/v1"
+                and jwks.scheme == "https"
+                and jwks.hostname == hosted_host
+                and jwks.port in {None, 443}
+                and jwks.path == "/auth/v1/.well-known/jwks.json"
+                and user_endpoint.scheme == "https"
+                and user_endpoint.hostname == hosted_host
+                and user_endpoint.port in {None, 443}
+                and user_endpoint.path == "/auth/v1/user"
+            )
+
+            if not (local_shape or hosted_shape):
+                errors.append(
+                    "live Supabase identity must be either the local CLI endpoint "
+                    "(http loopback:54321) or an exact hosted HTTPS .supabase.co "
+                    "endpoint on the same host as NEXT_PUBLIC_SUPABASE_URL"
+                )
             if self.s3_endpoint_url:
                 endpoint = urlparse(self.s3_endpoint_url)
                 if (

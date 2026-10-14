@@ -96,8 +96,35 @@ def test_compose_pins_real_immutable_minio_server_release() -> None:
         "\n  minio-init:\n", maxsplit=1
     )[0]
 
-    assert "image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z" in minio_service
-    assert "quay.io/minio/minio:latest" not in minio_service
+    # Decision 47: pinned musl-based alpine/minio release (index digest) used on
+    # BOTH the target host and local dev. The official quay.io/minio image is
+    # glibc/x86-64-v2 and cannot execute on the below-baseline target host.
+    assert (
+        "image: docker.io/alpine/minio:RELEASE.2025-10-15T17-29-55Z"
+        "@sha256:cf23643a6cf9ce159c57643ceb88279e431262282428c9e0bf3a7ef1a97e84b4" in minio_service
+    )
+    assert "quay.io/minio/minio" not in minio_service
+    assert "alpine/minio:latest" not in minio_service
+    # The image ships no `mc`, so the healthcheck must probe MinIO's own HTTP
+    # liveness endpoint rather than `mc ready`.
+    assert "wget -q -O - http://127.0.0.1:9000/minio/health/live" in minio_service
+    assert 'test: ["CMD", "mc", "ready", "local"]' not in minio_service
+
+
+def test_compose_minio_init_uses_api_boto3_not_the_glibc_mc_image() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text()
+    minio_init_service = compose.split("\n  minio-init:\n", maxsplit=1)[1].split(
+        "\n  clamav:\n", maxsplit=1
+    )[0]
+
+    # Bucket provisioning must not use the glibc-based mc image (it cannot run
+    # on the target host, decision 47) and must never live inside Alembic
+    # migrations. It runs the API image's own boto3 stack instead.
+    assert "quay.io/minio/mc" not in minio_init_service
+    assert "dockerfile: infrastructure/docker/api.Dockerfile" in minio_init_service
+    assert 'command: ["python", "scripts/init_minio_bucket.py"]' in minio_init_service
+    assert "S3_ENDPOINT_URL: http://minio:9000" in minio_init_service
+    assert "S3_BUCKET: ${MINIO_BUCKET:-keeper-private}" in minio_init_service
 
 
 def test_compose_uses_supported_minio_cors_configuration() -> None:
@@ -285,9 +312,12 @@ def test_compose_web_uses_internal_server_routes_and_public_browser_routes() -> 
         "NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:8000}"
         in web_service
     )
-    assert "SUPABASE_INTERNAL_URL: http://host.docker.internal:54321" in web_service
     assert (
-        "NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}"
+        "SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-${NEXT_PUBLIC_SUPABASE_URL}}"
+        in web_service
+    )
+    assert (
+        "NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env}"
         in web_service
     )
     assert 'extra_hosts:\n      - "host.docker.internal:host-gateway"' in web_service

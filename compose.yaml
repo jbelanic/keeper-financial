@@ -20,7 +20,15 @@ services:
     restart: unless-stopped
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # Decision 47: pinned musl-based alpine/minio build, used on BOTH the target
+    # host and local dev so the stacks stay aligned. The official quay.io/minio
+    # image is glibc-2.34 based and requires x86-64-v2; the target inspiron host
+    # (AMD Athlon II) cannot execute it (SIGILL / exit 132), while this static
+    # musl build runs on both. It runs as root because the image's `minio` user
+    # cannot write the root-owned /data volume, and it ships no `mc`, so the
+    # healthcheck probes MinIO's own HTTP liveness endpoint instead.
+    image: docker.io/alpine/minio:RELEASE.2025-10-15T17-29-55Z@sha256:cf23643a6cf9ce159c57643ceb88279e431262282428c9e0bf3a7ef1a97e84b4
+    user: "0:0"
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
@@ -32,25 +40,29 @@ services:
     volumes:
       - keeper_minio:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:9000/minio/health/live >/dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
-      start_period: 5s
+      start_period: 30s
     restart: unless-stopped
 
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    # One-shot idempotent private-bucket creation using the API image's own
+    # boto3 stack. This replaces the glibc-based `mc` image, which cannot run on
+    # the below-baseline target host (decision 47) and would break the
+    # minio -> minio-init -> api startup ordering there. Bucket provisioning
+    # must never live inside Alembic migrations.
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
-      MINIO_BUCKET: ${MINIO_BUCKET:-keeper-private}
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - >-
-        mc alias set keeper http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" &&
-        mc mb --ignore-existing "keeper/$${MINIO_BUCKET}" &&
-        mc anonymous set none "keeper/$${MINIO_BUCKET}"
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+      S3_BUCKET: ${MINIO_BUCKET:-keeper-private}
+      S3_REGION: us-east-1
+    command: ["python", "scripts/init_minio_bucket.py"]
     depends_on:
       minio:
         condition: service_healthy
@@ -98,9 +110,15 @@ services:
       # localhost site or the dedicated apply.localhost borrower host. All
       # origins stay local-host HTTP so the production validator still passes.
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://apply.localhost:3000,http://127.0.0.1:8000
-      SUPABASE_JWKS_URL: http://host.docker.internal:54321/auth/v1/.well-known/jwks.json
-      SUPABASE_USER_URL: http://host.docker.internal:54321/auth/v1/user
-      SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
+      # Identity endpoints come from .env (decision 46): either the local CLI
+      # endpoints for dev/test or the exact hosted .supabase.co endpoints for
+      # production. The API validator accepts only those two shapes and fails
+      # closed otherwise, so there is no loopback default here.
+      SUPABASE_ISSUER: ${SUPABASE_ISSUER:?set SUPABASE_ISSUER in .env}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL:?set SUPABASE_JWKS_URL in .env}
+      SUPABASE_USER_URL: ${SUPABASE_USER_URL:?set SUPABASE_USER_URL in .env}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the Supabase anon key in .env}}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env}
       SMTP_ENABLED: ${SMTP_ENABLED:-false}
       SMTP_HOST: ${SMTP_HOST:-host.docker.internal}
       SMTP_PORT: ${SMTP_PORT:-54324}
@@ -145,8 +163,8 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the Supabase anon key in .env}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
         NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME: ${NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME:-Keeper Financial}
         NEXT_PUBLIC_BROKERAGE_LEGAL_NAME: ${NEXT_PUBLIC_BROKERAGE_LEGAL_NAME:-Keeper Financial Inc.}
@@ -164,10 +182,13 @@ services:
       # the server. Pin it to 0.0.0.0 so the container listens on all interfaces.
       HOSTNAME: 0.0.0.0
       API_INTERNAL_URL: http://api:8000
-      SUPABASE_INTERNAL_URL: http://host.docker.internal:54321
+      # Server-side containers reach Supabase Auth through the internal route:
+      # the host gateway for the local CLI stack, or NEXT_PUBLIC_SUPABASE_URL for
+      # the hosted production project (decision 46).
+      SUPABASE_INTERNAL_URL: ${SUPABASE_INTERNAL_URL:-${NEXT_PUBLIC_SUPABASE_URL}}
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:8000}
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://127.0.0.1:54321}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the local Supabase anon key in .env}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?set NEXT_PUBLIC_SUPABASE_URL in .env}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?set the Supabase anon key in .env}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME: ${NEXT_PUBLIC_BROKERAGE_DISPLAY_NAME:-Keeper Financial}
       NEXT_PUBLIC_BROKERAGE_LEGAL_NAME: ${NEXT_PUBLIC_BROKERAGE_LEGAL_NAME:-Keeper Financial Inc.}

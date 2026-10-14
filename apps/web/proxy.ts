@@ -95,10 +95,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: forwardedHeaders } });
   }
   let response = NextResponse.next({ request: { headers: forwardedHeaders } });
+  // Fail closed: never fall back to a loopback Supabase URL.
+  const supabaseUrl =
+    process.env.SUPABASE_INTERNAL_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    return new NextResponse("Supabase URL is not configured", { status: 500 });
+  }
   const supabase = createServerClient(
-    process.env.SUPABASE_INTERNAL_URL ??
-      process.env.NEXT_PUBLIC_SUPABASE_URL ??
-      "http://127.0.0.1:54321",
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "local-placeholder",
     {
       cookieOptions: { name: KEEPER_AUTH_COOKIE },
