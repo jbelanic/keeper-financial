@@ -220,6 +220,61 @@ def test_safe_hosted_supabase_production_configuration_is_accepted() -> None:
     assert settings.app_env == "production"
 
 
+def _valid_hosted_production_kwargs() -> dict[str, object]:
+    return {
+        "app_env": "production",
+        "debug": False,
+        "dev_auth_enabled": False,
+        "require_admin_mfa": True,
+        "web_origin": "http://localhost:3000",
+        "cors_origins": "http://localhost:3000",
+        "database_url": "postgresql+psycopg://keeper:secret@db:5432/keeper",
+        "next_public_supabase_url": "https://hdzmlwhubkecegrhptdd.supabase.co",
+        "supabase_issuer": "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1",
+        "supabase_jwks_url": (
+            "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json"
+        ),
+        "supabase_user_url": "https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/user",
+        "supabase_anon_key": "synthetic-hosted-anon-key",
+        "storage_backend": "s3",
+        "malware_scanner_backend": "clamav",
+        "clamav_host": "clamav",
+        "clamav_port": 3310,
+        "s3_endpoint_url": "http://minio:9000",
+        "s3_public_endpoint_url": "http://localhost:9000",
+        "s3_access_key_id": "synthetic-local-access-id",
+        "s3_secret_access_key": "synthetic-local-secret",
+        "s3_bucket": "keeper-private",
+    }
+
+
+def test_real_data_enabled_requires_borrower_application_enabled() -> None:
+    with pytest.raises(ValidationError, match="BORROWER_REAL_DATA_ENABLED requires"):
+        Settings(
+            _env_file=None,
+            borrower_real_data_enabled=True,
+            borrower_application_enabled=False,
+        )
+
+
+def test_production_borrower_origin_must_be_exact_https(tmp_path: Path) -> None:
+    keyring = tmp_path / "keyring.json"
+    hmac_key = tmp_path / "hmac.key"
+    keyring.write_text("{}")
+    hmac_key.write_bytes(b"x" * 32)
+    kwargs = _valid_hosted_production_kwargs()
+    kwargs.update(
+        {
+            "borrower_application_enabled": True,
+            "borrower_encryption_keyring_file": str(keyring),
+            "borrower_capability_hmac_key_file": str(hmac_key),
+            "borrower_application_origin": "http://apply.localhost:3000",
+        }
+    )
+    with pytest.raises(ValidationError, match="BORROWER_APPLICATION_ORIGIN must be exactly"):
+        Settings(_env_file=None, **kwargs)  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize(
     "identity_overrides",
     [

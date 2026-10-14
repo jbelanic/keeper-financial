@@ -54,21 +54,33 @@ Bucket: `keeper-private` (candidate + borrower private objects). Supabase Storag
 disabled; MinIO is the only object store.
 
 ### Minimal backup (free)
-`scripts/backup_minio.sh` mirrors the bucket to a local directory using the `minio/mc`
-container (no install required). Run on a schedule (cron / systemd timer):
+`scripts/backup_all.sh` (decision 49 P0) runs a coordinated backup at one consistency
+boundary:
+
+- `scripts/backup_postgres.sh` — `pg_dump` through the `db` service, gzip-compressed, and
+  (when `BACKUP_ENCRYPTION_KEY_FILE` is set) encrypted with `openssl aes-256-cbc -pbkdf2`.
+- `scripts/backup_minio.py` — boto3 mirror of `keeper-private` (replaces the earlier
+  `minio/mc` approach, which is glibc-based and cannot run on the below-baseline target
+  host, decision 47). Objects are application-level ciphertext already, so the mirror does
+  not re-encrypt.
+
+Run on a schedule (cron / systemd timer):
 
 ```bash
-./scripts/backup_minio.sh /var/backups/keeper-minio
+./scripts/backup_all.sh /var/backups/keeper
 ```
 
-It requires `MINIO_ENDPOINT`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` (from `.env`) and
-writes a timestamped mirror plus a manifest. It does not store object keys or signed URLs in
-logs beyond the restricted evidence boundary.
+It requires `POSTGRES_DB`, `POSTGRES_USER`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`,
+`MINIO_BUCKET` (from `.env`) and writes timestamped PostgreSQL dumps plus a MinIO mirror
+and a combined manifest. It does not store object keys or signed URLs in logs beyond the
+restricted evidence boundary, and it keeps a 30-day rolling window. The encryption key file
+must live outside the repo and outside the backup destination.
 
 ### Restore test (isolated)
 1. Restore into a separate bucket/target that is not reachable from the live application.
 2. Reconcile object keys against PostgreSQL metadata; any orphan is recorded, not copied
-   into live.
+   into live. Run `scripts/reconcile_restore_deletions.py` as a safety gate so a restore
+   cannot resurrect records deleted after the backup was created (decision 49 P0).
 3. Destroy the isolated target after the check (or retain per the approved backup policy).
 
 ## 3. ClamAV signature freshness, health, and fail-closed
@@ -78,11 +90,10 @@ logs beyond the restricted evidence boundary.
   2s connect / 15s read timeout.
 - Fail-closed is enforced in code: a scanner timeout, malformed response, unavailable daemon,
   or non-clean result persists **no** MinIO bytes and **no** PostgreSQL document metadata.
-- Freshness: `freshclam` updates signatures from the public mirror by default. For local
-  operation, add a periodic check (cron) that records engine + signature version/age and
-  alerts if age exceeds the approved threshold (default: 24h). No new service is required;
-  a one-line cron calling `docker exec keeper-financial-clamav-1 freshclam --quiet` and
-  logging the result is sufficient for local evidence.
+- Freshness: `freshclam` updates signatures from the public mirror by default.
+  `scripts/monitor_health.sh` (decision 49 P0) checks clamd availability (PING over
+  loopback 3310), API/DB health, and PostgreSQL/MinIO backup freshness, and exits non-zero
+  on any critical failure; run it from cron with `MAILTO` for the digest.
 
 ## 4. DNS / TLS / ingress (local done; production requirements)
 

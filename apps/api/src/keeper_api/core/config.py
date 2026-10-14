@@ -328,6 +328,9 @@ class Settings(BaseSettings):
                     "Documenso public URL must be exactly https://sign.keeperfinancial.ca"
                 )
 
+        if self.borrower_real_data_enabled and not self.borrower_application_enabled:
+            raise ValueError("BORROWER_REAL_DATA_ENABLED requires BORROWER_APPLICATION_ENABLED")
+
         if self.borrower_application_enabled:
             if not self.borrower_encryption_keyring_file:
                 raise ValueError(
@@ -351,6 +354,15 @@ class Settings(BaseSettings):
                     raise ValueError("BORROWER_APPLICATION_ORIGIN must be a valid URL")
             except ValueError:
                 raise ValueError("BORROWER_APPLICATION_ORIGIN must be a valid URL") from None
+            if (
+                self.app_env == "production"
+                and self.borrower_application_origin.rstrip("/")
+                != "https://apply.keeperfinancial.ca"
+            ):
+                raise ValueError(
+                    "BORROWER_APPLICATION_ORIGIN must be exactly "
+                    "https://apply.keeperfinancial.ca in production"
+                )
 
         return self
 

@@ -1,4 +1,4 @@
-.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed reset-local-admin link-local-admin openapi
+.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed reset-local-admin link-local-admin openapi backup monitor
 
 bootstrap: api-install
 	npm install
@@ -69,3 +69,9 @@ openapi:
 	.venv/bin/python apps/api/scripts/export_openapi.py
 	npm run contracts:generate
 	npm run format --workspace @keeper/contracts
+
+backup:
+	./scripts/backup_all.sh
+
+monitor:
+	./scripts/monitor_health.sh
