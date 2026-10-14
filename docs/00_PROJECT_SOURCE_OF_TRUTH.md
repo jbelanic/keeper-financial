@@ -186,3 +186,18 @@ and malware decisions stay on the local Compose PostgreSQL/MinIO/ClamAV services
 Supabase Storage stays disabled; borrowers remain accountless; and dev/test
 retains the local Supabase CLI stack. Decisions 47 and 48 record the pinned
 legacy MinIO image and the accepted below-baseline CPU risk.
+
+On 2026-10-14 the owner approved a revised, commercially proportionate Phase F
+readiness scope (decision 49): implement the P0 production security controls now —
+production fail-closed configuration validation, encrypted PostgreSQL plus coordinated
+PostgreSQL/MinIO backups with restore-time deletion reconciliation as a defined safety
+gate, and basic cron/script monitoring — while deferring the automated borrower purge
+scheduler, a legal-hold API/management UI, candidate-document lifecycle automation, and a
+global log-redaction framework. The borrower retention model is recorded as an explicit
+unresolved owner decision: decision 37's seven-year submitted-record and 30-day-draft
+retention remains authoritative and unchanged; the proposed minimal-retention
+transfer-then-delete model is not adopted because it presumes a Filogix/origination
+handoff excluded by the approved MVP boundary, and it requires Ontario
+compliance/privacy validation before any purge/deletion code. Real-borrower submission
+remains gated by the runtime release controls until the retention model is resolved and a
+real restore drill succeeds.
