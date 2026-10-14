@@ -41,6 +41,19 @@ const INTERVIEW_STATUSES = new Set([
   "interview",
 ]);
 
+function informationRequestHint(status: string): string {
+  if (status === "application_submitted") {
+    return (
+      "Information can be requested only while this selected application is under review or in interview. " +
+      "Begin review first when it is newly submitted."
+    );
+  }
+  if (status === "more_information_required") {
+    return "An information request is already pending for this application and is awaiting the candidate's response.";
+  }
+  return "Information can be requested only while this selected application is under review or in interview.";
+}
+
 class ReviewRequestError extends Error {
   constructor(public readonly status: number) {
     super(`review request failed (${status})`);
@@ -456,11 +469,7 @@ export function CandidateReviewPipeline({
               </div>
             </fieldset>
             {!INFORMATION_REQUEST_STATUSES.has(detail.status) ? (
-              <p className="notice">
-                Information can be requested only while this selected
-                application is under review or in interview. Begin review first
-                when it is newly submitted.
-              </p>
+              <p className="notice">{informationRequestHint(detail.status)}</p>
             ) : null}
           </form>
 
