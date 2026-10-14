@@ -152,6 +152,56 @@ describe("application-specific administrator information requests", () => {
     );
   });
 
+  it("shows an awaiting-response notice, not a begin-review prompt, after a request is sent", async () => {
+    const requester = vi.fn(async (path: string, init?: RequestInit) => {
+      if (!init) return jsonResponse(detail("under_review"));
+      if (path.endsWith("/information-requests")) {
+        return jsonResponse(
+          {
+            id: "00000000-0000-4000-8000-000000000555",
+            candidate_id: candidateId,
+            application_id: applicationId,
+            status: "open",
+            message: "Please provide a synthetic clarification.",
+            created_at: "2026-07-18T12:00:00Z",
+          },
+          201,
+        );
+      }
+      throw new Error(`unexpected path ${path}`);
+    });
+    const { CandidateReviewPipeline } = await import(
+      "@/app/(admin)/admin/candidates/candidate-review-pipeline"
+    );
+    render(
+      <CandidateReviewPipeline
+        initialQueue={queue}
+        initialPlans={[]}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /review synthetic for selected opportunity, attempt 1/i,
+      }),
+    );
+    await screen.findByLabelText(/message to candidate/i);
+    fireEvent.change(screen.getByLabelText(/message to candidate/i), {
+      target: { value: "Please provide a synthetic clarification." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /send request/i }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /information request sent/i,
+    );
+    expect(screen.getByText(/already pending/i)).toBeInTheDocument();
+    expect(screen.queryByText(/begin review first/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /send request/i }),
+    ).toBeDisabled();
+  });
+
   it("presents an operation-specific conflict without interview wording", async () => {
     const requester = vi.fn(async (_path: string, init?: RequestInit) =>
       init ? jsonResponse({}, 409) : jsonResponse(detail("under_review")),
