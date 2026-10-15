@@ -1032,9 +1032,20 @@ Do not stop shared Docker, Nginx, WordPress, Immich, Supabase, PostgreSQL, MinIO
 
 If Nginx files were damaged, restore `/etc/nginx` from the timestamped backup, run `nginx -t`, and reload. A restore is an administrator decision; do not overwrite newer unrelated Nginx changes blindly.
 
-## 20. Ongoing Keeper backup minimum
+## 20. Ongoing Keeper backup, off-host copy, and restore
 
-These are minimum commands, not a completed backup policy. Backups need approved encryption, off-host storage, retention, and isolated restore tests.
+The complete operational procedure — daily automated backups, daily verified encrypted USB
+off-host copy (two rotating drives), 30-day rolling retention, quarterly isolated restore
+drills, and alerting — is `docs/operations/backup-restore-runbook.md`. Use that runbook;
+this section is a pointer, not a substitute.
+
+Scripts (decision 49 P0): `scripts/backup_all.sh` (coordinated encrypted PostgreSQL +
+MinIO backup), `scripts/backup_postgres.sh` (encrypted `pg_dump`), `scripts/backup_minio.py`
+(boto3 MinIO mirror), `scripts/backup_usb.sh` (verified encrypted USB copy),
+`scripts/monitor_health.sh` (health/ClamAV/backup/USB freshness), `scripts/send_alert.py`
+(alert email), and `scripts/reconcile_restore_deletions.py` (restore-time deletion safety
+gate). Backups need approved encryption, off-host storage, retention, and isolated restore
+tests; a backup that has never been restored is unproven.
 
 ### 20.1 PostgreSQL
 
@@ -1052,24 +1063,10 @@ Test restoration only into an isolated database/container, never over live data.
 
 ### 20.2 MinIO
 
-The tracked backup script requires MinIO settings in its process environment. Do not `source .env` or print it. Run the backup logic through Docker's `--env-file` handling:
-
-**`[SON/ROOT]`**
-
-```bash
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-sudo install -d -m 0700 /var/backups/keeper-minio
-cd /srv/keeper-financial
-sudo docker run --rm --network host --env-file .env \
-  --entrypoint /bin/sh \
-  -e BACKUP_STAMP="$STAMP" \
-  -v /var/backups/keeper-minio:/backup \
-  quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z \
-  -c 'mc alias set keeper http://127.0.0.1:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null && mc mirror --overwrite keeper/"$MINIO_BUCKET" /backup/keeper-"$BACKUP_STAMP" >/dev/null'
-sudo test -d "/var/backups/keeper-minio/keeper-$STAMP"
-```
-
-Object backups remain encrypted borrower ciphertext for borrower documents, but candidate objects and metadata still require restricted backup custody. Restore into an isolated bucket and reconcile against PostgreSQL metadata.
+Use `scripts/backup_minio.py` (boto3) via `scripts/backup_all.sh` — the earlier
+`quay.io/minio/mc` image cannot run on the below-baseline target host (decision 47). See
+`docs/operations/backup-restore-runbook.md` for the full procedure and the verified
+encrypted USB off-host copy.
 
 ### 20.3 Keys and hosted Supabase Auth
 

@@ -83,6 +83,10 @@ must live outside the repo and outside the backup destination.
    cannot resurrect records deleted after the backup was created (decision 49 P0).
 3. Destroy the isolated target after the check (or retain per the approved backup policy).
 
+The complete operational procedure — cron scheduling, daily verified encrypted USB off-host
+copy (two rotating drives), 30-day rolling retention, quarterly restore drills, and
+failure alerting — is `docs/operations/backup-restore-runbook.md`.
+
 ## 3. ClamAV signature freshness, health, and fail-closed
 
 - Image `clamav/clamav:stable` runs `clamd` (port 3310, internal only) and `freshclam`.

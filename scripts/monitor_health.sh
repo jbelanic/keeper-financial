@@ -87,6 +87,19 @@ else
   fail "minio backup dir missing: $minio_dir"
 fi
 
+# Off-host USB copy freshness: the daily USB step writes a success marker.
+usb_marker="${USB_MOUNT:-/mnt/keeper-usb}/keeper-backups/last_success"
+if [[ -f "$usb_marker" ]]; then
+  usb_age_s=$(( $(date +%s) - $(stat -c %Y "$usb_marker") ))
+  if (( usb_age_s > STALE_MAX )); then
+    fail "usb backup stale (${usb_age_s}s)"
+  else
+    pass "usb backup fresh"
+  fi
+else
+  fail "usb backup marker missing: $usb_marker"
+fi
+
 echo "---"
 if (( FAILED )); then
   echo "MONITOR_FAIL $(date -u +%FT%TZ)"
