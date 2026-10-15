@@ -867,6 +867,39 @@ curl --fail --silent --show-error http://127.0.0.1:8000/health/db >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:3000/ >/dev/null
 ```
 
+### 15.1 Provision the first production administrator
+
+The first administrator is linked from an explicit hosted-Supabase identity with the
+production bootstrap command (`scripts/bootstrap_admin_identity.py`, decision 49), never the
+local `seed_local.py`/`link_local_admin_identity.py` scripts (those are local/synthetic-only).
+The command links the exact Supabase subject UUID + verified email to a `brokerage_admin`
+account, idempotently and audited; it never links by email alone, never uses service-role
+credentials, and never overwrites a genuine provider subject.
+
+1. In the hosted Supabase dashboard (`https://hdzmlwhubkecegrhptdd.supabase.co`),
+   **Authentication → Users → Add user** (or **Invite user**) with the administrator's
+   email and a strong password.
+2. Copy that user's **UUID** (the `id` shown in the Auth users list).
+3. Run the bootstrap command (it refuses to run unless `APP_ENV=production`):
+
+**`[SON/ROOT]`**
+
+```bash
+cd /srv/keeper-financial
+sudo docker compose run --rm -e APP_ENV=production api python scripts/bootstrap_admin_identity.py \
+  --email '<admin-email>' \
+  --subject '<supabase-uuid>' \
+  --name '<display name>'
+```
+
+4. After public cutover (Phase P), sign in at `https://keeperfinancial.ca/auth/sign-in` with
+   those credentials. The `brokerage_admin` role is granted exactly once (idempotent); verify
+   the admin console loads.
+
+Stop if the command refuses to run: confirm `APP_ENV=production`, that the `.env` uses the
+exact hosted `.supabase.co` identity values (Phase N), and that the subject UUID came from the
+hosted project (not a local Supabase CLI identity).
+
 ## 16. Phase O — install and review the Nginx template
 
 Do not overwrite the current WordPress file. Install Keeper under a separate name:
@@ -1134,7 +1167,7 @@ Alembic downgrade is not the default rollback. If a forward migration has writte
 | Access WordPress/Immich data | No | Yes, only as existing administrator |
 | Review local logs/evidence | No by default | Yes; redact before sharing |
 | Enable real borrower data | No | Only after separate release controls/approval |
-| Provision production administrators | No command exists | Requires approved implementation |
+| Provision production administrators | No | Yes — `scripts/bootstrap_admin_identity.py` (§15.1) |
 
 ## 23. Final acceptance checklist
 
