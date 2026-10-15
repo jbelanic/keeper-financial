@@ -73,6 +73,18 @@ production consent, and all Phase F operational work remain required.
 
 ## Phase 1F readiness limitations
 
+- **2026-10-14 (decision 49 P0):** production fail-closed configuration validation
+  (audited + two gap guards added: exact production borrower origin and the
+  real-data-requires-application gate), encrypted PostgreSQL + coordinated
+  PostgreSQL/MinIO backup (`scripts/backup_all.sh`, `backup_postgres.sh`,
+  `backup_minio.py`), restore-time deletion reconciliation
+  (`scripts/reconcile_restore_deletions.py`, a safety gate), and basic monitoring
+  (`scripts/monitor_health.sh`) are implemented and tested. The automated borrower purge
+  scheduler, legal-hold API/UI, candidate-document lifecycle automation, and a global
+  log-redaction framework remain **deferred**; the borrower retention model is an explicit
+  unresolved owner decision (decision 37 stays authoritative pending Ontario
+  compliance/privacy validation).
+
 - Phase 1B lead notification/assignment/CRM/export/customer-withdrawal and distributed abuse controls remain deferred. The mortgage redirect is current legacy behavior scheduled for replacement; CRM/e-signature provider labels remain disabled.
 - Borrower identity/financial/document intake is now approved under `docs/28_BORROWER_APPLICATION_MVP_REQUIREMENTS.md`. Credit-bureau connectivity, automated underwriting/approval, lender submission, deal compliance, full CRM, commissions/payroll, custom signing, automated FSRA verification, and independent agent portals remain out of scope.
 - The Documenso adapter supports explicit server-side status refresh against one configured HTTPS origin and refuses redirects. Self-hosted production deployment, backup/restore, monitoring, credentials, outbound policy, deployed-version status confirmation, webhook names/signatures, reconciliation scheduling, and failure alerting remain Phase 1F or conditional deployment work. No webhook behavior is claimed.
