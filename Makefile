@@ -1,4 +1,4 @@
-.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed reset-local-admin link-local-admin openapi backup monitor
+.PHONY: bootstrap infra up down compose-config api-install api-dev web-dev lint format typecheck test build migrate migrate-status migrate-check seed reset-local-admin link-local-admin bootstrap-admin approve-consent openapi backup monitor
 
 bootstrap: api-install
 	npm install
@@ -64,6 +64,17 @@ ADMIN_EMAIL ?= admin@example.test
 link-local-admin:
 	@if [ -z "$(SUPABASE_SUBJECT)" ]; then echo "SUPABASE_SUBJECT is required." >&2; exit 2; fi
 	@docker compose run --rm --build -e APP_ENV=local api python scripts/link_local_admin_identity.py --email "$(ADMIN_EMAIL)" --subject "$(SUPABASE_SUBJECT)"
+
+ADMIN_NAME ?= Brokerage Administrator
+CONSENT_VERSION ?= borrower-privacy-credit-disclosure-2026-07-27-v1
+
+bootstrap-admin:
+	@if [ -z "$(SUPABASE_SUBJECT)" ]; then echo "SUPABASE_SUBJECT is required." >&2; exit 2; fi
+	@docker compose run --rm --build -e APP_ENV=production api python scripts/bootstrap_admin_identity.py --email "$(ADMIN_EMAIL)" --subject "$(SUPABASE_SUBJECT)" --name "$(ADMIN_NAME)"
+
+approve-consent:
+	@if [ -z "$(CONSENT_DIGEST)" ]; then echo "CONSENT_DIGEST is required." >&2; exit 2; fi
+	@docker compose run --rm --build -e APP_ENV=production api python scripts/approve_consent_real_data.py --version "$(CONSENT_VERSION)" --digest "$(CONSENT_DIGEST)"
 
 openapi:
 	.venv/bin/python apps/api/scripts/export_openapi.py
