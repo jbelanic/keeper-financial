@@ -199,7 +199,7 @@ docker compose -f compose.yaml -f compose.documenso.yaml config --quiet
 docker compose -f compose.yaml -f compose.documenso.yaml up -d documenso-tls api
 ```
 
-Do not enable this overlay merely to make the API start; the base API no longer depends on the Documenso TLS bridge while `ESIGN_PROVIDER=disabled`.
+Do not enable this overlay merely to make the API start; the base API no longer depends on the Documenso TLS bridge while `ESIGN_PROVIDER=disabled`. This overlay and its self-signed loopback `443` bridge are **local-dev only**; production serves Documenso at `sign.keeperfinancial.ca` through the host Nginx with a real certificate, never through `compose.documenso.yaml`.
 
 ## 7. Nginx cutover
 
