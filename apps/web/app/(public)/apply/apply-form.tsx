@@ -55,7 +55,7 @@ function validateFields(form: HTMLFormElement): FieldErrors {
 }
 
 export function ApplyForm({
-  unavailableContact = "the published phone or email contact",
+  unavailableContact = "our phone number or email address",
   preferredAgentSlug,
 }: {
   unavailableContact?: string;
@@ -117,7 +117,7 @@ export function ApplyForm({
       if (!response.ok) {
         if (response.status === 422) {
           setErrors([
-            "Check the required fields and remove sensitive or unsupported information.",
+            "Check the required fields and remove any sensitive details.",
           ]);
         } else if (response.status === 429) {
           const retryAfter = response.headers.get("Retry-After");
@@ -128,11 +128,11 @@ export function ApplyForm({
           ]);
         } else if (response.status === 503) {
           setErrors([
-            `The mortgage application is temporarily unavailable. No application information has been submitted. Try again later or contact Keeper Financial using the published telephone number or email address.`,
+            "We couldn’t send your request right now. Nothing was submitted. Please try again shortly, or call or email us.",
           ]);
         } else {
           setErrors([
-            `We could not send your request. Review the form and try again. If the problem continues, contact Keeper Financial using the published telephone number or email address.`,
+            "We could not send your request. Review the form and try again. If the problem continues, call or email us.",
           ]);
         }
         return;
@@ -162,9 +162,9 @@ export function ApplyForm({
       <ErrorSummary errors={errors} />
       {submitted ? (
         <p role="status" aria-live="polite" className="notice notice-success">
-          Your contact request has been received. Keep sensitive information out
-          of follow-up email. Use an authorized secure process if documents are
-          requested.
+          Thanks — your request has been received. For your protection, please
+          don’t send documents by email; we’ll point you to the secure
+          application if we need them.
         </p>
       ) : null}
       <div className="grid-2">
@@ -246,7 +246,7 @@ export function ApplyForm({
       <FormField
         id="message"
         label="Brief message (optional)"
-        hint="Do not include a SIN, banking information, tax records, credit information, passwords, identity documents or mortgage documents."
+        hint="Please don’t include your SIN or banking details here."
       >
         <textarea id="message" name="message" maxLength={1000} />
       </FormField>

@@ -26,9 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Fail closed with non-indexable metadata when publication cannot be proved.
   }
   return createPageMetadata({
-    title: "Agent profile not published",
-    description:
-      "No approved Keeper Financial agent profile is published at this address.",
+    title: "Agent profile not available",
+    description: "This agent profile is not available.",
     path: "/agents",
     noIndex: true,
   });
@@ -67,7 +66,7 @@ export default async function AgentProfilePage({ params }: Props) {
             />
           ) : null}
           <header className="foundation-header">
-            <p className="eyebrow">Keeper Financial agent</p>
+            <p className="eyebrow">Licensed mortgage agent</p>
             <h1>{agent.licensed_name}</h1>
             <p className="page-lead">{agent.approved_title}</p>
             <p>Licence {agent.licence_number}</p>
@@ -105,7 +104,7 @@ export default async function AgentProfilePage({ params }: Props) {
             </dl>
           </section>
           <section className="card" aria-labelledby="agent-contact-heading">
-            <h2 id="agent-contact-heading">Approved public contact</h2>
+            <h2 id="agent-contact-heading">Contact</h2>
             {agent.public_email ? (
               <p>
                 <a href={`mailto:${agent.public_email}`}>
@@ -136,7 +135,7 @@ export default async function AgentProfilePage({ params }: Props) {
           className="paper-panel"
           aria-labelledby="brokerage-identity-heading"
         >
-          <p className="eyebrow">Brokerage identity</p>
+          <p className="eyebrow">Brokerage information</p>
           <h2 id="brokerage-identity-heading">{siteConfig.legalName}</h2>
           <p>{siteConfig.regulatoryText}</p>
           <p>{siteConfig.address}</p>
@@ -144,10 +143,6 @@ export default async function AgentProfilePage({ params }: Props) {
             <a href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
             {" · "}
             <a href={siteConfig.emailHref}>{siteConfig.email}</a>
-          </p>
-          <p className="fine-print">
-            Agent-specific application attribution is managed through Keeper
-            Financial’s application configuration.
           </p>
         </aside>
       </div>

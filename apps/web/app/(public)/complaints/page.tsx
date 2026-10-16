@@ -15,7 +15,7 @@ export default function ComplaintsPage() {
     <div className="container policy-page">
       <InteriorPageHeader
         title="Complaints"
-        description="Keeper Financial takes client concerns seriously. If you have a complaint about the mortgage services you received, please contact us so we can review the matter."
+        description="If something went wrong, we want to hear about it and make it right."
       />
       <article className="policy-content">
         <section>

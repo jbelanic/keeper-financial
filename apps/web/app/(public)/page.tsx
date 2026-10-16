@@ -11,9 +11,9 @@ import {
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Start with your mortgage goal",
+  title: "Your mortgage, handled properly",
   description:
-    "Explore common mortgage topics, ask a general question, or continue to the mortgage application when you are ready to provide detailed information.",
+    "Compare options from multiple lenders, ask us anything, and apply online in a secure application with a licensed Ontario mortgage brokerage.",
   path: "/",
 });
 
@@ -29,19 +29,19 @@ export default function HomePage() {
   return (
     <>
       <PageHero
-        eyebrow="Mortgage guidance"
-        title="Start with your mortgage goal. Continue securely when you’re ready."
-        description="Explore common mortgage topics, ask a general question, or continue to the mortgage application when you are ready to provide detailed information."
+        eyebrow="Ontario mortgage brokerage"
+        title="Your mortgage, handled properly."
+        description="Buying, renewing or refinancing? Compare options from multiple lenders, ask us anything, and apply online in a secure application."
         image="/images/home-conversation.png"
         imageAlt="A couple having a relaxed conversation in their living room"
         imagePriority
       >
         <div className="button-row">
           <Link className="button-link" href="/mortgages">
-            Explore mortgage topics
+            See your options
           </Link>
           <Link className="button-link button-secondary" href="/apply">
-            Get started
+            Start your application
           </Link>
         </div>
       </PageHero>
@@ -50,21 +50,22 @@ export default function HomePage() {
         <div>
           <Icon name="conversation" />
           <span>
-            <strong>Clear information</strong>General questions first
-          </span>
-        </div>
-        <div>
-          <Icon name="shield" />
-          <span>
-            <strong>General questions first</strong>Sensitive details stay in
-            the application
+            <strong>Licensed Ontario brokers</strong>Talk to licensed mortgage
+            professionals who work for you, not the lender
           </span>
         </div>
         <div>
           <Icon name="building" />
           <span>
-            <strong>Sensitive details stay in the application</strong>Keep
-            detailed information in the mortgage application
+            <strong>More lenders, one application</strong>We compare options
+            from banks, credit unions and other lenders
+          </span>
+        </div>
+        <div>
+          <Icon name="shield" />
+          <span>
+            <strong>Your information stays private</strong>Detailed financial
+            and identity details stay inside our secure application
           </span>
         </div>
       </div>
@@ -74,7 +75,7 @@ export default function HomePage() {
           <SectionHeading
             eyebrow="Common mortgage goals"
             title="Where would you like to begin?"
-            description="Choose the topic closest to your current goal. These pages provide general information and do not determine eligibility, rates or approval."
+            description="Start with the topic that matches where you are today. It is general information — your rate and your approval depend on your full picture."
             align="center"
           />
           <div className="service-grid">
@@ -95,8 +96,8 @@ export default function HomePage() {
         <div className="container process-layout">
           <SectionHeading
             eyebrow="How it works"
-            title="A clear first step"
-            description="Choose your topic. Review general information without providing financial or identity documents. Ask a question. Contact Keeper Financial using basic contact details and non-sensitive context. Continue to the application. Use the configured mortgage application service when detailed information is required."
+            title="A simple path to your mortgage"
+            description="Ask us anything first — you will not need documents until you are ready. When you are, we move you into a secure application and stay with you from there."
           />
           <ol className="process-list">
             {processSteps.map((step, index) => (
@@ -115,16 +116,61 @@ export default function HomePage() {
       </section>
 
       <section className="section">
+        <div className="container">
+          <SectionHeading
+            eyebrow="Why Keeper Financial"
+            title="Mortgage advice built around your options"
+            description="We work for you, not the lender."
+            align="center"
+          />
+          <div className="value-grid">
+            <article>
+              <Icon name="building" />
+              <h3>More lenders to compare</h3>
+              <p>
+                When you work with one financial institution, you generally see
+                only that institution’s mortgage products. We review options
+                from multiple lenders, which may include banks, credit unions,
+                monoline lenders, trust companies and alternative lenders where
+                appropriate.
+              </p>
+            </article>
+            <article>
+              <Icon name="conversation" />
+              <h3>Guidance, not guarantees</h3>
+              <p>
+                No mortgage broker can guarantee approval, a specific rate, or
+                that every borrower will qualify. What we can do is help you
+                understand your position, prepare a stronger application and
+                compare the options that may fit.
+              </p>
+            </article>
+            <article>
+              <Icon name="shield" />
+              <h3>Local, modern and secure</h3>
+              <p>
+                Keeper Financial combines local Ontario mortgage guidance with a
+                modern online experience: start online, share information
+                securely, and work with a licensed mortgage professional who can
+                explain your options clearly.
+              </p>
+            </article>
+          </div>
+          <p className="section-link">
+            <Link className="text-link" href="/broker">
+              Read more about working with a broker <Icon name="arrow" />
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="section">
         <div className="container split-feature">
           <div>
-            <p className="eyebrow">Prefer to contact a specific agent?</p>
-            <h2>
-              Browse currently published profiles and choose an agent to
-              contact.
-            </h2>
+            <p className="eyebrow">Work with one person</p>
+            <h2>Choose the agent you’d rather work with.</h2>
             <p>
-              Browse currently published profiles and choose an agent to
-              contact.
+              See who works in your area, then start with the person you pick.
             </p>
             <Link className="button-link" href="/agents">
               Find an Agent
@@ -132,15 +178,14 @@ export default function HomePage() {
           </div>
           <aside className="paper-panel">
             <Icon name="shield" />
-            <h3>Keep sensitive information out of general messages.</h3>
+            <h3>Never email us sensitive documents.</h3>
             <p>
-              Do not send a SIN, banking information, tax records, identity
-              documents, passwords or mortgage documents through a public
-              contact form or general email. Use the mortgage application or
-              another authorized secure channel when requested.
+              For your protection, we never ask for a SIN, banking details, tax
+              records or identity documents by email or in a general form.
+              Anything detailed happens inside the secure application.
             </p>
             <Link className="text-link" href="/contact">
-              Contact Keeper Financial <Icon name="arrow" />
+              Contact us <Icon name="arrow" />
             </Link>
           </aside>
         </div>
@@ -172,12 +217,12 @@ export default function HomePage() {
       <section className="section section-tight">
         <div className="container">
           <CtaBand
-            title="Choose your next step"
-            description="Ask a general question or continue to the mortgage application."
+            title="Ready when you are"
+            description="Ask a question, or start your application."
             primaryHref="/apply"
-            primaryLabel="Get started"
+            primaryLabel="Start your application"
             secondaryHref="/contact"
-            secondaryLabel="Contact Keeper Financial"
+            secondaryLabel="Contact us"
           />
         </div>
       </section>

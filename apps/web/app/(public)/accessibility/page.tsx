@@ -25,18 +25,16 @@ export default function AccessibilityPage() {
             mind, including:
           </p>
           <ul>
-            <li>Clear page structure and semantic headings</li>
-            <li>Keyboard-operable navigation and interactive elements</li>
+            <li>Clear page structure and headings</li>
+            <li>Navigation and controls that work from a keyboard</li>
             <li>Visible focus indicators for keyboard users</li>
             <li>Labelled form fields and descriptive buttons</li>
             <li>
               Content that reflows on smaller screens without page-level
               horizontal scrolling
             </li>
-            <li>Error and status messages that do not rely on colour alone</li>
-            <li>
-              Sufficient colour contrast for core text and interface elements
-            </li>
+            <li>Status messages that do not rely on colour alone</li>
+            <li>Readable contrast for core text and interface elements</li>
             <li>
               Reduced-motion support for non-essential animation where supported
               by the user’s device or browser settings
@@ -114,16 +112,10 @@ export default function AccessibilityPage() {
         <section>
           <h2>Ongoing review</h2>
           <p>
-            Keeper Financial’s website implementation includes automated checks
-            and behaviour-focused accessibility review during development.
-            Accessibility is an ongoing process, and we expect to continue
-            improving the website as content, technology, and user needs evolve.
-          </p>
-          <p>
-            The accessibility statement on this page is approved site content. A
-            separate formal specialist accessibility review remains a deferred
-            production-readiness item, but accessibility is incorporated into
-            the site and is not a standalone release blocker.
+            We test accessibility as we build, and we treat accessibility
+            barriers as defects that get prioritised and fixed. Accessibility is
+            an ongoing process, and we expect to continue improving the website
+            as content, technology, and user needs evolve.
           </p>
         </section>
         <section>

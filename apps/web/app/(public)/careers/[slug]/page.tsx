@@ -23,9 +23,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Fail closed with non-indexable metadata when publication cannot be proved.
   }
   return createPageMetadata({
-    title: "Opportunity not published",
-    description:
-      "No approved Keeper Financial opportunity is published at this address.",
+    title: "Role not available",
+    description: "This role is not available.",
     path: "/careers",
     noIndex: true,
   });
@@ -51,7 +50,7 @@ export default async function CareerOpportunityPage({ params }: Props) {
               { label: posting.title },
             ]}
           />
-          <p className="eyebrow">Current opportunity</p>
+          <p className="eyebrow">Current role</p>
           <h1>{posting.title}</h1>
           <p className="page-lead">{posting.summary}</p>
         </div>
@@ -63,7 +62,7 @@ export default async function CareerOpportunityPage({ params }: Props) {
           aria-labelledby="opportunity-details-heading"
         >
           <p className="eyebrow">Role overview</p>
-          <h2 id="opportunity-details-heading">Opportunity details</h2>
+          <h2 id="opportunity-details-heading">About the role</h2>
           <div className="posting-body">{posting.body}</div>
         </section>
 

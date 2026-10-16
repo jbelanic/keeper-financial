@@ -8,7 +8,7 @@ import { createPageMetadata } from "@/lib/metadata";
 export const metadata: Metadata = createPageMetadata({
   title: "From a general question to a complete application",
   description:
-    "Begin with general information and basic contact details. Move to the mortgage application only when you are ready to provide detailed information.",
+    "Ask anything general first, then move into our secure mortgage application when you are ready to share the details.",
   path: "/how-it-works",
 });
 
@@ -18,11 +18,11 @@ export default function HowItWorksPage() {
       <PageHero
         eyebrow="How it works"
         title="From a general question to a complete application."
-        description="Begin with general information and basic contact details. Move to the mortgage application only when you are ready to provide detailed information."
+        description="Ask us anything general first. When you are ready to apply, we take you into a secure application — no documents needed until then."
       >
         <div className="button-row">
           <Link className="button-link" href="/apply">
-            Get started
+            Start your application
           </Link>
         </div>
       </PageHero>
@@ -48,16 +48,15 @@ export default function HowItWorksPage() {
               <li>Your name and contact details</li>
               <li>A general mortgage objective</li>
               <li>Your preferred contact method</li>
-              <li>A brief, non-sensitive message</li>
+              <li>A short message</li>
             </ul>
           </div>
           <aside className="paper-panel boundary-panel">
             <Icon name="shield" />
-            <h2>What belongs in the application</h2>
+            <h2>What stays in the secure application</h2>
             <p>
-              Provide detailed income, assets, liabilities, credit consent,
-              identity information and mortgage documents only through an
-              authorized secure process.
+              Income, assets, debts, credit consent, identity information and
+              mortgage documents — never by email, and never in a general form.
             </p>
           </aside>
         </div>
@@ -65,14 +64,14 @@ export default function HowItWorksPage() {
       <section className="section">
         <div className="container reading-layout">
           <SectionHeading
-            eyebrow="Keep expectations clear"
-            title="Public information cannot determine your outcome."
+            eyebrow="What to expect"
+            title="Real answers for your situation."
           />
           <div>
             <p>
-              Public information and an initial conversation cannot determine
-              whether a particular mortgage, rate, term or approval is
-              available.
+              What is on this website is general information. Once we understand
+              your goals and your details, we can tell you what is realistic for
+              you — and what is not.
             </p>
             <Link className="text-link" href="/mortgages">
               Explore mortgage topics
@@ -84,11 +83,11 @@ export default function HowItWorksPage() {
         <div className="container">
           <CtaBand
             title="Start in the way that suits you"
-            description="Ask a general question or move directly to the mortgage application."
+            description="Ask a question, or go straight to the application."
             primaryHref="/apply"
-            primaryLabel="Get started"
+            primaryLabel="Start your application"
             secondaryHref="/contact"
-            secondaryLabel="Contact Keeper Financial"
+            secondaryLabel="Contact us"
           />
         </div>
       </section>

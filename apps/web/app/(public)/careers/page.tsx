@@ -12,7 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Ontario Mortgage Agent Careers | Keeper Financial",
+  title: "Ontario Mortgage Agent Careers",
   description:
     "Explore Ontario mortgage agent careers with Keeper Financial, including competitive compensation, autonomy, lead opportunities, coaching and brokerage support.",
   path: "/careers",
@@ -38,8 +38,8 @@ function OpportunitySection({
         aria-label="Current opportunities"
       >
         <div className="container recruitment-state">
-          <ErrorState title="Opportunities are temporarily unavailable">
-            Please try again later.
+          <ErrorState title="We can’t load our current openings right now">
+            Please refresh or try again shortly.
           </ErrorState>
         </div>
       </section>
@@ -53,8 +53,9 @@ function OpportunitySection({
         aria-label="Current opportunities"
       >
         <div className="container recruitment-state">
-          <EmptyState title="No opportunities are currently published">
-            Check this page again later for future opportunities.
+          <EmptyState title="No open roles right now">
+            New mortgage agent opportunities are posted here as they open —
+            check back soon.
           </EmptyState>
         </div>
       </section>
@@ -70,7 +71,7 @@ function OpportunitySection({
       >
         <div className="container">
           <article className="featured-opportunity">
-            <p className="eyebrow">Featured opportunity</p>
+            <p className="eyebrow">Now hiring</p>
             <h2 id="featured-opportunity-heading">{posting.title}</h2>
             <p>{posting.summary}</p>
             <Link className="button-link" href={`/careers/${posting.slug}`}>
@@ -89,9 +90,9 @@ function OpportunitySection({
     >
       <div className="container">
         <SectionHeading
-          eyebrow="Published roles"
+          eyebrow="Open roles"
           title="Current opportunities"
-          description="Review each published opportunity before choosing the role you want to apply for."
+          description="See what is open, then apply for the role that fits you."
         />
         <div className="posting-grid">
           {postings.map((posting) => (
@@ -103,7 +104,7 @@ function OpportunitySection({
                 href={`/careers/${posting.slug}`}
                 aria-label={`View ${posting.title}`}
               >
-                View opportunity <Icon name="arrow" />
+                View role <Icon name="arrow" />
               </Link>
             </article>
           ))}

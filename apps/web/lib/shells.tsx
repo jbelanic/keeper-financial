@@ -84,8 +84,8 @@ export function PublicShell({ children }: { children: ReactNode }) {
           <div className="footer-brand">
             <Brand />
             <p>
-              Plain-language mortgage information and a secure way to take the
-              next step.
+              Clear mortgage guidance and a secure way to apply, from a licensed
+              Ontario brokerage.
             </p>
             <p className="regulatory-line">
               {siteConfig.legalName} · {siteConfig.regulatoryText}
@@ -165,7 +165,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
         </div>
         <div className="container footer-bottom">
           <p>
-            © {new Date().getFullYear()} {siteConfig.legalName}. All rights
+            © {new Date().getFullYear()} {siteConfig.legalName} All rights
             reserved.
           </p>
           <p>

@@ -1513,6 +1513,10 @@ p {
 .value-grid .line-icon {
   margin-inline: auto;
 }
+.section-link {
+  margin-top: var(--space-5);
+  text-align: center;
+}
 .recruitment-strip {
   margin-top: -2rem;
 }

@@ -20,12 +20,11 @@ export function ApplyPaths({
       <div className="container">
         <InteriorPageHeader
           title="Choose how you’d like to begin"
-          description="Ask a general question using basic contact details, or continue to the mortgage application when you are ready to provide detailed information."
+          description="Ask us a question with just your contact details, or start your private application when you’re ready to share more."
         />
         <p className="notice apply-warning">
-          Do not submit financial, identity, health, credential, or underwriting
-          information in the contact form. Use the secure full-application path
-          for detailed mortgage information.
+          Please don’t send financial, identity or health details in the contact
+          form — the secure application is the place for those.
         </p>
       </div>
       <section className="section section-no-top">
@@ -37,8 +36,8 @@ export function ApplyPaths({
             <p className="eyebrow">Option one</p>
             <h2>Ask a general question</h2>
             <p>
-              Share your name, contact details, general mortgage objective and
-              optional non-sensitive context.
+              Share your name, contact details and a short note about what you
+              need.
             </p>
             <p className="contact-shortcuts">
               Prefer to call?{" "}
@@ -62,8 +61,9 @@ export function ApplyPaths({
             <p className="eyebrow">Option two</p>
             <h2>Continue to the mortgage application</h2>
             <p>
-              Start a private, same-browser Keeper application for detailed
-              financial, identity, property and mortgage information.
+              Start your private application for the financial, identity and
+              property details we’ll need. It saves as you go in this browser
+              only.
             </p>
             <a
               className="button-link"
@@ -72,12 +72,10 @@ export function ApplyPaths({
               Continue to the mortgage application
             </a>
             <p className="fine-print">
-              Your draft stays with Keeper and resumes only in this browser
-              while its secure cookie remains available. Do not use a shared
-              device. Final submission and document upload are not yet
-              available. If the application is unavailable, call{" "}
-              {config.phoneDisplay}
-              or email {config.email}.
+              Saved as you go. Your draft resumes only in this browser while its
+              secure cookie remains available, so please don’t use a shared or
+              public device. If the application is unavailable, call{" "}
+              {config.phoneDisplay} or email {config.email}.
             </p>
           </Card>
         </div>
