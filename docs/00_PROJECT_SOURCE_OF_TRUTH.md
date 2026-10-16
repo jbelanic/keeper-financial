@@ -125,7 +125,8 @@ decision-37 retention periods; its effective date is 2026-10-16. The displayed
 registration text (`FSCO # 13696`) still requires owner/legal verification now
 that FSRA has replaced FSCO. This is a public-content change only: it does not
 alter deployment, real-data, retention, migration, or operational-readiness
-status.
+status. The full before/after change list and the implementation record are in
+`docs/38_PUBLIC_COPY_REVIEW.md`.
 
 On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 
