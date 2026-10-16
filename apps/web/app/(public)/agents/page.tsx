@@ -25,9 +25,12 @@ export default async function AgentsPage() {
       <PageHero eyebrow="Find an Agent" title="Find a Keeper Financial agent" />
       <section
         className="section section-no-top"
-        aria-label="Keeper Financial agents"
+        aria-labelledby="agents-heading"
       >
         <div className="container">
+          <h2 className="visually-hidden" id="agents-heading">
+            Keeper Financial agents
+          </h2>
           {result === null ? (
             <ErrorState title="We can’t show our agent list right now">
               Please try again shortly, or call or email us and we will match
