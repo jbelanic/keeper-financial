@@ -128,9 +128,7 @@ def test_bash_and_python_loaders_agree(tmp_path: Path) -> None:
             f"bash loader exited {completed.returncode}\n"
             f"stdout={completed.stdout!r}\nstderr={completed.stderr!r}"
         )
-    exported = dict(
-        line.split("=", 1) for line in completed.stdout.splitlines() if "=" in line
-    )
+    exported = dict(line.split("=", 1) for line in completed.stdout.splitlines() if "=" in line)
 
     assert exported == EXPECTED
 
