@@ -17,7 +17,7 @@ describe("route inventory", () => {
         "/mortgages/investment-properties",
         "/agents/[slug]",
         "/careers/[slug]",
-        "/privacy",
+        "/privacy-policy",
         "/complaints",
         "/accessibility",
       ]),

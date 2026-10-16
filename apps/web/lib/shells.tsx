@@ -139,7 +139,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             <h2>Policies</h2>
             <ul>
               <li>
-                <Link href="/privacy">Privacy</Link>
+                <Link href="/privacy-policy">Privacy</Link>
               </li>
               <li>
                 <Link href="/complaints">Complaints</Link>

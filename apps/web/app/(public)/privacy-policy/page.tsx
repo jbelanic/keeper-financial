@@ -83,7 +83,7 @@ export const metadata: Metadata = createPageMetadata({
   title: "Privacy Notice",
   description:
     "This notice describes how Keeper Financial Inc., operating as Keeper Financial, collects, uses, discloses and protects personal information through keeperfinancial.ca, its candidate portal and related communications.",
-  path: "/privacy",
+  path: "/privacy-policy",
 });
 
 export default function PrivacyPage() {

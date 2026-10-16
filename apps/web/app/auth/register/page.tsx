@@ -56,7 +56,9 @@ export default async function CandidateRegistrationPage({
               .
             </p>
             <p>
-              <Link href="/privacy">Read the candidate privacy disclosure</Link>{" "}
+              <Link href="/privacy-policy">
+                Read the candidate privacy disclosure
+              </Link>{" "}
               before submitting your application.
             </p>
           </>
