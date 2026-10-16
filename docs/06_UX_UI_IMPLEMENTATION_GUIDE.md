@@ -41,6 +41,44 @@ Do not copy inaccessible interactions or layouts without adaptation.
 - Always show system status after user actions.
 - Never rely on color alone.
 
+## Public copy standard
+
+Public pages describe the brokerage and the customer's next step — never how the
+platform was built. The 2026-10-16 copy review (owner + legal approved) removed
+internal and production vocabulary from every public surface. Keep it out.
+
+Prohibited in public copy (use the right-hand form instead):
+
+| Do not publish | Publish |
+| --- | --- |
+| published profile / published opportunity / currently published | our agents / open roles / current openings |
+| published identity / published public contacts | brokerage information / contact us |
+| the configured mortgage application service | our secure application |
+| through a validated route | *(delete)* |
+| an authorized secure process / secure channel | our secure application |
+| non-sensitive context / non-sensitive message | a short note about what you need |
+| general contact channels | email or phone |
+| information minimization | your privacy |
+| secure handoff | security by design |
+| a real contact route | call, email, or use the form |
+| third-person self-reference ("Contact Keeper Financial") | first person ("Contact us") |
+
+Additional rules:
+
+- One sensitive-information warning per page. State the data boundary at the
+  point of contact; do not repeat the same sentence in the hero, a card and an
+  aside.
+- Never publish authoring instructions, review status, release-planning notes,
+  sprint language, or "approved site content" statements. Those belong in
+  repository documents, not on a public page.
+- No new quantified or comparative claim without the `docs/04` public-claims
+  review: no rates, lender counts, awards, rankings, testimonials, earnings or
+  growth figures, or invented timelines.
+- Keep the required disclosures verbatim: the registration line, "Mortgage
+  options are subject to borrower qualification and lender approval", the
+  no-guarantee and "general information only" wording, the FSRA complaint
+  escalation, and the WCAG 2.1 AA accessibility commitment.
+
 ## Public navigation
 
 Recommended:
@@ -70,7 +108,8 @@ The page must present both options without making either look secondary.
 
 - Enter the exact Keeper-owned `apply.keeperfinancial.ca` workflow; do not redirect to an external provider.
 - State expected time only where verified.
-- Explain that the accountless draft resumes only in the same browser while its secure capability remains valid; do not imply emailed or cross-device resume.
+- Explain that the accountless draft resumes only in the same browser while its secure capability remains valid; do not imply emailed or cross-device resume. **Current approved wording (2026-10-16):** "Saved as you go. Your draft resumes only in this browser while its secure cookie remains available, so please don't use a shared or public device."
+- Do not state that final submission or document upload is unavailable. Both are implemented (Phase D.2); real-data submission is fail-closed at runtime by the `BORROWER_REAL_DATA_ENABLED` gate and the consent `real_data_approved` marker, and that runtime gate is not public-page copy.
 - Use a direct call to action with adjacent privacy/security guidance.
 - Keep the full application separate from the minimal contact form rather than duplicating sensitive fields on `/apply`.
 - The borrower workflow must provide accessible step navigation, explicit required/optional labels, linked error summaries, save state, review before submission, document status, consent immediately before submission, and no sensitive browser persistence.
