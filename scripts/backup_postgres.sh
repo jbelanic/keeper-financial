@@ -12,12 +12,16 @@
 # Usage:
 #   ./scripts/backup_postgres.sh [DEST_DIR]
 #
-# Environment (from .env): POSTGRES_DB, POSTGRES_USER; optional
-# BACKUP_ENCRYPTION_KEY_FILE.
+# Environment (loaded from $KEEPER_ENV_FILE or <repo>/.env): POSTGRES_DB,
+# POSTGRES_USER; optional BACKUP_ENCRYPTION_KEY_FILE.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_DIR="$(dirname "${SCRIPT_DIR}")"
+
+# shellcheck source=lib/load_env.sh
+. "${SCRIPT_DIR}/lib/load_env.sh"
+keeper_load_env
 
 DEST_DIR="${1:-${BACKUP_DIR:-/var/backups/keeper-postgres}}"
 DB_NAME="${POSTGRES_DB:-keeper}"
@@ -45,6 +49,10 @@ if [[ -n "${BACKUP_ENCRYPTION_KEY_FILE:-}" ]]; then
     -in "${PLAIN}" -out "${PLAIN}.enc"
   rm -f "${PLAIN}"
   OUT="${PLAIN}.enc"
+else
+  # Not an error — encryption is opt-in — but it must never be silent: this dump
+  # contains borrower personal information.
+  echo "BACKUP_WARN db=${DB_NAME} unencrypted (BACKUP_ENCRYPTION_KEY_FILE is not set)" >&2
 fi
 
 SIZE="$(stat -c%s "${OUT}")"

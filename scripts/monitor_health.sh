@@ -12,6 +12,14 @@
 #   ./scripts/monitor_health.sh
 set -uo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Read the same deployment settings the backup scripts read, so the paths this
+# monitor checks are always the paths the backups were written to.
+# shellcheck source=lib/load_env.sh
+. "${SCRIPT_DIR}/lib/load_env.sh"
+keeper_load_env
+
 FAILED=0
 
 pass() { echo "PASS $1"; }

@@ -53,6 +53,30 @@ installing the cron entries below.
 MinIO mirror (`backup_minio.py`) at one consistency boundary. It exits non-zero on any
 failure.
 
+### Where the host scripts read their settings
+
+The backup/restore/monitor scripts run *outside* Compose, so they load the deployment
+environment file themselves — one resolution order for every script, matching Compose's
+`env_file: ${KEEPER_ENV_FILE:-.env}`:
+
+1. `$KEEPER_ENV_FILE`
+2. `<repo root>/.env`
+
+Existing environment variables always win, so a single value can be overridden for one run
+(`MINIO_ROOT_USER=... ./scripts/backup_all.sh`). A missing file is not an error; each script
+fails closed on the settings *it* needs. The loader is
+`apps/api/src/keeper_api/services/ops_env.py` for Python and `scripts/lib/load_env.sh` for
+bash; `apps/api/tests/test_ops_env_loading.py` asserts the two agree, because a divergence
+between them is how a value silently loads one way in one script and another way in the next.
+
+Parsing rule worth knowing: a value may be wrapped in one layer of matching quotes, and
+inline `#` comments are **not** stripped (so a value containing `#` round-trips). Keep
+comments on their own lines.
+
+Without this, a cron run has no shell profile and no exported values: the MinIO leg fails
+with `missing settings: MINIO_ROOT_USER, MINIO_ROOT_PASSWORD` no matter what `.env` holds,
+and `BACKUP_ENCRYPTION_KEY_FILE` is never picked up.
+
 Install the cron entry (as root, edit `sudo crontab -e`):
 
 ```cron
@@ -68,6 +92,10 @@ and `BACKUP_MINIO_DIR` (default `/var/backups/keeper-minio`); the monitor checks
 same paths. Encryption: the PostgreSQL dump is encrypted with `openssl aes-256-cbc
 -pbkdf2` when `BACKUP_ENCRYPTION_KEY_FILE` is set (keep that key file outside the repo and
 outside the backup directory); MinIO objects are application-level ciphertext already.
+**When `BACKUP_ENCRYPTION_KEY_FILE` is not set the dump is written in plaintext**, so
+`backup_postgres.sh` now prints `BACKUP_WARN ... unencrypted` to stderr — an unencrypted
+dump of borrower data must never be silent. Check that warning is absent once the key file
+is configured.
 
 **A failed or missing backup must generate an alert, not rely on someone noticing.** The
 cron wrapper above pipes failure output to `scripts/send_alert.py`, which emails

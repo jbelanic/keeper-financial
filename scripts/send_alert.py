@@ -20,17 +20,16 @@ import sys
 from email.message import EmailMessage
 from pathlib import Path
 
-try:
-    from dotenv import load_dotenv
-except ImportError:  # pragma: no cover - python-dotenv ships with the venv
-    load_dotenv = None
-
 
 def _load_env() -> None:
-    if load_dotenv is not None:
-        env = Path(".env")
-        if env.is_file():
-            load_dotenv(env)
+    """Load the deployment environment file (see ``keeper_api.services.ops_env``)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    source_root = repo_root / "apps" / "api" / "src"
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+    from keeper_api.services.ops_env import load_env_file
+
+    load_env_file(root=repo_root)
 
 
 def main(argv: list[str]) -> int:
