@@ -5,7 +5,8 @@
   rolling retention, quarterly isolated restore drills, and alerting.
 - **Scripts:** `scripts/backup_all.sh`, `scripts/backup_postgres.sh`,
   `scripts/backup_minio.py`, `scripts/backup_usb.sh`, `scripts/monitor_health.sh`,
-  `scripts/send_alert.py`, `scripts/reconcile_restore_deletions.py`.
+  `scripts/send_alert.py`, `scripts/reconcile_restore_deletions.py`,
+  `scripts/restore_minio.py`.
 
 The target is simple and repeatable, not an enterprise backup platform. Low transaction
 volume reduces the *workload*, not the need for the controls: a failed backup must be
@@ -109,7 +110,8 @@ accepting any real borrower data**, and record the outcome.
    ```
    (create `keeper_restore_test` first; adapt the custom-format path if the dump is
    custom-format).
-3. **MinIO** — restore the mirror into an isolated bucket (never the live `keeper-private`).
+3. **MinIO** — restore the mirror into an isolated bucket (never the live
+   `keeper-private`) with `scripts/restore_minio.py`.
 4. **Reconcile** — run `scripts/reconcile_restore_deletions.py` with the backup timestamp
    so a restore cannot resurrect records deleted after the backup was taken.
 5. **Verify** — confirm record↔object relationships reconcile and a representative
