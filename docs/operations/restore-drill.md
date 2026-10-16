@@ -41,10 +41,19 @@ sudo sh -c "gunzip -c /var/backups/keeper-postgres/<newest>.sql.gz | \
 
 ## 2. MinIO restore (isolated)
 
-There is **no restore script** — `backup_minio.py` mirrors *live → local* only. Restore
-by copying the newest mirror into an isolated bucket (never `keeper-private`) using the
-app's boto3/S3 stack against `http://127.0.0.1:9000`. Record the exact commands you use
-in `local-notes/incident-log.md` so this step is repeatable.
+Create the isolated bucket first (via the MinIO console), then restore the newest
+mirror with the restore script:
+
+```bash
+cd /home/inspiron/keeper-financial
+.venv/bin/python scripts/restore_minio.py \
+  /var/backups/keeper-minio/keeper-private-<TS> --bucket keeper-restore-test
+```
+
+`restore_minio.py` refuses to write into the live `keeper-private` bucket unless
+`--allow-live-bucket` is passed, refuses a missing/empty mirror, and uploads every
+object key from the mirror into the named bucket. Record the exact commands you ran
+in `local-notes/incident-log.md` so the drill is repeatable.
 
 ## 3. Reconcile deletions (safety gate)
 

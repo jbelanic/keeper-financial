@@ -5,7 +5,8 @@
   rolling retention, quarterly isolated restore drills, and alerting.
 - **Scripts:** `scripts/backup_all.sh`, `scripts/backup_postgres.sh`,
   `scripts/backup_minio.py`, `scripts/backup_usb.sh`, `scripts/monitor_health.sh`,
-  `scripts/send_alert.py`, `scripts/reconcile_restore_deletions.py`.
+  `scripts/send_alert.py`, `scripts/reconcile_restore_deletions.py`,
+  `scripts/restore_minio.py`.
 
 The target is simple and repeatable, not an enterprise backup platform. Low transaction
 volume reduces the *workload*, not the need for the controls: a failed backup must be
@@ -23,6 +24,30 @@ volume reduces the *workload*, not the need for the controls: a failed backup mu
 A control performed by an unnamed person is not a control.
 
 ## 1. Daily automated backups (cron)
+
+### Host Python venv (one-time prerequisite)
+
+The host-level scripts (`backup_minio.py`, `send_alert.py`, `restore_minio.py`,
+`reconcile_restore_deletions.py`) run outside Docker and need a Python venv with only the
+ops dependencies — not the full API runtime, whose native wheels may not run on the
+target host:
+
+```bash
+sudo apt-get install -y python3-venv   # Ubuntu/Debian ships venv separately
+cd /home/inspiron/keeper-financial
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install --no-deps -e apps/api
+.venv/bin/pip install boto3 python-dotenv
+.venv/bin/python -c 'import boto3, dotenv, keeper_api.services.minio_restore, keeper_api.services.backup_reconciliation; print("venv OK")'
+```
+
+`--no-deps` installs `keeper_api` without its API runtime (FastAPI/SQLAlchemy/Pillow/…);
+`pip` will warn that some pinned dependencies are not installed — that is expected. The
+ops scripts only import `boto3`, `python-dotenv`, and two stdlib-light
+`keeper_api.services` modules; `boto3` and `python-dotenv` are pure Python, so they
+install on the below-baseline target host. Confirm the last line prints `venv OK` before
+installing the cron entries below.
 
 `scripts/backup_all.sh` runs the encrypted PostgreSQL dump (`backup_postgres.sh`) and the
 MinIO mirror (`backup_minio.py`) at one consistency boundary. It exits non-zero on any
@@ -109,7 +134,8 @@ accepting any real borrower data**, and record the outcome.
    ```
    (create `keeper_restore_test` first; adapt the custom-format path if the dump is
    custom-format).
-3. **MinIO** — restore the mirror into an isolated bucket (never the live `keeper-private`).
+3. **MinIO** — restore the mirror into an isolated bucket (never the live
+   `keeper-private`) with `scripts/restore_minio.py`.
 4. **Reconcile** — run `scripts/reconcile_restore_deletions.py` with the backup timestamp
    so a restore cannot resurrect records deleted after the backup was taken.
 5. **Verify** — confirm record↔object relationships reconcile and a representative
