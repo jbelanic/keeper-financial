@@ -257,6 +257,10 @@ class SensitiveUploadMiddleware:
         if len(host_values) != 1 or len(origin_values) != 1 or len(csrf_values) != 1:
             return 403, "forbidden"
         host = host_values[0]
+        if host.split(":", 1)[0].casefold() == "api":
+            forwarded_host_values = header_values(b"x-forwarded-host")
+            if len(forwarded_host_values) == 1:
+                host = forwarded_host_values[0]
         if route_limit.expected_host is not None and (
             host.split(":", 1)[0].casefold()
             != route_limit.expected_host.split(":", 1)[0].casefold()

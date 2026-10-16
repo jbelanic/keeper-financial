@@ -205,6 +205,42 @@ def test_borrower_upload_preparser_accepts_bounded_cookie_request() -> None:
     assert sent[0]["status"] == 204
 
 
+def test_borrower_upload_preparser_accepts_proxied_api_host() -> None:
+    sent, received, downstream_calls = _run_middleware(
+        path="/api/v1/borrower-applications/11111111-1111-1111-1111-111111111111/documents",
+        headers=[
+            (b"cookie", b"__Host-keeper-borrower-draft=" + b"a" * 50),
+            (b"host", b"api:8000"),
+            (b"x-forwarded-host", b"localhost:8000"),
+            (b"origin", b"http://localhost:8000"),
+            (b"x-keeper-borrower-csrf", b"1"),
+        ],
+        incoming=[{"type": "http.request", "body": b"bounded", "more_body": False}],
+    )
+
+    assert received == 1
+    assert downstream_calls == 1
+    assert sent[0]["status"] == 204
+
+
+def test_borrower_upload_preparser_rejects_mismatched_proxied_host() -> None:
+    sent, received, downstream_calls = _run_middleware(
+        path="/api/v1/borrower-applications/11111111-1111-1111-1111-111111111111/documents",
+        headers=[
+            (b"cookie", b"__Host-keeper-borrower-draft=" + b"a" * 50),
+            (b"host", b"api:8000"),
+            (b"x-forwarded-host", b"evil.example"),
+            (b"origin", b"http://localhost:8000"),
+            (b"x-keeper-borrower-csrf", b"1"),
+        ],
+        incoming=[{"type": "http.request", "body": b"bounded", "more_body": False}],
+    )
+
+    assert received == 0
+    assert downstream_calls == 0
+    assert sent[0]["status"] == 403
+
+
 def test_candidate_upload_rejection_uses_private_no_store() -> None:
     sent, _, _ = _run_middleware(
         path="/api/v1/candidate/applications/id/documents",
