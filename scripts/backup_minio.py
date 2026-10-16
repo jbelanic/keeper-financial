@@ -10,8 +10,8 @@ and never logs object keys or signed URLs.
 Usage:
   .venv/bin/python scripts/backup_minio.py [DEST_DIR]
 
-Environment (from .env): MINIO_ENDPOINT, MINIO_ROOT_USER, MINIO_ROOT_PASSWORD,
-MINIO_BUCKET (default ``keeper-private``).
+Environment (loaded from $KEEPER_ENV_FILE or <repo>/.env): MINIO_ENDPOINT,
+MINIO_ROOT_USER, MINIO_ROOT_PASSWORD, MINIO_BUCKET (default ``keeper-private``).
 """
 
 from __future__ import annotations
@@ -28,7 +28,23 @@ from botocore.config import Config
 RETENTION_DAYS = 30
 
 
+def load_deployment_env() -> None:
+    """Load the deployment environment file (see ``keeper_api.services.ops_env``).
+
+    This script previously read only ``os.environ``, so a cron run — which has no
+    shell profile and no exported values — always reported missing settings.
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+    source_root = repo_root / "apps" / "api" / "src"
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+    from keeper_api.services.ops_env import load_env_file
+
+    load_env_file(root=repo_root)
+
+
 def main(argv: list[str]) -> int:
+    load_deployment_env()
     missing = [
         name
         for name in ("MINIO_ROOT_USER", "MINIO_ROOT_PASSWORD")

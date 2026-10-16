@@ -64,17 +64,26 @@ boundary:
   host, decision 47). Objects are application-level ciphertext already, so the mirror does
   not re-encrypt.
 
-Run on a schedule (cron / systemd timer):
+Run on a schedule (cron / systemd timer). `backup_all.sh` takes **no arguments** — the
+destinations come from the environment:
 
 ```bash
-./scripts/backup_all.sh /var/backups/keeper
+./scripts/backup_all.sh            # destinations from BACKUP_POSTGRES_DIR / BACKUP_MINIO_DIR
+./scripts/backup_postgres.sh /var/backups/keeper    # single-leg, explicit destination
 ```
 
 It requires `POSTGRES_DB`, `POSTGRES_USER`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`,
-`MINIO_BUCKET` (from `.env`) and writes timestamped PostgreSQL dumps plus a MinIO mirror
-and a combined manifest. It does not store object keys or signed URLs in logs beyond the
-restricted evidence boundary, and it keeps a 30-day rolling window. The encryption key file
-must live outside the repo and outside the backup destination.
+`MINIO_BUCKET`, loaded from `$KEEPER_ENV_FILE` (default `<repo root>/.env`) — the scripts
+read that file themselves, so a cron run without a shell profile still works. It writes
+timestamped PostgreSQL dumps plus a MinIO mirror and a combined manifest. It does not store
+object keys or signed URLs in logs beyond the restricted evidence boundary, and it keeps a
+30-day rolling window. The encryption key file must live outside the repo and outside the
+backup destination.
+
+**Encryption is opt-in.** With `BACKUP_ENCRYPTION_KEY_FILE` unset, the PostgreSQL dump is
+written in plaintext and the script prints `BACKUP_WARN ... unencrypted`. Treat a
+`BACKUP_WARN` line in `/var/log/keeper-backup.log` as a finding, not noise: it means
+borrower data is sitting unencrypted in `/var/backups`.
 
 ### Restore test (isolated)
 1. Restore into a separate bucket/target that is not reachable from the live application.

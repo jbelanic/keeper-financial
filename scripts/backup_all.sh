@@ -9,15 +9,22 @@
 # Usage:
 #   ./scripts/backup_all.sh
 #
-# Environment (from .env): POSTGRES_DB, POSTGRES_USER, MINIO_ROOT_USER,
-# MINIO_ROOT_PASSWORD, MINIO_BUCKET; optional BACKUP_ENCRYPTION_KEY_FILE.
-# Destinations: BACKUP_POSTGRES_DIR (default /var/backups/keeper-postgres) and
-# BACKUP_MINIO_DIR (default /var/backups/keeper-minio) — the same defaults the
-# monitor (`monitor_health.sh`) and the runbook use.
+# Environment (loaded from $KEEPER_ENV_FILE or <repo>/.env): POSTGRES_DB,
+# POSTGRES_USER, MINIO_ROOT_USER, MINIO_ROOT_PASSWORD, MINIO_BUCKET; optional
+# BACKUP_ENCRYPTION_KEY_FILE. Destinations: BACKUP_POSTGRES_DIR (default
+# /var/backups/keeper-postgres) and BACKUP_MINIO_DIR (default
+# /var/backups/keeper-minio) — the same defaults the monitor
+# (`monitor_health.sh`) and the runbook use.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_DIR="$(dirname "${SCRIPT_DIR}")"
+
+# The settings below live in the deployment environment file Compose reads; load
+# it here so this script behaves the same from cron as from an interactive shell.
+# shellcheck source=lib/load_env.sh
+. "${SCRIPT_DIR}/lib/load_env.sh"
+keeper_load_env
 
 PG_DIR="${BACKUP_POSTGRES_DIR:-/var/backups/keeper-postgres}"
 MINIO_DIR="${BACKUP_MINIO_DIR:-/var/backups/keeper-minio}"
