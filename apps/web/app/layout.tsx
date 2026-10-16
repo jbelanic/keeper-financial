@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.siteUrl),
   title: { default: "Keeper Financial", template: "%s | Keeper Financial" },
   description:
-    "Plain-language mortgage guidance and secure next steps from Keeper Financial in Ontario.",
+    "Keeper Financial is a licensed Ontario mortgage brokerage helping borrowers compare options from multiple lenders and apply securely online.",
   applicationName: "Keeper Financial",
   referrer: "strict-origin-when-cross-origin",
 };

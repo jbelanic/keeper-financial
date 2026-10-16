@@ -112,6 +112,22 @@ submission, generated-contract, and borrower-web contract. Phase F retention
 jobs, legal-hold operations, ingress, backup/restore, deployment, monitoring,
 and operational evidence remain unimplemented and awaiting separate approval.
 
+On 2026-10-16 the owner and legal review approved the full public-facing copy
+review (decision 50). Public pages now follow the plain-language standard
+recorded in `docs/06` §Public copy standard: internal and production vocabulary
+and duplicated copy were removed, the home page carries approved brokerage value
+messaging, and the Privacy Notice was corrected — it previously published
+authoring instructions and stated that a complete mortgage application "is
+handled through Filogix", contrary to decisions 3 and 38 and `docs/28`. The
+notice now discloses the mortgage-application data class, the credit-use
+consent, application-level encryption, authorized-access limits, and the
+decision-37 retention periods; its effective date is 2026-10-16. The displayed
+registration text (`FSCO # 13696`) still requires owner/legal verification now
+that FSRA has replaced FSCO. This is a public-content change only: it does not
+alter deployment, real-data, retention, migration, or operational-readiness
+status. The full before/after change list and the implementation record are in
+`docs/38_PUBLIC_COPY_REVIEW.md`.
+
 On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 
 On 2026-07-27 the owner approved (a) the assigned-agent full-data retrieval

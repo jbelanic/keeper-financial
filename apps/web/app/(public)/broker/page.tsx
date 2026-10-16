@@ -50,13 +50,13 @@ export default function BrokerPage() {
         <div className="container reading-layout">
           <SectionHeading
             eyebrow="Protect sensitive information"
-            title="Use the right channel for each step."
+            title="Keep sensitive details in the secure application."
           />
           <div>
             <p>
-              Use the public contact routes only for a general objective and
-              contact details. Do not email or submit financial documents,
-              identity records, credit information, or detailed debts.
+              Email or call us for anything general. Please do not send
+              financial documents, identity records, credit information or debt
+              details — we collect those securely in the application.
             </p>
             <Link className="text-link" href="/how-it-works">
               See how the process works
@@ -68,11 +68,11 @@ export default function BrokerPage() {
         <div className="container">
           <CtaBand
             title="Review your mortgage options"
-            description="Ask a general question or continue to the mortgage application."
+            description="Ask a question, or start your application."
             primaryHref="/apply"
-            primaryLabel="Get started"
+            primaryLabel="Start your application"
             secondaryHref="/contact"
-            secondaryLabel="Contact Keeper Financial"
+            secondaryLabel="Contact us"
           />
         </div>
       </section>

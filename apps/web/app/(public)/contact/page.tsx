@@ -8,7 +8,7 @@ import { siteConfig } from "@/lib/site-config";
 export const metadata: Metadata = createPageMetadata({
   title: "Contact Keeper Financial",
   description:
-    "Call, email, visit, or send a minimal contact request to Keeper Financial using the published contact details.",
+    "Call, email, visit our London office, or send us a message — how to reach Keeper Financial in Ontario.",
   path: "/contact",
 });
 
@@ -18,7 +18,7 @@ export default function ContactPage() {
       <PageHero
         eyebrow="Contact"
         title="Start with a general question."
-        description="Call, email or send a basic contact request. Keep financial, identity and mortgage documents out of general messages."
+        description="Call, email or send us a message and we’ll get back to you. Anything detailed belongs in the secure application."
       />
       <section className="section section-no-top">
         <div className="container contact-grid">
@@ -26,8 +26,8 @@ export default function ContactPage() {
             <Icon name="conversation" />
             <h2>Call</h2>
             <p>
-              Speak with Keeper Financial about a general mortgage question or
-              mortgage review.
+              Talk to a licensed mortgage professional about what you are trying
+              to do.
             </p>
             <a className="text-link" href={siteConfig.phoneHref}>
               {siteConfig.phoneDisplay}
@@ -37,8 +37,8 @@ export default function ContactPage() {
             <Icon name="arrow" />
             <h2>Email</h2>
             <p>
-              Use email for general questions only. Do not attach mortgage,
-              financial, tax, or identity documents.
+              Email us for anything general. Please do not attach documents — we
+              collect those securely in the application.
             </p>
             <a className="text-link break-anywhere" href={siteConfig.emailHref}>
               {siteConfig.email}
@@ -55,12 +55,11 @@ export default function ContactPage() {
         <div className="container split-feature">
           <div>
             <SectionHeading
-              eyebrow="Send a contact request"
-              title="Share only what the team needs to respond."
-              description="The Get Started form collects basic contact details, a general mortgage objective, and optional non-sensitive context."
+              eyebrow="Send us a message"
+              title="Tell us what you need."
             />
             <Link className="button-link" href="/apply">
-              Go to Get Started
+              Send a message
             </Link>
           </div>
           <aside className="paper-panel">

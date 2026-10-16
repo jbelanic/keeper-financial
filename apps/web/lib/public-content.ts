@@ -157,30 +157,30 @@ export const mortgageServices = [
     slug: "purchase",
     title: "Planning a home purchase",
     eyebrow: "Purchase mortgages",
-    lead: "Understand the mortgage steps that may form part of a planned home purchase and prepare questions before beginning a complete application.",
+    lead: "What usually happens between planning a purchase and getting the keys, and what to prepare before you apply.",
     shortTitle: "Purchase",
     summary:
-      "Understand the mortgage steps that may form part of a planned home purchase.",
+      "What happens between planning a home purchase and getting the keys.",
     considerations: [
-      "your general timeline and the type of property you are considering",
-      "the difference between an early conversation, a pre-approval and a final lending decision",
-      "when detailed financial information and documents may be required through the mortgage application",
+      "Your timeline and the kind of property you are considering",
+      "The difference between an early conversation, a pre-approval and a final lending decision",
+      "When we will need your financial details and documents (always inside the secure application)",
     ],
     sections: [
       {
         eyebrow: "Why prepare early",
         heading: "A conversation before you shop",
         body: [
-          "Starting the mortgage conversation before you shop gives you a clearer picture of budget, timeline and the steps ahead. It does not commit you to a product.",
+          "Starting the mortgage conversation before you shop gives you a clearer picture of your budget, your timeline and the steps ahead. It does not commit you to a product.",
         ],
       },
       {
         heading: "What a mortgage conversation can cover",
         points: [
-          "how a purchase amount is assessed",
-          "the difference between an early discussion, a pre-approval and final lender approval",
-          "term and rate-structure options in plain language",
-          "costs that sit outside the mortgage itself",
+          "How a purchase amount is assessed",
+          "The difference between an early discussion, a pre-approval and final lender approval",
+          "Term and rate options, in plain language",
+          "Costs that sit outside the mortgage itself",
         ],
       },
       {
@@ -199,41 +199,41 @@ export const mortgageServices = [
     slug: "refinancing",
     title: "Considering a refinance",
     eyebrow: "Refinancing",
-    lead: "A refinance may change the amount, term or structure of an existing mortgage. A complete review is needed to assess available options, costs and suitability.",
+    lead: "Change the amount, term or structure of your mortgage, and understand the costs before you commit.",
     shortTitle: "Refinance",
     summary:
-      "A refinance may change the amount, term or structure of an existing mortgage.",
+      "Change your mortgage’s amount, term or structure — and know the costs first.",
     considerations: [
-      "why you are considering a change and your preferred timing",
-      "potential charges, fees and other trade-offs to discuss before proceeding",
-      "when to continue to a complete mortgage application",
+      "Why you are considering a change, and your preferred timing",
+      "The fees, charges and trade-offs to weigh before you proceed",
+      "When a complete mortgage application is needed",
     ],
     sections: [
       {
         eyebrow: "Why borrowers review a refinance",
         heading: "Reasons people consider it",
         points: [
-          "consolidating higher-cost debt",
-          "funding renovations",
-          "accessing equity",
-          "changing the payment or term structure",
+          "Consolidating higher-cost debt",
+          "Funding renovations",
+          "Accessing equity",
+          "Changing the payment or term structure",
         ],
       },
       {
         heading: "Costs and trade-offs to weigh",
         points: [
-          "a charge may apply to end your current term early",
-          "legal and appraisal fees can apply",
-          "a longer amortization usually means more total interest",
-          "it changes your equity position",
+          "A charge may apply to end your current term early",
+          "Legal and appraisal fees can apply",
+          "A longer amortization usually means more total interest",
+          "It changes your equity position",
         ],
       },
       {
         heading: "How the review works",
         points: [
-          "an assessment of your current mortgage",
-          "a comparison of options against your stated goal",
-          "a complete application only when you choose to proceed",
+          "An assessment of your current mortgage",
+          "A comparison of options against your stated goal",
+          "A complete application only when you choose to proceed",
         ],
       },
     ] as MortgageSection[],
@@ -242,14 +242,14 @@ export const mortgageServices = [
     slug: "renewals",
     title: "Preparing for a mortgage renewal",
     eyebrow: "Mortgage renewals",
-    lead: "Review your current mortgage, renewal information and priorities before deciding on your next term.",
+    lead: "Your lender’s renewal letter is not your only option. Here is what is worth comparing before you decide.",
     shortTitle: "Renewals",
     summary:
-      "Review your current mortgage, renewal information and priorities before deciding on your next term.",
+      "Your renewal letter is not your only option. Here is what is worth comparing.",
     considerations: [
-      "your maturity date and any renewal offer you have received",
-      "whether your needs or plans have changed",
-      "questions about terms and options that require a complete review",
+      "Your maturity date and any renewal offer you have received",
+      "Whether your needs or plans have changed",
+      "Questions about terms and options that need a complete review",
     ],
     sections: [
       {
@@ -262,17 +262,17 @@ export const mortgageServices = [
       {
         heading: "What to review before you decide",
         points: [
-          "your maturity date and any offer received",
-          "the offered term length and how it fits your plans",
-          "prepayment and portability features",
-          "what changing lenders could involve",
+          "Your maturity date and any offer received",
+          "The offered term length and how it fits your plans",
+          "Prepayment and portability features",
+          "What changing lenders could involve",
         ],
       },
       {
         heading: "When to start",
         points: [
-          "many borrowers begin 4 to 6 months before maturity",
-          "timelines vary by lender — confirm your exact date",
+          "Many borrowers begin 4 to 6 months before maturity",
+          "Timelines vary by lender — confirm your exact date",
         ],
       },
     ] as MortgageSection[],
@@ -281,25 +281,24 @@ export const mortgageServices = [
     slug: "first-time-buyers",
     title: "Buying your first home",
     eyebrow: "First-time home buyers",
-    lead: "Learn the main stages of a first purchase and prepare for the information a complete mortgage application may require.",
+    lead: "A step-by-step look at your first purchase, from budget to keys, and what the application will ask for.",
     shortTitle: "First-time buyers",
-    summary:
-      "Learn the main stages of a first purchase and prepare for the information a complete mortgage application may require.",
+    summary: "A step-by-step look at your first purchase, from budget to keys.",
     considerations: [
-      "the difference between early planning, a pre-approval and final lender approval",
-      "purchase costs and responsibilities beyond the mortgage itself",
-      "how to provide detailed financial and identity information securely",
+      "The difference between early planning, a pre-approval and final lender approval",
+      "Purchase costs and responsibilities beyond the mortgage itself",
+      "How to provide detailed financial and identity information securely",
     ],
     sections: [
       {
         eyebrow: "Stages of a first purchase",
         heading: "From planning to possession",
         points: [
-          "planning and budget",
-          "an early discussion or pre-approval",
-          "an offer with conditions",
-          "final lender approval",
-          "closing and possession",
+          "Planning and budget",
+          "An early discussion or pre-approval",
+          "An offer with conditions",
+          "Final lender approval",
+          "Closing and possession",
         ],
       },
       {
@@ -325,33 +324,33 @@ export const mortgageServices = [
     slug: "investment-properties",
     title: "Financing an investment property",
     eyebrow: "Investment properties",
-    lead: "Mortgage requirements for an investment property may differ from those for a principal residence. A complete review is required to assess a specific application.",
+    lead: "Investment mortgages work differently from a principal residence. Here is what matters before you commit.",
     shortTitle: "Investment properties",
     summary:
-      "Mortgage requirements for an investment property may differ from those for a principal residence.",
+      "Investment mortgages work differently from a principal residence.",
     considerations: [
-      "the intended use of the property and your general timeline",
-      "questions to prepare for the mortgage application",
-      "whether separate tax, accounting or legal advice may be appropriate",
+      "The intended use of the property and your general timeline",
+      "Questions to prepare for the mortgage application",
+      "Whether separate tax, accounting or legal advice may be appropriate",
     ],
     sections: [
       {
         eyebrow: "How investment financing can differ",
         heading: "Generally different from a residence",
         points: [
-          "minimum down payments are often higher",
-          "qualification may consider projected rental income within set limits",
-          "rates and fees can differ",
-          "lender guidelines vary",
+          "Minimum down payments are often higher",
+          "Qualification may consider projected rental income within set limits",
+          "Rates and fees can differ",
+          "Lender guidelines vary",
         ],
       },
       {
         heading: "What to prepare",
         points: [
-          "property type and location",
-          "expected rents",
-          "your existing property portfolio",
-          "your financing goals",
+          "Property type and location",
+          "Expected rents",
+          "Your existing property portfolio",
+          "Your financing goals",
         ],
       },
       {
@@ -373,12 +372,12 @@ export const processSteps = [
   {
     title: "Contact Keeper Financial",
     description:
-      "Share your name, contact details, general mortgage goal and non-sensitive context.",
+      "Share your name, contact details and a short note about what you need.",
   },
   {
     title: "Continue securely",
     description:
-      "Use the configured mortgage application service for detailed financial, credit, identity and document information.",
+      "Continue in our secure application, where your financial, credit and identity details belong.",
   },
   {
     title: "Review the next step",
@@ -430,20 +429,20 @@ export const recruitmentContent = {
     lead: "Start by understanding the opportunity. An account is only needed when you choose to apply.",
     steps: [
       {
-        heading: "Review the published opportunity",
-        body: "Read the role details without creating an account.",
+        heading: "Review the role",
+        body: "Read the details — no account needed.",
       },
       {
-        heading: "Create an account and save a draft",
-        body: "Begin a posting-specific application and return to your saved draft in the candidate portal.",
+        heading: "Create an account and start",
+        body: "Start your application and pick it up any time from the candidate portal.",
       },
       {
-        heading: "Follow your application",
-        body: "View candidate-visible status updates and messages through the portal.",
+        heading: "Track your progress",
+        body: "See your status and messages in the portal.",
       },
       {
         heading: "Complete onboarding if selected",
-        body: "Selected candidates move into Keeper's controlled onboarding process.",
+        body: "Selected candidates move into our onboarding process.",
       },
     ],
   },
@@ -456,23 +455,23 @@ export const recruitmentContent = {
   application: {
     eyebrow: "Application process",
     heading: "How the application works",
-    lead: "Choose the entry path that fits you. Both options keep your application tied to this exact opportunity.",
+    lead: "Choose the path that fits you. Both keep your application tied to this role.",
     steps: [
       {
-        heading: "Choose your account path",
-        body: "Create an account or sign in with an existing account from this opportunity.",
+        heading: "Create your account",
+        body: "Create an account or sign in with an existing account from this role.",
       },
       {
-        heading: "Prepare your application",
-        body: "Save a posting-specific draft and submit it when the required sections are complete.",
+        heading: "Complete your application",
+        body: "Save your draft and submit it once the required sections are complete.",
       },
       {
-        heading: "Follow status and messages",
-        body: "Candidate-visible updates stay available through the portal.",
+        heading: "Track status and messages",
+        body: "Your updates stay available in the portal.",
       },
       {
         heading: "Onboard if selected",
-        body: "Selection may lead to Keeper's controlled onboarding process.",
+        body: "Selection may lead to our onboarding process.",
       },
     ],
   },

@@ -6,9 +6,9 @@ import { mortgageServices } from "@/lib/public-content";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Information for the mortgage decision in front of you",
+  title: "Mortgage help, wherever you are right now",
   description:
-    "Review common mortgage topics in plain language. When you are ready, you can ask a general question or continue to the mortgage application.",
+    "Buying your first home, renewing, refinancing or investing — start with plain-language answers, then talk to a licensed mortgage professional.",
   path: "/mortgages",
 });
 
@@ -19,12 +19,12 @@ export default function MortgagesPage() {
     <>
       <PageHero
         eyebrow="Mortgage topics"
-        title="Information for the mortgage decision in front of you."
-        description="Review common mortgage topics in plain language. When you are ready, you can ask a general question or continue to the mortgage application."
+        title="Mortgage help, wherever you are right now."
+        description="Buying your first home, renewing, refinancing or investing? Start with plain-language answers, then talk to a licensed mortgage professional."
       >
         <div className="button-row">
           <Link className="button-link" href="/apply">
-            Get started
+            Start your application
           </Link>
           <Link className="button-link button-secondary" href="/how-it-works">
             How it works
@@ -35,7 +35,7 @@ export default function MortgagesPage() {
         <div className="container">
           <SectionHeading
             title="Choose a topic"
-            description="This information is general. It does not advertise a rate, determine eligibility, or replace a review of your complete circumstances."
+            description="This is general information: it does not quote a rate, decide eligibility, or replace a review of your situation."
           />
           <div className="service-grid">
             {mortgageServices.map((service, index) => (
@@ -53,20 +53,18 @@ export default function MortgagesPage() {
       <section className="section section-muted">
         <div className="container reading-layout">
           <SectionHeading
-            eyebrow="A useful boundary"
-            title="General information here. Detailed information in the application."
+            eyebrow="Where to start"
+            title="General questions here. Detailed information in your secure application."
           />
           <div>
             <p>
-              Use this website for general information and basic contact
-              details. Provide income, assets, liabilities, credit consent,
-              identity information and supporting documents only through an
-              authorized secure process.
+              Ask us anything general, or give us your contact details. Income,
+              assets, debts, credit consent, identity information and documents
+              go in the secure application — never by email.
             </p>
             <p>
-              When you are ready for a complete review, the Get Started page
-              links through a validated route to the configured mortgage
-              application service.
+              When you are ready, Get started takes you straight to the secure
+              mortgage application.
             </p>
           </div>
         </div>
@@ -75,9 +73,9 @@ export default function MortgagesPage() {
         <div className="container">
           <CtaBand
             title="Not sure where to begin?"
-            description="Start with a general question and keep sensitive information out of your message."
+            description="Ask us a question — you do not need to share anything detailed yet."
             primaryHref="/contact"
-            primaryLabel="Contact Keeper Financial"
+            primaryLabel="Contact us"
             secondaryHref="/apply"
             secondaryLabel="View both start options"
           />

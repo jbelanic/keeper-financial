@@ -94,27 +94,15 @@ export default async function MortgageServicePage({
               </Link>
             </p>
           ) : null}
-          <div className="reading-grid detail-consider">
+          <div className="content-stack">
             <article className="prose-card">
-              <h2>Consider:</h2>
+              <h2>Worth thinking about</h2>
               <ul className="check-list">
                 {service.considerations.map((consideration) => (
                   <li key={consideration}>{consideration}</li>
                 ))}
               </ul>
             </article>
-            <aside className="paper-panel">
-              <h2>
-                General information here. Detailed information in the
-                application.
-              </h2>
-              <p>
-                Use this website for general information and basic contact
-                details. Provide income, assets, liabilities, credit consent,
-                identity information and supporting documents only through an
-                authorized secure process.
-              </p>
-            </aside>
           </div>
         </div>
       </section>
@@ -122,13 +110,13 @@ export default async function MortgageServicePage({
         <div className="container reading-layout">
           <SectionHeading
             eyebrow="Protect sensitive information"
-            title="Use the right channel for each step."
+            title="Keep sensitive details in the secure application."
           />
           <div>
             <p>
-              Use the public contact routes only for a general objective and
-              contact details. Do not email or submit financial documents,
-              identity records, credit information, or detailed debts.
+              Email or call us for anything general. Please do not send
+              financial documents, identity records, credit information or debt
+              details — we collect those securely in the application.
             </p>
             <Link className="text-link" href="/how-it-works">
               See how the process works
@@ -140,9 +128,9 @@ export default async function MortgageServicePage({
         <div className="container">
           <CtaBand
             title="Choose your next step"
-            description="Ask a general question or continue to the mortgage application."
+            description="Ask a question, or start your application."
             primaryHref="/apply"
-            primaryLabel="Get started"
+            primaryLabel="Start your application"
             secondaryHref="/contact"
             secondaryLabel="Ask a general question"
           />

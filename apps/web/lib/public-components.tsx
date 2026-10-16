@@ -56,7 +56,7 @@ export function PageHero({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   children?: ReactNode;
   image?: string;
   imageAlt?: string;
@@ -71,7 +71,7 @@ export function PageHero({
         <div className="page-hero-copy">
           <p className="eyebrow">{eyebrow}</p>
           <h1>{title}</h1>
-          <p className="page-lead">{description}</p>
+          {description ? <p className="page-lead">{description}</p> : null}
           {children}
         </div>
         {image ? (

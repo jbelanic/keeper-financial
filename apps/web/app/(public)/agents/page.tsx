@@ -8,7 +8,8 @@ import { PageHero } from "@/lib/public-components";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Find an Agent",
-  description: "Browse currently published Keeper Financial agent profiles.",
+  description:
+    "Meet the licensed mortgage agents at Keeper Financial and contact the one you would like to work with.",
   path: "/agents",
 });
 
@@ -21,24 +22,24 @@ export default async function AgentsPage() {
   }
   return (
     <>
-      <PageHero
-        eyebrow="Find an Agent"
-        title="Find a Keeper Financial agent"
-        description="Browse currently published profiles and select an agent to contact."
-      />
+      <PageHero eyebrow="Find an Agent" title="Find a Keeper Financial agent" />
       <section
         className="section section-no-top"
-        aria-labelledby="agent-directory-heading"
+        aria-labelledby="agents-heading"
       >
-        <div className="container reading-layout">
-          <h2 id="agent-directory-heading">Agent directory</h2>
+        <div className="container">
+          <h2 className="visually-hidden" id="agents-heading">
+            Keeper Financial agents
+          </h2>
           {result === null ? (
-            <ErrorState title="Agent profiles are temporarily unavailable">
-              Please try again later or contact Keeper Financial.
+            <ErrorState title="We can’t show our agent list right now">
+              Please try again shortly, or call or email us and we will match
+              you with an agent.
             </ErrorState>
           ) : result.items.length === 0 ? (
-            <EmptyState title="No agent profiles are available right now">
-              Contact Keeper Financial for general assistance.
+            <EmptyState title="Our agent profiles are coming soon">
+              In the meantime, call or email us and we will connect you with the
+              right agent.
             </EmptyState>
           ) : (
             <div className="grid-2 agent-directory-grid">
@@ -56,7 +57,6 @@ export default async function AgentsPage() {
                     />
                   ) : null}
                   <div>
-                    <p className="eyebrow">Published profile</p>
                     <h3>{agent.licensed_name}</h3>
                     <p>{agent.approved_title}</p>
                     <p>Licence {agent.licence_number}</p>

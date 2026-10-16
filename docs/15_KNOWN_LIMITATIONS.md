@@ -32,6 +32,30 @@ production consent, and all Phase F operational work remain required.
 - Key custody/recovery owners, legal-hold authority, public DNS/TLS ceremony, target-host Nginx configuration, backup/restore/purge drill, monitoring/incident response, and public abuse capacity remain operational evidence items during deployment execution rather than missing owner-approval blockers.
 - No legacy MortgageApp data import is approved. The legacy repository remains unarchived until accepted implementation, deployment, and cutover.
 
+## Public copy and privacy-notice corrections (2026-10-16)
+
+The owner and legal review approved the public-facing copy review (decision 50)
+and it is implemented on `content/public-copy-review`. Public pages now use the
+plain-language standard in `docs/06` §Public copy standard.
+
+- The Privacy Notice effective date is 2026-10-16. It no longer publishes
+  authoring instructions, no longer states that a complete mortgage application
+  "is handled through Filogix" (the MVP has no Filogix integration), and now
+  discloses the mortgage-application data class, the credit-use consent,
+  application-level encryption, authorized-access limits, and the decision-37
+  retention periods (seven years for submitted records, 30 days of inactivity
+  for an unsubmitted draft).
+- The Accessibility page no longer publishes the internal release-planning
+  sentence about a deferred specialist review.
+- The `/apply` page no longer states that final submission and document upload
+  are unavailable. Both are implemented (Phase D.2). The real constraint is the
+  runtime gate — `BORROWER_REAL_DATA_ENABLED` plus the consent
+  `real_data_approved` marker, per decision 40 — which keeps real-data
+  submission fail-closed and is deliberately not published as public copy.
+- Still open, unchanged by this decision: the displayed registration text
+  (`FSCO # 13696`) requires owner/legal verification now that FSRA has replaced
+  FSCO, and the Phase 1F specialist reviews remain outstanding.
+
 ## Recruitment and privacy boundary
 
 - `docs/19_PHASE_1C_CANDIDATE_APPLICATION_POLICY.md` resolves the questionnaire, cardinality/reapplication, post-withdrawal access, document categories, candidate disclosure/version, and candidate MFA policy. The implementation does not broaden those allow-lists.

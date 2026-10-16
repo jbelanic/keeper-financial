@@ -57,9 +57,9 @@ describe("apply paths and attribution", () => {
       "href",
       "https://apply.keeperfinancial.ca/?agent=published-agent",
     );
-    expect(document.body.textContent).toContain("same-browser");
+    expect(document.body.textContent).toContain("this browser");
     expect(
-      screen.getAllByText(/Do not (submit|include)/i).length,
+      screen.getAllByText(/don.t (send|use)/i).length,
     ).toBeGreaterThanOrEqual(2);
   });
 

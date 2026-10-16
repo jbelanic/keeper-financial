@@ -96,7 +96,7 @@ describe("public recruitment postings", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: "No opportunities are currently published",
+        name: "No open roles right now",
       }),
     ).toBeInTheDocument();
     expect(
@@ -119,7 +119,7 @@ describe("public recruitment postings", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      /opportunities are temporarily unavailable/i,
+      /can’t load our current openings right now/i,
     );
     expect(
       screen.queryByRole("link", { name: "Explore the current opportunity" }),
