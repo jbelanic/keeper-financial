@@ -14,7 +14,7 @@ import {
 } from "@/app/(public)/mortgages/[slug]/page";
 import { metadata as mortgagesMetadata } from "@/app/(public)/mortgages/page";
 import { metadata as homeMetadata } from "@/app/(public)/page";
-import { metadata as privacyMetadata } from "@/app/(public)/privacy/page";
+import { metadata as privacyMetadata } from "@/app/(public)/privacy-policy/page";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { SITEMAP_ROUTES } from "@/lib/routes";

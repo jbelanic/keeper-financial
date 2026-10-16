@@ -6,7 +6,7 @@ import ContactPage from "@/app/(public)/contact/page";
 import HowItWorksPage from "@/app/(public)/how-it-works/page";
 import MortgagesPage from "@/app/(public)/mortgages/page";
 import HomePage from "@/app/(public)/page";
-import PrivacyPage from "@/app/(public)/privacy/page";
+import PrivacyPage from "@/app/(public)/privacy-policy/page";
 
 const pages: Array<[string, () => React.ReactNode]> = [
   ["Start with your mortgage goal", HomePage],

@@ -14,7 +14,7 @@ export const PUBLIC_ROUTES = [
   "/careers",
   "/careers/[slug]",
   "/about",
-  "/privacy",
+  "/privacy-policy",
   "/complaints",
   "/accessibility",
   "/contact",
@@ -39,7 +39,7 @@ export const SITEMAP_ROUTES = [
   "/careers",
   "/about",
   "/contact",
-  "/privacy",
+  "/privacy-policy",
   "/complaints",
   "/accessibility",
 ] as const;
