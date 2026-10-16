@@ -17,13 +17,12 @@ This is the command-by-command guide. `DEPLOYMENT_SIDE_BY_SIDE.md` remains the s
 
 Every command is labelled by who runs it:
 
-- **`[SON/ROOT]`** — the server administrator, using an account with `sudo`.
-- **`[DEPLOY]`** — the restricted `keeper-deploy` account. It does not receive `sudo` or Docker-group membership.
+- **`[SON/ROOT]`** — the server administrator, using a single account with `sudo` (there is no separate restricted deploy account).
 - **`[WORKSTATION]`** — the owner's or administrator's separate computer.
 - **`[CUTOVER]`** — public-impacting command; run only in the agreed cutover window.
 - **`[ROLLBACK]`** — run only to reverse a failed cutover.
 
-Docker daemon access is root-equivalent. In this guide, the son executes Docker and system operations. Do not add `keeper-deploy` to the `docker` group merely for convenience.
+Docker daemon access is root-equivalent. In this guide, the single `sudo` administrator runs Git, Docker, and system operations.
 
 ### 0.2 What this guide can deploy now
 
@@ -314,22 +313,12 @@ npx --yes supabase@2.109.1 --version
 
 Expected: Node `v22.x` and Supabase CLI `2.109.1`.
 
-## 5. Phase D — create the restricted account and clone `main`
+## 5. Phase D — clone `main`
 
-### 5.1 Create the account and directory
+### 5.1 Deployment directory
 
-**`[SON/ROOT]`**
-
-```bash
-id keeper-deploy >/dev/null 2>&1 || sudo adduser --disabled-password --gecos '' keeper-deploy
-if getent group docker | grep -qE '(^|,)keeper-deploy(,|$)'; then
-  echo 'STOP: keeper-deploy unexpectedly has Docker-group access' >&2
-  exit 1
-fi
-sudo install -d -o keeper-deploy -g keeper-deploy -m 0750 /srv/keeper-financial
-```
-
-Do not grant unrestricted sudo or add the account to `docker`.
+The deployment lives at `/home/inspiron/keeper-financial`, owned by the single
+`sudo` administrator account. No separate restricted account is created.
 
 ### 5.2 Clone the exact branch
 
@@ -338,7 +327,7 @@ GitHub's repository default branch may not be `main`, so the branch must be expl
 **`[SON/ROOT]`**
 
 ```bash
-sudo -u keeper-deploy git clone --branch main --single-branch https://github.com/jbelanic/keeper-financial.git /srv/keeper-financial
+git clone --branch main --single-branch https://github.com/jbelanic/keeper-financial.git /home/inspiron/keeper-financial
 ```
 
 If the directory already contains a checkout, do not clone over it. Update it safely instead:
@@ -346,10 +335,10 @@ If the directory already contains a checkout, do not clone over it. Update it sa
 **`[SON/ROOT]`**
 
 ```bash
-sudo -u keeper-deploy git -C /srv/keeper-financial status --short --branch
-sudo -u keeper-deploy git -C /srv/keeper-financial fetch origin --prune
-sudo -u keeper-deploy git -C /srv/keeper-financial switch main
-sudo -u keeper-deploy git -C /srv/keeper-financial pull --ff-only origin main
+git -C /home/inspiron/keeper-financial status --short --branch
+git -C /home/inspiron/keeper-financial fetch origin --prune
+git -C /home/inspiron/keeper-financial switch main
+git -C /home/inspiron/keeper-financial pull --ff-only origin main
 ```
 
 Verify:
@@ -357,9 +346,9 @@ Verify:
 **`[SON/ROOT]`**
 
 ```bash
-sudo -u keeper-deploy git -C /srv/keeper-financial status --short --branch
-sudo -u keeper-deploy git -C /srv/keeper-financial rev-parse HEAD
-sudo -u keeper-deploy git -C /srv/keeper-financial rev-parse origin/main
+git -C /home/inspiron/keeper-financial status --short --branch
+git -C /home/inspiron/keeper-financial rev-parse HEAD
+git -C /home/inspiron/keeper-financial rev-parse origin/main
 ```
 
 The two revisions must match and status must show only:
@@ -377,7 +366,7 @@ Record the revision in the deployment evidence. Do not deploy an unmerged featur
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo install -o root -g root -m 0600 .env.example .env
 git check-ignore .env
 sudoedit .env
@@ -439,7 +428,7 @@ Decision 46 moves production identity to the owner-hosted Supabase project. The 
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudoedit .env
 ```
 
@@ -460,7 +449,7 @@ Copy only the hosted project's browser-safe anon key into `SUPABASE_ANON_KEY` an
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 curl --fail --silent --show-error https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/.well-known/jwks.json >/dev/null
 curl --fail --silent --show-error https://hdzmlwhubkecegrhptdd.supabase.co/auth/v1/health >/dev/null
 sudo ss -ltnp | grep -E ':(54320|54321|54322|54323|54324)\b' || echo 'no local Supabase listeners (expected)'
@@ -479,12 +468,12 @@ Generate keys even though borrower intake remains disabled during the first smok
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo install -d -o root -g root -m 0700 secrets
 sudo bash -c 'set -euo pipefail; python3 -c "
 import base64, json, os
 from pathlib import Path
-root = Path(\"/srv/keeper-financial/secrets\")
+root = Path(\"/home/inspiron/keeper-financial/secrets\")
 keyring = root / \"borrower_encryption_keyring\"
 hmac_key = root / \"borrower_capability_hmac_key\"
 if keyring.exists() or hmac_key.exists():
@@ -509,7 +498,7 @@ The API runs as a non-root `keeper` user. Grant only its numeric container group
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose build api
 API_GID="$(sudo docker compose run --rm --no-deps --entrypoint id api -g)"
 case "$API_GID" in (*[!0-9]*|'') echo 'STOP: invalid API container GID' >&2; exit 1;; esac
@@ -525,7 +514,7 @@ Do not display file contents. Store an encrypted offline copy under the approved
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose config --quiet
 sudo docker compose -f compose.yaml -f compose.documenso.yaml config --quiet
 ```
@@ -549,7 +538,7 @@ Every published Keeper port must show host IP `127.0.0.1`. Stop if a value is bl
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose up -d db minio minio-init clamav
 sudo docker compose ps --all
 ```
@@ -572,7 +561,7 @@ Migrations do not run automatically. Back up retained data before every future m
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose run --rm --build api alembic upgrade head
 sudo docker compose run --rm api alembic current --check-heads
 sudo docker compose run --rm api alembic check
@@ -585,7 +574,7 @@ All three commands must succeed. `current --check-heads` and `alembic check` pro
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose up --build -d api web
 sudo docker compose ps --all
 ```
@@ -680,7 +669,7 @@ After reconnecting:
 
 ```bash
 sudo systemctl is-active docker nginx
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose up -d
 sudo docker compose ps --all
 curl --fail --silent --show-error http://127.0.0.1:8000/health >/dev/null
@@ -807,7 +796,7 @@ Edit only through `sudoedit`; do not print `.env`.
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudoedit .env
 ```
 
@@ -885,7 +874,7 @@ credentials, and never overwrites a genuine provider subject.
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose run --rm -e APP_ENV=production api python scripts/bootstrap_admin_identity.py \
   --email '<admin-email>' \
   --subject '<supabase-uuid>' \
@@ -907,7 +896,7 @@ Do not overwrite the current WordPress file. Install Keeper under a separate nam
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo install -o root -g root -m 0644 infrastructure/nginx/keeper-financial.conf /etc/nginx/sites-available/keeper-financial.conf
 sudoedit /etc/nginx/sites-available/keeper-financial.conf
 ```
@@ -1057,7 +1046,7 @@ If Keeper itself must be stopped after public routing is restored:
 **`[ROLLBACK]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose stop web api
 ```
 
@@ -1067,10 +1056,12 @@ If Nginx files were damaged, restore `/etc/nginx` from the timestamped backup, r
 
 ## 20. Ongoing Keeper backup, off-host copy, and restore
 
-The complete operational procedure — daily automated backups, daily verified encrypted USB
+The complete operational procedures — daily automated backups, daily verified encrypted USB
 off-host copy (two rotating drives), 30-day rolling retention, quarterly isolated restore
-drills, and alerting — is `docs/operations/backup-restore-runbook.md`. Use that runbook;
-this section is a pointer, not a substitute.
+drills, and alerting — are in `docs/operations/backup-restore-runbook.md`; incident response
+is in `docs/operations/incident-response.md`; and the step-by-step restore drill is in
+`docs/operations/restore-drill.md`. Use those runbooks; this section is a pointer, not a
+substitute.
 
 Scripts (decision 49 P0): `scripts/backup_all.sh` (coordinated encrypted PostgreSQL +
 MinIO backup), `scripts/backup_postgres.sh` (encrypted `pg_dump`), `scripts/backup_minio.py`
@@ -1087,7 +1078,7 @@ tests; a backup that has never been restored is unproven.
 ```bash
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 sudo install -d -m 0700 /var/backups/keeper-postgres
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo sh -c "docker compose exec -T db sh -c 'pg_dump --format=custom --no-owner --no-acl -U \"\$POSTGRES_USER\" \"\$POSTGRES_DB\"' > '/var/backups/keeper-postgres/keeper-$STAMP.dump'"
 sudo test -s "/var/backups/keeper-postgres/keeper-$STAMP.dump"
 ```
@@ -1118,9 +1109,9 @@ Never pull over uncommitted server changes and never deploy an unmerged branch.
 **`[SON/ROOT]`**
 
 ```bash
-sudo -u keeper-deploy git -C /srv/keeper-financial status --short --branch
-sudo -u keeper-deploy git -C /srv/keeper-financial fetch origin --prune
-sudo -u keeper-deploy git -C /srv/keeper-financial log --oneline HEAD..origin/main
+git -C /home/inspiron/keeper-financial status --short --branch
+git -C /home/inspiron/keeper-financial fetch origin --prune
+git -C /home/inspiron/keeper-financial log --oneline HEAD..origin/main
 ```
 
 Stop if status is dirty. Preserve deliberate server-only files outside Git; `.env`, `secrets/`, and Supabase signing keys are ignored.
@@ -1130,9 +1121,9 @@ Create PostgreSQL/MinIO backups before migration. Then update:
 **`[SON/ROOT]`**
 
 ```bash
-sudo -u keeper-deploy git -C /srv/keeper-financial switch main
-sudo -u keeper-deploy git -C /srv/keeper-financial pull --ff-only origin main
-sudo -u keeper-deploy git -C /srv/keeper-financial status --short --branch
+git -C /home/inspiron/keeper-financial switch main
+git -C /home/inspiron/keeper-financial pull --ff-only origin main
+git -C /home/inspiron/keeper-financial status --short --branch
 ```
 
 ### 21.2 Render, migrate, rebuild, and verify
@@ -1140,7 +1131,7 @@ sudo -u keeper-deploy git -C /srv/keeper-financial status --short --branch
 **`[SON/ROOT]`**
 
 ```bash
-cd /srv/keeper-financial
+cd /home/inspiron/keeper-financial
 sudo docker compose config --quiet
 sudo docker compose run --rm --build api alembic upgrade head
 sudo docker compose run --rm api alembic current --check-heads
@@ -1156,18 +1147,20 @@ Alembic downgrade is not the default rollback. If a forward migration has writte
 
 ## 22. Responsibility boundary
 
-| Activity | `keeper-deploy` | Son/server administrator |
-| --- | --- | --- |
-| Read/fetch merged public source | Yes | Oversight |
-| Modify Git history or force push | No | No under this guide |
-| Read `.env` or borrower keys | No | Yes, only as custodian |
-| Run Docker/Supabase containers | No | Yes |
-| Run migrations | No | Yes, after backup |
-| Change Nginx/Certbot/DNS/firewall | No | Yes, cutover window only |
-| Access WordPress/Immich data | No | Yes, only as existing administrator |
-| Review local logs/evidence | No by default | Yes; redact before sharing |
-| Enable real borrower data | No | Only after separate release controls/approval |
-| Provision production administrators | No | Yes — `scripts/bootstrap_admin_identity.py` (§15.1) |
+A single `sudo` administrator performs every step; there is no separate deploy account.
+
+| Activity | Son/server administrator (`sudo`) |
+| --- | --- |
+| Read/fetch merged public source | Yes |
+| Modify Git history or force push | No under this guide |
+| Read `.env` or borrower keys | Yes, only as custodian |
+| Run Docker/Supabase containers | Yes |
+| Run migrations | Yes, after backup |
+| Change Nginx/Certbot/DNS/firewall | Yes, cutover window only |
+| Access WordPress/Immich data | Yes, only as existing administrator |
+| Review local logs/evidence | Yes; redact before sharing |
+| Enable real borrower data | Only after separate release controls/approval |
+| Provision production administrators | Yes — `scripts/bootstrap_admin_identity.py` (§15.1) |
 
 ## 23. Final acceptance checklist
 
@@ -1177,7 +1170,7 @@ Alembic downgrade is not the default rollback. If a forward migration has writte
 - [ ] existing service/listener inventory stored root-only;
 - [ ] WordPress/Nginx backups verified;
 - [ ] Docker Engine/Compose versions verified (no host Node/Supabase CLI required on the target; decision 46);
-- [ ] restricted account has no sudo/Docker access;
+- [ ] deployment runs as the single `sudo` administrator account (no separate restricted account);
 - [ ] exact merged `main` revision recorded;
 - [ ] `.env`, borrower keys, and signing key are ignored and root-restricted;
 - [ ] Supabase Storage/S3 disabled;

@@ -32,10 +32,10 @@ Install the cron entry (as root, edit `sudo crontab -e`):
 
 ```cron
 # Daily coordinated Keeper backup at 02:10; alert on failure.
-10 2 * * *  cd /srv/keeper-financial && ./scripts/backup_all.sh >> /var/log/keeper-backup.log 2>&1 || .venv/bin/python scripts/send_alert.py "Keeper backup FAILED" < /var/log/keeper-backup.log
+10 2 * * *  cd /home/inspiron/keeper-financial && ./scripts/backup_all.sh >> /var/log/keeper-backup.log 2>&1 || .venv/bin/python scripts/send_alert.py "Keeper backup FAILED" < /var/log/keeper-backup.log
 
 # Hourly monitor at :17; alert on any critical failure.
-17 * * * *  cd /srv/keeper-financial && ./scripts/monitor_health.sh > /var/log/keeper-monitor.log 2>&1 || .venv/bin/python scripts/send_alert.py "Keeper monitor FAILED" < /var/log/keeper-monitor.log
+17 * * * *  cd /home/inspiron/keeper-financial && ./scripts/monitor_health.sh > /var/log/keeper-monitor.log 2>&1 || .venv/bin/python scripts/send_alert.py "Keeper monitor FAILED" < /var/log/keeper-monitor.log
 ```
 
 `backup_all.sh` writes to `BACKUP_POSTGRES_DIR` (default `/var/backups/keeper-postgres`)
@@ -95,6 +95,9 @@ stale backup. Rotate to the other drive the next day and take it off-site.
 
 ## 4. Quarterly isolated restore drill (mandatory before real data)
 
+The detailed step-by-step checklist is `docs/operations/restore-drill.md`; this section
+summarises the same drill.
+
 A backup that has never been restored is unproven. Run this **quarterly**, and **before
 accepting any real borrower data**, and record the outcome.
 
@@ -102,7 +105,7 @@ accepting any real borrower data**, and record the outcome.
    over live data, with no production ingress.
 2. **PostgreSQL** — restore the newest dump into a throwaway database:
    ```bash
-   sudo sh -c "gunzip -c /var/backups/keeper-postgres/<newest>.sql.gz | docker compose -f /srv/keeper-financial/compose.yaml exec -T db psql -U keeper -d keeper_restore_test"
+   sudo sh -c "gunzip -c /var/backups/keeper-postgres/<newest>.sql.gz | docker compose -f /home/inspiron/keeper-financial/compose.yaml exec -T db psql -U keeper -d keeper_restore_test"
    ```
    (create `keeper_restore_test` first; adapt the custom-format path if the dump is
    custom-format).
@@ -118,6 +121,8 @@ accepting any real borrower data**, and record the outcome.
 conflict, or the drill can only pass by restoring into the live environment.
 
 ## 5. Alerting
+
+Failure response procedures: `docs/operations/incident-response.md`.
 
 | Condition | Mechanism |
 | --- | --- |

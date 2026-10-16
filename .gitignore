@@ -40,3 +40,8 @@ compose.override.yaml
 .DS_Store
 .idea/
 .vscode/
+
+# Private local operational notes (named operators, machine-specific values).
+# Everything except this README is gitignored so it survives pull/checkout.
+local-notes/*
+!local-notes/README.md
