@@ -30,6 +30,45 @@ Your Documenso compose already avoids colliding with Keeper:
 
 Keep Postgres/Redis internal. Do **not** publish them to the host.
 
+## 1.1 Host CPU baseline (verified requirement)
+
+The published `documenso/documenso` image will not run on a CPU without SSE4.2/AVX. Two native
+addons abort with SIGILL (`Illegal instruction`, exit 132) and the app container restart-loops
+before it serves a single request:
+
+| Module | Consequence |
+| --- | --- |
+| `@img/sharp-linuxmusl-x64` (libvips) | `rc=132` on dlopen |
+| `@napi-rs/canvas-linux-x64-musl` (Skia) | `rc=132` on dlopen |
+
+Both are in the document render/sign path, so there is no "disable it" workaround: an
+uncaught SIGILL cannot be caught from JavaScript.
+
+Preflight the target host **before** pulling anything:
+
+```bash
+grep -m1 -o -E 'sse4_2|avx' /proc/cpuinfo || echo "HOST UNSUPPORTED — provision a newer CPU"
+
+docker run --rm --entrypoint sh documenso/documenso@sha256:945bd2c04306bd5d78def0c4ceafdffb6b0a106cd6a2543db5acda9a6424b2d9 -c '
+find /app/node_modules -name "*.node" -path "*musl*" | while read f; do
+  node -e "process.dlopen({exports:{}},\"$f\")" >/dev/null 2>&1
+  echo "rc=$? $f"
+done' | grep -v 'rc=0'
+```
+
+No output from the second command is a pass; any `rc=132` means that addon cannot execute on
+this host.
+
+Diagnosis notes from a verified failure (AMD Athlon II X4 630, 2009):
+
+- Plain `node` works — both `node:22-alpine` and the image's own `node -e` succeed — so the
+  failure is additive, not Node itself.
+- The Prisma engine loads and `prisma migrate deploy` succeeds, so migrations apply and the
+  first-run output looks healthy right up to `🌟 Starting Documenso server...`.
+- `docker inspect` can report a clean-looking exit while the container is cycling under
+  `restart: unless-stopped`, so restart loops must be diagnosed from `logs` and a foreground
+  run (`--entrypoint sh app -c 'node build/server/main.js'`), not from the exit code alone.
+
 ## 2. Production hardening (required before public exposure)
 
 The Documenso `docker-compose.yaml` ships development defaults. Before `sign.keeperfinancial.ca`
@@ -188,4 +227,5 @@ passes (it requires the exact HTTPS `/api/v2` + `sign.keeperfinancial.ca` shapes
 Stop before exposing `sign.keeperfinancial.ca` if: any default secret remains; images are
 unpinned; SMTP is still Mailpit (capture-only); the signing cert/passphrase has no offline
 backup; `nginx -t` fails; the Keeper production validator rejects the `DOCUMENSO_*` shape;
-or the e-sign ceremony cannot complete end-to-end.
+the host CPU cannot execute the image's native addons (§1.1); or the e-sign ceremony cannot
+complete end-to-end.
