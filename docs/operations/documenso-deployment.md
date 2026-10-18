@@ -39,6 +39,8 @@ is public, replace every one of these with a strong, separately-recorded secret:
 - `NEXTAUTH_SECRET`, `NEXT_PRIVATE_ENCRYPTION_KEY`, `NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY`,
   `NEXT_PRIVATE_SIGNING_PASSPHRASE` (all hardcoded) → strong random (e.g. `openssl rand -hex 32`).
 - Pin images: `documenso/documenso:latest` and `axllent/mailpit:latest` → pinned digest/tag.
+  The tracked stack in §2.1 already pins Postgres, Redis, and the Documenso app by digest and
+  omits Mailpit entirely; do not reintroduce `latest`.
 
 **Signing certificate** (`certificates/cert.p12` + its passphrase): this is the Documenso
 signing identity. Back it up as a crown jewel — losing it breaks re-verification of past
@@ -59,6 +61,33 @@ NEXT_PRIVATE_SMTP_FROM_ADDRESS=no-reply@keeperfinancial.ca
 ```
 
 Mailpit may be removed from the production stack entirely.
+
+### 2.1 Tracked stack definition
+
+The production Compose project is version-controlled in this repository, not in the upstream
+Documenso checkout:
+
+| Path | Purpose |
+| --- | --- |
+| `infrastructure/documenso/docker-compose.production.yaml` | Pinned-digest stack: app on `127.0.0.1:3001`, internal Postgres/Redis, no Mailpit, no secret literals |
+| `infrastructure/documenso/env.production.example` | Non-secret configuration — installed as `.env` |
+| `infrastructure/documenso/secrets.production.example` | Required secret keys and their generation commands — installed output is `.secrets.env` |
+
+Install and run it from the deployment directory, because its relative paths (`./certificates`,
+`.env`, `.secrets.env`) resolve against the working directory:
+
+```bash
+sudo mkdir -p /home/inspiron/documenso
+sudo install -m 0644 infrastructure/documenso/docker-compose.production.yaml \
+  /home/inspiron/documenso/docker-compose.yaml
+cd /home/inspiron/documenso
+sudo docker compose config --quiet   # requires .env and .secrets.env to exist
+sudo docker compose up -d
+```
+
+Do not run this file from inside the repository checkout: the relative paths would resolve to
+the checkout instead of the deployment directory.
+
 
 ## 3. Public URLs and DNS/TLS
 
@@ -84,6 +113,14 @@ sudo nginx -t
 sudo systemctl reload nginx
 curl -I https://sign.keeperfinancial.ca/
 ```
+
+Issue the certificate **before** installing that server block: it references
+`/etc/letsencrypt/live/sign.keeperfinancial.ca/{fullchain,privkey}.pem`, which do not exist
+until issuance, so `nginx -t` fails if the block is installed first. Install a temporary
+port-80-only server block that serves `/.well-known/acme-challenge/` from `/var/www/certbot`,
+issue with `certbot certonly --webroot -w /var/www/certbot -d sign.keeperfinancial.ca`, then
+install the reviewed block and remove the temporary one. Do not use `certbot --nginx`, which
+rewrites the reviewed configuration.
 
 ## 4. ICA template and signer recipient
 
