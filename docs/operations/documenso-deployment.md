@@ -88,6 +88,18 @@ sudo docker compose up -d
 Do not run this file from inside the repository checkout: the relative paths would resolve to
 the checkout instead of the deployment directory.
 
+`certificates/cert.p12` must be owned by the uid the image runs as. The image's user is
+`nodejs`, **uid 1001**, and the file is mode `0400`, so a root-owned bundle is unreadable to
+the container: Documenso boots with "Certificate not found or not readable" and signing
+disabled, without failing the container. After generating the bundle:
+
+```bash
+chown 1001:1001 /home/inspiron/documenso/certificates/cert.p12
+chmod 0400 /home/inspiron/documenso/certificates/cert.p12
+```
+
+Keep `0400` — do not relax it to `0444` to make the container read it.
+
 
 ## 3. Public URLs and DNS/TLS
 
@@ -99,8 +111,18 @@ NEXTAUTH_URL=https://sign.keeperfinancial.ca
 NEXT_PUBLIC_URL=https://sign.keeperfinancial.ca
 NEXT_PUBLIC_API_URL=https://sign.keeperfinancial.ca
 NEXT_PUBLIC_WEBAPP_URL=https://sign.keeperfinancial.ca
-NEXT_PRIVATE_INTERNAL_WEBAPP_URL=https://sign.keeperfinancial.ca
+NEXT_PRIVATE_INTERNAL_WEBAPP_URL=http://127.0.0.1:3001
 ```
+
+`NEXT_PRIVATE_INTERNAL_WEBAPP_URL` is the URL the app uses to call **itself** — the local
+job scheduler dispatches to `${NEXT_PRIVATE_INTERNAL_WEBAPP_URL}/api/jobs/...`
+(`packages/lib/jobs/client/local.ts`). It must be reachable from inside the container, so it
+is the loopback port, not the public origin. Upstream's own `.env.example` documents it as
+"URL used by the web app to request itself (e.g. local background jobs)" and defaults it to
+`http://localhost:3000`. Pointing it at `https://sign.keeperfinancial.ca` requires DNS
+hairpin from the container plus the certificate to already be live; when the self-call fails
+the scheduler crashes and the container restart-loops even though the certificate and
+database are fine.
 
 - Obtain a Let's Encrypt certificate for `sign.keeperfinancial.ca` using the host's existing
   Certbot, then install the reviewed server block `infrastructure/nginx/documenso-financial.conf`
