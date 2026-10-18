@@ -1,0 +1,57 @@
+# Keeper Financial — self-hosted Documenso, production stack definition.
+#
+# Companion to docs/operations/documenso-deployment.md §2–§3. This file is the
+# tracked source of truth for the Documenso Compose project; it is *installed*
+# into the deployment directory and run from there, because its relative paths
+# (./certificates, .env, .secrets.env) resolve against the working directory:
+#
+#   sudo install -m 0644 infrastructure/documenso/docker-compose.production.yaml \
+#     /home/inspiron/documenso/docker-compose.yaml
+#   cd /home/inspiron/documenso && sudo docker compose up -d
+#
+# What it enforces:
+#   - the app is published to 127.0.0.1:3001 only; host Nginx/Certbot owns public 80/443
+#   - Postgres and Redis stay on the internal documenso_default network (no host ports)
+#   - Mailpit is not part of the production stack (transactional email is SMTP2GO)
+#   - every image is pinned by digest
+#   - no secret literals: values come from .env and .secrets.env
+#
+# The project name is pinned so the network keeps the name `documenso_default`
+# that the docs and the local-dev overlay reference.
+name: documenso
+
+services:
+  db:
+    image: postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .secrets.env
+    volumes:
+      - documenso-db:/var/lib/postgresql/data
+
+  redis:
+    image: redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    restart: unless-stopped
+    volumes:
+      - documenso-redis:/data
+
+  app:
+    image: documenso/documenso@sha256:945bd2c04306bd5d78def0c4ceafdffb6b0a106cd6a2543db5acda9a6424b2d9
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "127.0.0.1:3001:3001"
+    env_file:
+      - .env
+      - .secrets.env
+    volumes:
+      - documenso-uploads:/app/uploads
+      - ./certificates/cert.p12:/opt/documenso/cert.p12:ro
+
+volumes:
+  documenso-db:
+  documenso-redis:
+  documenso-uploads:
