@@ -10,6 +10,18 @@ The Keeper application is already code-ready: the production validator requires
 `DOCUMENSO_API_BASE_URL` to be an exact HTTPS `/api/v2` origin and `DOCUMENSO_PUBLIC_BASE_URL`
 to be exactly `https://sign.keeperfinancial.ca`. This runbook is the missing deployment side.
 
+## 0.1 Documenso is optional
+
+Keeper onboarding does not depend on Documenso. With `ESIGN_PROVIDER=disabled` (or `manual`)
+the injected contractor agreement is signed outside Keeper and an administrator records an
+attestation — verified date, evidence source (`external_esign_provider` or
+`signed_copy_on_file`), and a reference to the signed copy — on the assignment's
+`executed_agreements` gate. The signed document itself stays outside Keeper.
+
+Deploy Documenso only to move that capture back inside the system. Flipping
+`ESIGN_PROVIDER=documenso` restores provider-owned behaviour exactly as described below, and
+no other code change is required.
+
 ## 0. Named operator
 
 | Role | Name | Responsibility |

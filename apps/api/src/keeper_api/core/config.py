@@ -12,6 +12,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 Environment = Literal["local", "production"]
 StorageBackend = Literal["local", "s3"]
 MalwareScannerBackend = Literal["clamav", "local_test", "disabled"]
+# `disabled` and `manual` both mean "no provider integration": the executed
+# contractor agreement is signed outside Keeper and an administrator records a
+# manual attestation against the assignment's agreement gate. Only `documenso`
+# hands that gate to the provider, and it is the only mode that requires the
+# DOCUMENSO_* values.
+EsignProvider = Literal["disabled", "manual", "documenso"]
 
 
 class Settings(BaseSettings):
@@ -79,7 +85,7 @@ class Settings(BaseSettings):
     mortgage_application_url: str | None = None
     mortgage_application_allowed_hosts: str = ""
     mortgage_application_agent_links: dict[str, str] = Field(default_factory=dict)
-    esign_provider: str = "disabled"
+    esign_provider: EsignProvider = "disabled"
     documenso_api_base_url: str | None = None
     documenso_public_base_url: str | None = None
     documenso_api_token: SecretStr | None = None

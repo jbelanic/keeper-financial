@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from conftest import create_user
 from keeper_api.api.routes import onboarding as onboarding_routes
+from keeper_api.core.config import Settings
 from keeper_api.models.domain import (
     AuditEvent,
     Candidate,
@@ -515,8 +516,9 @@ def test_completion_requires_readiness_provider_evidence_and_active_assignment(
 
 
 def test_completion_rolls_back_all_transitions_on_failure(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings: Settings
 ) -> None:
+    settings.esign_provider = "documenso"
     create_admin(db)
     if db.scalar(select(Role).where(Role.code == "agent")) is None:
         db.add(Role(code="agent", description="Synthetic existing agent role"))
@@ -566,6 +568,7 @@ def test_completion_rolls_back_all_transitions_on_failure(
             assignment_id=assignment_id,
             actor_user_id=actor_user_id,
             request_id="rollback-test",
+            settings=settings,
         )
     db.rollback()
     db.expire_all()
@@ -595,8 +598,9 @@ def test_completion_rolls_back_all_transitions_on_failure(
 
 
 def test_admin_completion_atomically_activates_and_grants_agent_once(
-    client: TestClient, db: Session
+    client: TestClient, db: Session, settings: Settings
 ) -> None:
+    settings.esign_provider = "documenso"
     create_admin(db)
     if db.scalar(select(Role).where(Role.code == "agent")) is None:
         db.add(Role(code="agent", description="Synthetic existing agent role"))
@@ -677,6 +681,160 @@ def test_admin_completion_atomically_activates_and_grants_agent_once(
     assert dashboard["assignment"]["status"] == "completed"
     assert dashboard["activation_ready"] is False
     assert dashboard["esign_envelopes"][0]["envelope_url"] is None
+
+
+def test_manual_mode_completes_onboarding_with_an_attested_external_agreement(
+    client: TestClient, db: Session
+) -> None:
+    """With e-sign off, an administrator attestation replaces the provider envelope."""
+    create_admin(db)
+    if db.scalar(select(Role).where(Role.code == "agent")) is None:
+        db.add(Role(code="agent", description="Synthetic existing agent role"))
+        db.commit()
+    candidate, application, candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+    task = db.scalar(
+        select(CandidateOnboardingTask).where(
+            CandidateOnboardingTask.assignment_id == assignment_id
+        )
+    )
+    assert task is not None
+    task.status = "completed"
+    for gate in db.scalars(
+        select(ProgrammaticGate).where(ProgrammaticGate.assignment_id == assignment_id)
+    ):
+        if gate.code == "executed_agreements":
+            continue
+        gate.status = "satisfied"
+        gate.satisfied_at = datetime.now(UTC)
+    db.commit()
+
+    # No envelope exists at all: the agreement was signed outside Keeper.
+    satisfied = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/executed_agreements/satisfy",
+        headers=ADMIN_HEADERS,
+        json={
+            "verified_on": "2026-10-19",
+            "evidence_source": "external_esign_provider",
+            "evidence_reference": "external-provider-envelope-1234",
+        },
+    )
+    assert satisfied.status_code == 200
+    assert satisfied.json()["evidence_kind"] == "manual"
+
+    completed = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/complete",
+        headers=ADMIN_HEADERS,
+    )
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["agent_access_enabled"] is True
+
+    assignment = db.get(CandidateOnboardingAssignment, assignment_id)
+    assert assignment is not None and assignment.status == "completed"
+    assert (
+        db.scalars(
+            select(CandidateEsignEnvelope).where(
+                CandidateEsignEnvelope.assignment_id == assignment_id
+            )
+        ).all()
+        == []
+    )
+    attestation = db.scalar(
+        select(GateEvidenceEvent)
+        .join(ProgrammaticGate, ProgrammaticGate.id == GateEvidenceEvent.gate_id)
+        .where(
+            ProgrammaticGate.assignment_id == assignment_id,
+            ProgrammaticGate.code == "executed_agreements",
+            GateEvidenceEvent.event_type == "satisfied",
+        )
+    )
+    assert attestation is not None
+    assert attestation.evidence_source == "external_esign_provider"
+    assert attestation.evidence_reference == "external-provider-envelope-1234"
+
+    dashboard = client.get(
+        "/api/v1/candidate/onboarding", headers={"X-Dev-Auth-Sub": candidate_subject}
+    ).json()
+    agreement_gate = next(
+        gate for gate in dashboard["gates"] if gate["code"] == "executed_agreements"
+    )
+    assert agreement_gate["evidence_kind"] == "manual"
+    assert dashboard["esign_envelopes"] == []
+
+
+def test_manual_agreement_attestation_requires_supported_evidence(
+    client: TestClient, db: Session
+) -> None:
+    create_admin(db)
+    candidate, application, _candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+
+    unsupported = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/executed_agreements/satisfy",
+        headers=ADMIN_HEADERS,
+        json={
+            "verified_on": "2026-10-19",
+            "evidence_source": "self_attested",
+            "evidence_reference": "verbal confirmation",
+        },
+    )
+    assert unsupported.status_code == 409
+    assert "evidence source must be one of" in unsupported.json()["detail"]
+
+    missing_reference = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/executed_agreements/satisfy",
+        headers=ADMIN_HEADERS,
+        json={
+            "verified_on": "2026-10-19",
+            "evidence_source": "signed_copy_on_file",
+            "evidence_reference": "   ",
+        },
+    )
+    # Blank/whitespace evidence is rejected by the request contract itself.
+    assert missing_reference.status_code == 422
+
+    gate = db.scalar(
+        select(ProgrammaticGate).where(
+            ProgrammaticGate.assignment_id == assignment_id,
+            ProgrammaticGate.code == "executed_agreements",
+        )
+    )
+    assert gate is not None and gate.status == "open"
+
+
+def test_documenso_mode_rejects_manual_agreement_attestation(
+    client: TestClient, db: Session, settings: Settings
+) -> None:
+    """The provider stays authoritative: manual evidence cannot bypass it."""
+    settings.esign_provider = "documenso"
+    create_admin(db)
+    candidate, application, _candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = uuid.UUID(
+        assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+    )
+
+    response = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/gates/executed_agreements/satisfy",
+        headers=ADMIN_HEADERS,
+        json={
+            "verified_on": "2026-10-19",
+            "evidence_source": "external_esign_provider",
+            "evidence_reference": "external-provider-envelope-1234",
+        },
+    )
+    assert response.status_code == 409
+    assert "derived activation gates cannot be satisfied manually" in response.json()["detail"]
 
 
 def test_review_queue_is_admin_only_and_application_specific(

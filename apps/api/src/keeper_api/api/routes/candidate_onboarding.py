@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
 from keeper_api.models.domain import (
     Candidate,
@@ -29,7 +30,6 @@ from keeper_api.schemas.review_onboarding import (
 )
 from keeper_api.services.auth import Principal, require_candidate
 from keeper_api.services.onboarding import (
-    DERIVED_GATE_CODES,
     OnboardingError,
     acknowledge_policy,
     activation_ready,
@@ -37,6 +37,7 @@ from keeper_api.services.onboarding import (
     candidate_assigned_documents,
     candidate_esign_envelopes,
     candidate_gates,
+    derived_gate_codes,
     get_candidate_tasks,
     submit_task_evidence,
 )
@@ -115,6 +116,7 @@ def onboarding_dashboard(
     response: Response,
     principal: Principal = Depends(require_candidate),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> CandidateOnboardingDashboard:
     response.headers.update(NO_STORE)
     candidate = _candidate(principal, db)
@@ -157,7 +159,7 @@ def onboarding_dashboard(
             for t in get_candidate_tasks(db, candidate_id=candidate.id, assignment_id=assignment.id)
         ],
         gates=[
-            _gate_out(g)
+            _gate_out(g, settings)
             for g in candidate_gates(db, candidate_id=candidate.id, assignment_id=assignment.id)
         ],
         documents=[_doc_out(document, version) for document, version in documents],
@@ -260,7 +262,7 @@ def _task_out(t: CandidateOnboardingTask) -> CandidateOnboardingTaskResponse:
     return CandidateOnboardingTaskResponse.model_validate(t, from_attributes=True)
 
 
-def _gate_out(g: Any) -> ActivationGateResponse:
+def _gate_out(g: Any, settings: Settings) -> ActivationGateResponse:
     return ActivationGateResponse(
         id=g.id,
         candidate_id=g.candidate_id,
@@ -269,7 +271,7 @@ def _gate_out(g: Any) -> ActivationGateResponse:
         label=g.label,
         status=g.status,
         satisfied_at=g.satisfied_at,
-        evidence_kind="derived" if g.code in DERIVED_GATE_CODES else "manual",
+        evidence_kind="derived" if g.code in derived_gate_codes(settings) else "manual",
     )
 
 
