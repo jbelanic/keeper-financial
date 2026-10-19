@@ -260,6 +260,15 @@ export function BorrowerReviewConsole({
                     <span className="muted">{item.assigned_agent_email}</span>
                   </>
                 ) : null}
+                {item.attribution_source === "agent_link" &&
+                item.attributed_agent_name ? (
+                  <>
+                    <br />
+                    <span className="muted">
+                      via agent link: {item.attributed_agent_name}
+                    </span>
+                  </>
+                ) : null}
               </span>,
               item.submitted_at
                 ? new Date(item.submitted_at).toLocaleString()

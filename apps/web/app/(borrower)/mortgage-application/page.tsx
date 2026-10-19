@@ -16,11 +16,9 @@ export default async function MortgageApplicationPage({
   searchParams?: Promise<{ agent?: string | string[] }>;
 }) {
   const rawAgent = (await searchParams)?.agent;
-  const agent =
-    typeof rawAgent === "string" &&
-    rawAgent.length <= 100 &&
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(rawAgent)
+  const agentCode =
+    typeof rawAgent === "string" && /^[a-z0-9]{8,32}$/.test(rawAgent)
       ? rawAgent
       : undefined;
-  return <BorrowerApplicationForm preferredAgentSlug={agent} />;
+  return <BorrowerApplicationForm agentCode={agentCode} />;
 }

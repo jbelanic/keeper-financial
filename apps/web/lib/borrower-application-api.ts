@@ -115,8 +115,11 @@ async function borrowerJson<T>(
   return (await response.json()) as T;
 }
 
-export async function startBorrowerDraft(): Promise<BorrowerDraftStart> {
-  return borrowerJson<BorrowerDraftStart>("/start", { method: "POST" });
+export async function startBorrowerDraft(
+  agentCode?: string,
+): Promise<BorrowerDraftStart> {
+  const query = agentCode ? `?agent=${encodeURIComponent(agentCode)}` : "";
+  return borrowerJson<BorrowerDraftStart>(`/start${query}`, { method: "POST" });
 }
 
 export async function getBorrowerDraft(
@@ -231,7 +234,7 @@ export function forgetBorrowerApplicationId(): void {
   window.sessionStorage.removeItem(APPLICATION_ID_KEY);
 }
 
-export async function recoverOrStartBorrowerDraft(): Promise<{
+export async function recoverOrStartBorrowerDraft(agentCode?: string): Promise<{
   draft: BorrowerRecoveredDraft | BorrowerDraftStart;
   recovered: boolean;
 }> {
@@ -252,7 +255,7 @@ export async function recoverOrStartBorrowerDraft(): Promise<{
       forgetBorrowerApplicationId();
     }
   }
-  const draft = await startBorrowerDraft();
+  const draft = await startBorrowerDraft(agentCode);
   rememberBorrowerApplicationId(draft.application_id);
   return { draft, recovered: false };
 }

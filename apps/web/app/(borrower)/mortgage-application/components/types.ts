@@ -4,6 +4,7 @@ export type MortgageRequestState = {
   estimated_property_value: string;
   expected_closing_date: string;
   preferred_agent_slug: string;
+  preferred_agent_name: string;
   down_payment_sources: DownPaymentState[];
 };
 
