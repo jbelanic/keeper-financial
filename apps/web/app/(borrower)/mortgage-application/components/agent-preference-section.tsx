@@ -9,13 +9,16 @@ export function AgentPreferenceSection({
 }) {
   if (attributedAgentName) {
     return (
-      <section className="borrower-preference" aria-labelledby="agent-preference">
+      <section
+        className="borrower-preference"
+        aria-labelledby="agent-preference"
+      >
         <h2 className="visually-hidden" id="agent-preference">
           Your agent
         </h2>
         <p role="status">
-          <strong>You are applying with {attributedAgentName}.</strong> They will
-          be able to help you finish this application.
+          <strong>You are applying with {attributedAgentName}.</strong> They
+          will be able to help you finish this application.
         </p>
       </section>
     );
@@ -44,8 +47,8 @@ export function AgentPreferenceSection({
         />
       </p>
       <p id="preferred-agent-name-hint" className="field-hint">
-        Enter their name if you know it. This does not assign them to your file —
-        our team confirms the right agent when your application is reviewed.
+        Enter their name if you know it. This does not assign them to your file
+        — our team confirms the right agent when your application is reviewed.
       </p>
     </section>
   );

@@ -266,8 +266,8 @@ export function AgentAssignedConsole({
             </span>
           </p>
           <p className="muted">
-            This application is still being completed. The SIN is masked here and
-            documents appear after the applicant submits.
+            This application is still being completed. The SIN is masked here
+            and documents appear after the applicant submits.
           </p>
           {draftView.detail.primary_borrower ? (
             <section aria-labelledby="agent-draft-contact-heading">
