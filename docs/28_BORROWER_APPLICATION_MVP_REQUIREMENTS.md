@@ -69,7 +69,15 @@ A brokerage administrator requires the existing active `brokerage_admin` authori
 
 ### 3.4 Attribution and assignment
 
-A public `agent` slug may be captured only after server-side resolution to a current eligible active agent profile. Client-supplied user IDs are rejected. A valid preference may produce initial assignment; an invalid, unpublished, suspended, or unknown slug is discarded and the application enters the unassigned administrator queue. Reassignment is administrator/AAL2 only, requires a reason, and is audited. Attribution and assignment remain distinct fields.
+*Amended 2026-10-19 (owner approval): attribution resolves against an eligible agent **account**; a published agent profile is no longer required.*
+
+Every onboarded agent holds a stable, opaque referral code (`agent_referral_links`), minted on first use and independent of whether an `agent_profiles` row exists or is published. A public `agent` reference is captured only after server-side resolution of that code to a current eligible agent account — active user, `agent` role, and an active candidate relationship, matching the predicate that governs the agent's own application read access. Client-supplied user identifiers are rejected.
+
+A resolved reference records attribution (`attribution_source='agent_link'`, resolved agent account and referral link, resolution timestamp) and performs **initial assignment at application start**, so the assigned agent can help the applicant complete an in-progress application. An unknown, revoked, or ineligible code is discarded silently — the application still starts, stays unassigned, and enters the administrator queue; the applicant is never blocked and the response does not reveal whether a code exists.
+
+Assignment, not attribution, governs agent read access, and it remains exact: the assigned agent can open only that application, only with AAL2, only while their agent relationship is active, and every read is audited. Expired drafts stay invisible to the agent, and agent reads never extend draft retention.
+
+When no referral code is present, the applicant may supply a free-text `preferred_agent_name`. It is stored only inside the encrypted payload as an applicant claim, is shown to reviewing administrators as an unverified hint, and is **never** matched to an account automatically. Reassignment is administrator/AAL2 only, requires a reason, and is audited. Attribution and assignment remain distinct fields.
 
 ## 4. Data collection contract
 

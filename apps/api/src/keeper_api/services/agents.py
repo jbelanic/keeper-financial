@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 import uuid
 from datetime import UTC, datetime
 
@@ -8,7 +9,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import ColumnElement, Select
 
-from keeper_api.models.domain import AgentProfile, Candidate, Role, User, UserRole
+from keeper_api.models.domain import (
+    AgentProfile,
+    AgentReferralLink,
+    Candidate,
+    Role,
+    User,
+    UserRole,
+)
 from keeper_api.models.statuses import AgentProfileStatus, CandidateStatus
 from keeper_api.schemas.agents import AgentProfileCreate, AgentProfileUpdate
 from keeper_api.services.audit import AuditService
@@ -65,6 +73,129 @@ def assert_agent_account_eligible(db: Session, user_id: uuid.UUID) -> None:
     )
     if eligible is None:
         raise LookupError("active agent relationship not found")
+
+
+_REFERRAL_CODE_ATTEMPTS = 5
+
+
+def _new_referral_code() -> str:
+    return secrets.token_hex(10)
+
+
+def referral_eligible_condition() -> ColumnElement[bool]:
+    """An agent who can actually open an attributed application.
+
+    Mirrors `require_internal_agent_access`: active user, `agent` role, and an ACTIVE
+    candidate relationship. Profile publication is deliberately excluded, so an
+    onboarded agent has a working link without a published profile.
+    """
+    return (
+        User.is_active.is_(True)
+        & (Role.code == "agent")
+        & (Candidate.status == CandidateStatus.ACTIVE.value)
+    )
+
+
+def assert_referral_agent_eligible(db: Session, user_id: uuid.UUID) -> None:
+    eligible = db.scalar(
+        select(User.id)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .join(Candidate, Candidate.user_id == User.id)
+        .where(User.id == user_id, referral_eligible_condition())
+    )
+    if eligible is None:
+        raise LookupError("active agent relationship not found")
+
+
+def referral_link_for_user(db: Session, user_id: uuid.UUID) -> AgentReferralLink | None:
+    return db.scalar(select(AgentReferralLink).where(AgentReferralLink.user_id == user_id))
+
+
+def ensure_referral_link(
+    db: Session, user_id: uuid.UUID, *, created_by_user_id: uuid.UUID | None = None
+) -> AgentReferralLink:
+    """Return this agent's link, minting one on first use."""
+    existing = referral_link_for_user(db, user_id)
+    if existing is not None:
+        if existing.revoked_at is not None:
+            existing.revoked_at = None
+            db.commit()
+            db.refresh(existing)
+        return existing
+    assert_referral_agent_eligible(db, user_id)
+    for _ in range(_REFERRAL_CODE_ATTEMPTS):
+        link = AgentReferralLink(
+            user_id=user_id,
+            code=_new_referral_code(),
+            created_by_user_id=created_by_user_id,
+        )
+        db.add(link)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            continue
+        db.refresh(link)
+        return link
+    raise AgentProfileConflict("referral code could not be minted")
+
+
+def rotate_referral_link(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    actor_user_id: uuid.UUID,
+    request_id: str | None = None,
+) -> AgentReferralLink:
+    assert_referral_agent_eligible(db, user_id)
+    link = ensure_referral_link(db, user_id, created_by_user_id=actor_user_id)
+    for _ in range(_REFERRAL_CODE_ATTEMPTS):
+        link.code = _new_referral_code()
+        link.rotated_at = datetime.now(UTC)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            continue
+        break
+    else:
+        raise AgentProfileConflict("referral code could not be rotated")
+    AuditService(db).record(
+        "agent.referral_link_rotated",
+        "user",
+        user_id,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+        safe_metadata={},
+    )
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def resolve_referral_code(db: Session, code: str) -> AgentReferralLink | None:
+    """Resolve a public referral code to an eligible agent, or None.
+
+    Unknown, revoked, and ineligible codes are indistinguishable from supplying no
+    code at all, so a crafted link cannot probe the agent roster.
+    """
+    normalized = code.strip().lower()
+    if not normalized or len(normalized) > 32:
+        return None
+    link = db.scalar(select(AgentReferralLink).where(AgentReferralLink.code == normalized))
+    if link is None or link.revoked_at is not None:
+        return None
+    eligible = db.scalar(
+        select(User.id)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .join(Candidate, Candidate.user_id == User.id)
+        .where(User.id == link.user_id, referral_eligible_condition())
+    )
+    if eligible is None:
+        return None
+    return link
 
 
 def get_admin_profile(

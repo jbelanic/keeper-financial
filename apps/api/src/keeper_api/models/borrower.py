@@ -69,6 +69,10 @@ class BorrowerApplication(IdTimestampsMixin, Base):
             "ix_borrower_applications_assigned_agent_id",
             "assigned_agent_id",
         ),
+        Index(
+            "ix_borrower_applications_attribution_agent_id",
+            "attribution_agent_user_id",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
@@ -120,6 +124,14 @@ class BorrowerApplication(IdTimestampsMixin, Base):
     attribution_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     attribution_agent_slug: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    attribution_agent_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+
+    attribution_referral_link_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("agent_referral_links.id", ondelete="RESTRICT"), nullable=True
+    )
 
     attribution_resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

@@ -26,6 +26,7 @@ from keeper_api.models.borrower import (
     BorrowerApplicationSnapshot,
     BorrowerConsentRecord,
 )
+from keeper_api.models.domain import User
 from keeper_api.schemas.borrower_internal import (
     BorrowerAgentProjection,
     BorrowerInternalProjection,
@@ -162,6 +163,7 @@ class BorrowerApplicationStartResponse(BaseModel):
     application_id: str
     revision: int
     lifecycle_status: str
+    attributed_agent_name: str | None = None
 
 
 class BorrowerApplicationSaveRequest(BaseModel):
@@ -256,6 +258,8 @@ class BorrowerReviewQueueItem(BaseModel):
     assigned_agent_id: str | None
     assigned_agent_name: str | None
     assigned_agent_email: str | None
+    attribution_source: str | None = None
+    attributed_agent_name: str | None = None
 
 
 class BorrowerReviewQueueResponse(BaseModel):
@@ -344,6 +348,7 @@ def review_queue(
 def start_application(
     request: Request,
     response: Response,
+    agent: str | None = None,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> BorrowerApplicationStartResponse:
@@ -351,7 +356,9 @@ def start_application(
     validate_borrower_origin(request, settings)
     crypto_state = _get_crypto_state(request)
 
-    application, capability = start_borrower_application(db, crypto_state, settings)
+    application, capability = start_borrower_application(
+        db, crypto_state, settings, agent_code=agent
+    )
 
     response.set_cookie(
         key=_BORROWER_COOKIE_NAME,
@@ -363,10 +370,17 @@ def start_application(
         max_age=30 * 24 * 60 * 60,
     )
 
+    attributed_agent = (
+        db.get(User, application.attribution_agent_user_id)
+        if application.attribution_agent_user_id
+        else None
+    )
+
     return BorrowerApplicationStartResponse(
         application_id=str(application.id),
         revision=application.revision,
         lifecycle_status=application.lifecycle_status,
+        attributed_agent_name=attributed_agent.display_name if attributed_agent else None,
     )
 
 

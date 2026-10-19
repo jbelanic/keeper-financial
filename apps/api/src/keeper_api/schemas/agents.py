@@ -244,3 +244,19 @@ class AdminAgentProfileList(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class AgentReferralLinkResponse(BaseModel):
+    """Public entry link that attributes an application to one agent.
+
+    `apply_url` is the link the agent shares; the code inside it only affects
+    routing and grants no access to any data.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: uuid.UUID
+    code: str
+    apply_url: str
+    created_at: datetime
+    rotated_at: datetime | None

@@ -7,14 +7,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
+from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
-from keeper_api.models.domain import AgentProfile
+from keeper_api.models.domain import AgentProfile, AgentReferralLink
 from keeper_api.models.statuses import CandidateStatus
 from keeper_api.schemas.agents import (
     AdminAgentProfile,
     AdminAgentProfileList,
     AgentProfileCreate,
     AgentProfileUpdate,
+    AgentReferralLinkResponse,
     EligibleAgent,
     PublicAgentProfile,
     PublicAgentProfileList,
@@ -29,13 +31,20 @@ from keeper_api.services.agents import (
     admin_profiles,
     create_profile,
     eligible_agent_accounts,
+    ensure_referral_link,
     get_admin_profile,
     public_profile_by_slug,
     public_profiles,
+    rotate_referral_link,
     slug_is_available,
     update_profile,
 )
-from keeper_api.services.auth import Principal, require_admin
+from keeper_api.services.auth import (
+    Principal,
+    get_current_principal,
+    require_admin,
+    require_admin_aal2,
+)
 
 router = APIRouter(tags=["agents"])
 NO_STORE = {"Cache-Control": "no-store"}
@@ -303,3 +312,96 @@ def transition_agent_profile(
     except InvalidAgentProfileTransition as exc:
         raise HTTPException(status_code=409, detail=str(exc), headers=NO_STORE) from exc
     return AgentStatusResponse(status=payload.status)
+
+
+def _referral_out(link: AgentReferralLink, settings: Settings) -> AgentReferralLinkResponse:
+    base = (settings.borrower_application_origin or "https://apply.keeperfinancial.ca").rstrip("/")
+    return AgentReferralLinkResponse(
+        user_id=link.user_id,
+        code=link.code,
+        apply_url=f"{base}/?agent={link.code}",
+        created_at=link.created_at,
+        rotated_at=link.rotated_at,
+    )
+
+
+@router.get(
+    "/agent-referral-link",
+    response_model=AgentReferralLinkResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Agent access is required"},
+    },
+)
+def get_own_referral_link(
+    response: Response,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AgentReferralLinkResponse:
+    """The signed-in agent's own application link, minted on first read."""
+    response.headers.update(NO_STORE)
+    if "agent" not in principal.roles or not principal.is_active:
+        raise HTTPException(status_code=403, detail="agent access is required")
+    try:
+        link = ensure_referral_link(db, principal.user_id, created_by_user_id=principal.user_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=403, detail="agent access is unavailable") from exc
+    return _referral_out(link, settings)
+
+
+@router.get(
+    "/admin/agent-accounts/{user_id}/referral-link",
+    response_model=AgentReferralLinkResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Agent account not found"},
+    },
+)
+def get_agent_referral_link(
+    user_id: uuid.UUID,
+    response: Response,
+    _: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AgentReferralLinkResponse:
+    response.headers.update(NO_STORE)
+    try:
+        link = ensure_referral_link(db, user_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="agent account not found") from exc
+    return _referral_out(link, settings)
+
+
+@router.post(
+    "/admin/agent-accounts/{user_id}/referral-link/rotate",
+    response_model=AgentReferralLinkResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin denied"},
+        404: {"description": "Agent account not found"},
+    },
+)
+def rotate_agent_referral_link(
+    user_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin_aal2),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AgentReferralLinkResponse:
+    """Replace an agent's code; the previous link stops resolving immediately."""
+    response.headers.update(NO_STORE)
+    try:
+        link = rotate_referral_link(
+            db,
+            user_id,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="agent account not found") from exc
+    except AgentProfileConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _referral_out(link, settings)
