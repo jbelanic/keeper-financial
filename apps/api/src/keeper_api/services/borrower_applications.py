@@ -893,19 +893,28 @@ def list_admin_review_queue(db: Session) -> list[dict[str, Any]]:
 
 
 def list_agent_assigned_queue(db: Session, agent_user_id: uuid.UUID) -> list[dict[str, Any]]:
+    """Applications this agent is assigned, including in-progress drafts.
+
+    Drafts are listed so an assigned agent can find and help finish an application
+    started from their referral link. Expired drafts stay hidden.
+    """
+    draft_status = BorrowerApplicationLifecycleStatus.DRAFT.value
     statuses = (
         BorrowerApplicationLifecycleStatus.SUBMITTED.value,
         BorrowerApplicationLifecycleStatus.UNDER_REVIEW.value,
     )
     applications = db.scalars(
         select(BorrowerApplication)
-        .where(BorrowerApplication.lifecycle_status.in_(statuses))
+        .where(BorrowerApplication.lifecycle_status.in_((*statuses, draft_status)))
         .where(BorrowerApplication.assigned_agent_id == agent_user_id)
-        .order_by(BorrowerApplication.submitted_at.asc(), BorrowerApplication.id.asc())
+        .order_by(BorrowerApplication.created_at.desc(), BorrowerApplication.id.desc())
     ).all()
     rows: list[dict[str, Any]] = []
     for application in applications:
-        if not has_submission_evidence(db, application.id):
+        if application.lifecycle_status == draft_status:
+            if borrower_draft_expired(application):
+                continue
+        elif not has_submission_evidence(db, application.id):
             continue
         rows.append(
             {
@@ -1161,6 +1170,94 @@ def _agent_borrower_info(raw: dict[str, Any] | None) -> dict[str, Any] | None:
         "has_sin": bool(sin_val),
         "relationship_to_primary": raw.get("relationship_to_primary"),
     }
+
+
+def get_agent_draft_projection(
+    db: Session,
+    crypto_state: BorrowerCryptoState | None,
+    application_id: uuid.UUID,
+) -> dict[str, Any]:
+    """Bounded in-progress view for the exact assigned agent.
+
+    Owner-approved boundary (2026-10-19): payload, completion progress and contact
+    details only. SIN is masked, documents are not exposed at all, and expired
+    drafts are invisible. Callers MUST enforce
+    require_internal_agent_access(..., allow_draft=True).
+    """
+    from keeper_api.schemas.borrower_internal import mask_sin
+
+    application = db.get(BorrowerApplication, application_id)
+    if application is None:
+        raise ValueError("application not found")
+    if application.lifecycle_status != BorrowerApplicationLifecycleStatus.DRAFT.value:
+        raise ValueError("application not found")
+    if borrower_draft_expired(application):
+        raise ValueError("application not found")
+
+    result: dict[str, Any] = {
+        "application_id": str(application.id),
+        "lifecycle_status": application.lifecycle_status,
+        "revision": application.revision,
+        "last_activity_at": application.last_activity_at.isoformat(),
+        "draft_expires_at": application.draft_expires_at.isoformat()
+        if application.draft_expires_at
+        else None,
+        "assigned_at": application.assigned_at.isoformat() if application.assigned_at else None,
+        "attribution_source": application.attribution_source,
+        "has_sin": False,
+        "has_co_borrower": False,
+        "primary_borrower": None,
+        "co_borrower": None,
+        "mortgage_request": None,
+        "progress": {
+            "primary_borrower": False,
+            "co_borrower": False,
+            "mortgage_request": False,
+            "subject_property": False,
+            "assets": False,
+            "liabilities": False,
+        },
+    }
+
+    if application.payload_revision == 0 or crypto_state is None:
+        return result
+
+    payload = get_latest_payload(db, crypto_state, application.id, application.payload_revision)
+    if payload is None:
+        return result
+
+    result["has_sin"] = bool(payload.get("primary_borrower", {}).get("sin"))
+    result["has_co_borrower"] = bool(payload.get("co_borrower"))
+    result["mortgage_request"] = payload.get("mortgage_request")
+    result["progress"] = {
+        "primary_borrower": bool(payload.get("primary_borrower")),
+        "co_borrower": bool(payload.get("co_borrower")),
+        "mortgage_request": bool(payload.get("mortgage_request")),
+        "subject_property": bool(payload.get("subject_property")),
+        "assets": bool(payload.get("assets")),
+        "liabilities": bool(payload.get("liabilities")),
+    }
+
+    for key, name_key in (("primary_borrower", "primary_borrower"), ("co_borrower", "co_borrower")):
+        raw = payload.get(name_key)
+        if raw is None:
+            continue
+        sin_val = raw.get("sin", "")
+        masked = mask_sin(sin_val) if sin_val else None
+        entry = {
+            "first_name": raw.get("first_name", ""),
+            "last_name": raw.get("last_name", ""),
+            "email": raw.get("email", ""),
+            "phone": raw.get("phone", ""),
+            "preferred_contact_method": raw.get("preferred_contact_method"),
+            "sin": {"last_three": masked.last_three, "display": masked.display} if masked else None,
+            "has_sin": bool(sin_val),
+        }
+        if name_key == "co_borrower":
+            entry["relationship_to_primary"] = raw.get("relationship_to_primary")
+        result[key] = entry
+
+    return result
 
 
 def get_agent_projection(

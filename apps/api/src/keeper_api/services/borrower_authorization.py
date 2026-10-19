@@ -149,6 +149,8 @@ def require_internal_agent_access(
     application_id: uuid.UUID,
     db: Session,
     settings: Settings,
+    *,
+    allow_draft: bool = False,
 ) -> Principal:
     if not principal.is_active or principal.verified_at is None:
         raise HTTPException(status_code=403, detail="active verified access is required")
@@ -163,12 +165,19 @@ def require_internal_agent_access(
         raise HTTPException(status_code=404, detail="application not found")
 
     if application.lifecycle_status == BorrowerApplicationLifecycleStatus.DRAFT.value:
-        raise HTTPException(status_code=404, detail="application not found")
+        if not allow_draft:
+            raise HTTPException(status_code=404, detail="application not found")
+        from keeper_api.services.borrower_applications import borrower_draft_expired
 
-    from keeper_api.services.borrower_applications import has_submission_evidence
+        # Expired drafts stay invisible to the agent exactly as they do to the
+        # applicant; reading a draft never extends its retention.
+        if borrower_draft_expired(application):
+            raise HTTPException(status_code=404, detail="application not found")
+    else:
+        from keeper_api.services.borrower_applications import has_submission_evidence
 
-    if not has_submission_evidence(db, application_id):
-        raise HTTPException(status_code=404, detail="application not found")
+        if not has_submission_evidence(db, application_id):
+            raise HTTPException(status_code=404, detail="application not found")
 
     if "agent" not in principal.roles:
         raise HTTPException(status_code=403, detail="agent access is required")

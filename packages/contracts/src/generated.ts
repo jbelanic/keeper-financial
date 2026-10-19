@@ -1176,6 +1176,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/borrower-applications/{application_id}/agent/draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Agent Draft Application
+     * @description In-progress application view for the exact assigned agent.
+     */
+    get: operations["get_agent_draft_application_api_v1_borrower_applications__application_id__agent_draft_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/borrower-applications/{application_id}/agent": {
     parameters: {
       query?: never;
@@ -1657,6 +1677,51 @@ export interface components {
     Body_upload_document_api_v1_upload_document_post: {
       /** File */
       file: string;
+    };
+    /**
+     * BorrowerAgentDraftProjection
+     * @description Bounded in-progress projection for the exact assigned agent.
+     *
+     *     Owner-approved boundary (2026-10-19): enough to help an applicant finish —
+     *     contact details, mortgage request and completion progress — with the SIN
+     *     masked and no document access. Authorized only by
+     *     require_internal_agent_access(..., allow_draft=True).
+     */
+    BorrowerAgentDraftProjection: {
+      /** Application Id */
+      application_id: string;
+      /** Lifecycle Status */
+      lifecycle_status: string;
+      /** Revision */
+      revision: number;
+      /** Last Activity At */
+      last_activity_at: string;
+      /** Draft Expires At */
+      draft_expires_at?: string | null;
+      /** Assigned At */
+      assigned_at?: string | null;
+      /** Attribution Source */
+      attribution_source?: string | null;
+      /** Has Sin */
+      has_sin: boolean;
+      /** Has Co Borrower */
+      has_co_borrower: boolean;
+      /** Primary Borrower */
+      primary_borrower?: {
+        [key: string]: unknown;
+      } | null;
+      /** Co Borrower */
+      co_borrower?: {
+        [key: string]: unknown;
+      } | null;
+      /** Mortgage Request */
+      mortgage_request?: {
+        [key: string]: unknown;
+      } | null;
+      /** Progress */
+      progress?: {
+        [key: string]: boolean;
+      };
     };
     /**
      * BorrowerAgentInfo
@@ -7172,6 +7237,40 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BorrowerReviewQueueResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_agent_draft_application_api_v1_borrower_applications__application_id__agent_draft_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerAgentDraftProjection"];
         };
       };
       /** @description Validation Error */

@@ -79,6 +79,8 @@ Assignment, not attribution, governs agent read access, and it remains exact: th
 
 When no referral code is present, the applicant may supply a free-text `preferred_agent_name`. It is stored only inside the encrypted payload as an applicant claim, is shown to reviewing administrators as an unverified hint, and is **never** matched to an account automatically. Reassignment is administrator/AAL2 only, requires a reason, and is audited. Attribution and assignment remain distinct fields.
 
+*In-progress draft review (owner approval 2026-10-19).* Because assignment begins at application start, the exact assigned agent may read an in-progress draft through a dedicated bounded projection: contact details, mortgage request and section-completion progress. The SIN is display-masked (never revealed in this view), documents are not exposed at all, and SIN reveal remains a separate AAL2 operation available only after submission. Expired drafts are invisible to the agent exactly as they are to the applicant, and reading a draft does not extend `last_activity_at` or the draft retention window. Every draft read is audited (`borrower_application_agent_draft_viewed`). Full unmasked agent access continues to require a submitted application per `docs/35`.
+
 ## 4. Data collection contract
 
 The server owns a versioned, typed schema. Unknown fields are rejected. Empty optional groups are omitted rather than stored as unrestricted JSON. Free text is length-bounded and treated as sensitive.
