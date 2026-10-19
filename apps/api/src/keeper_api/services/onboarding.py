@@ -8,7 +8,7 @@ from sqlalchemy import true as sql_true
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from keeper_api.core.config import Settings
+from keeper_api.core.config import Settings, get_settings
 from keeper_api.models.domain import (
     Candidate,
     CandidateApplication,
@@ -57,6 +57,32 @@ ACTIVATION_GATE_LABELS: dict[str, str] = {
 
 MANUAL_GATE_CODES = frozenset({"background_check", "fsra_authorization", "system_provisioning"})
 DERIVED_GATE_CODES = frozenset({"policy_acknowledgement", "executed_agreements"})
+# The agreement gate is the only gate whose ownership depends on ESIGN_PROVIDER:
+# the provider owns it in Documenso mode, an administrator attests it otherwise.
+AGREEMENT_GATE_CODE = "executed_agreements"
+# Fixed attestation sources for an externally executed contractor agreement.
+EXECUTED_AGREEMENT_EVIDENCE_SOURCES = frozenset({"external_esign_provider", "signed_copy_on_file"})
+
+
+def agreement_is_provider_managed(settings: Settings) -> bool:
+    """True only when the configured provider owns the agreement gate."""
+    return settings.esign_provider == "documenso"
+
+
+def manual_gate_codes(settings: Settings) -> frozenset[str]:
+    """Gate codes an administrator may satisfy by recording evidence."""
+    if agreement_is_provider_managed(settings):
+        return MANUAL_GATE_CODES
+    return MANUAL_GATE_CODES | {AGREEMENT_GATE_CODE}
+
+
+def derived_gate_codes(settings: Settings) -> frozenset[str]:
+    """Gate codes that may only be satisfied by automatic evidence."""
+    if agreement_is_provider_managed(settings):
+        return DERIVED_GATE_CODES
+    return DERIVED_GATE_CODES - {AGREEMENT_GATE_CODE}
+
+
 ACTIVATABLE_CANDIDATE_STATUSES = frozenset(
     {
         CandidateStatus.APPLICATION_SUBMITTED.value,
@@ -1208,9 +1234,19 @@ def satisfy_gate(
     evidence_reference: str,
     actor_user_id: uuid.UUID,
     request_id: str | None,
+    settings: Settings | None = None,
 ) -> ProgrammaticGate:
-    if code not in MANUAL_GATE_CODES:
+    settings = settings or get_settings()
+    if code not in manual_gate_codes(settings):
         raise OnboardingError("derived activation gates cannot be satisfied manually")
+    if code == AGREEMENT_GATE_CODE and not agreement_is_provider_managed(settings):
+        if evidence_source not in EXECUTED_AGREEMENT_EVIDENCE_SOURCES:
+            allowed = ", ".join(sorted(EXECUTED_AGREEMENT_EVIDENCE_SOURCES))
+            raise OnboardingError(f"executed agreement evidence source must be one of: {allowed}")
+        if not evidence_reference.strip():
+            raise OnboardingError(
+                "executed agreement evidence requires a reference to the signed copy"
+            )
     assignment = _lock_active_assignment(db, assignment.id)
     candidate = db.get(Candidate, assignment.candidate_id)
     if candidate is None:
@@ -1255,8 +1291,10 @@ def reopen_gate(
     reason: str,
     actor_user_id: uuid.UUID,
     request_id: str | None,
+    settings: Settings | None = None,
 ) -> ProgrammaticGate:
-    if code not in MANUAL_GATE_CODES:
+    settings = settings or get_settings()
+    if code not in manual_gate_codes(settings):
         raise OnboardingError("derived activation gates cannot be reopened manually")
     assignment = _lock_active_assignment(db, assignment.id)
     gate = _lock_gate(db, assignment_id=assignment.id, code=code)
@@ -1354,6 +1392,7 @@ def complete_onboarding_assignment(
     assignment_id: uuid.UUID,
     actor_user_id: uuid.UUID,
     request_id: str | None,
+    settings: Settings | None = None,
 ) -> CandidateOnboardingAssignment:
     """Atomically complete one exact ready assignment and grant its existing agent role.
 
@@ -1361,6 +1400,7 @@ def complete_onboarding_assignment(
     current envelope and readiness rows. Other assignment mutations begin with the
     assignment row, so concurrent completion serializes before terminal checks.
     """
+    settings = settings or get_settings()
     assignment = db.scalar(
         select(CandidateOnboardingAssignment)
         .where(CandidateOnboardingAssignment.id == assignment_id)
@@ -1405,17 +1445,19 @@ def complete_onboarding_assignment(
         .execution_options(populate_existing=True)
         .with_for_update()
     )
-    envelope = db.scalar(
-        select(CandidateEsignEnvelope)
-        .where(
-            CandidateEsignEnvelope.assignment_id == assignment.id,
-            CandidateEsignEnvelope.candidate_id == candidate.id,
-            CandidateEsignEnvelope.provider == "documenso",
-            CandidateEsignEnvelope.superseded_at.is_(None),
+    envelope: CandidateEsignEnvelope | None = None
+    if agreement_is_provider_managed(settings):
+        envelope = db.scalar(
+            select(CandidateEsignEnvelope)
+            .where(
+                CandidateEsignEnvelope.assignment_id == assignment.id,
+                CandidateEsignEnvelope.candidate_id == candidate.id,
+                CandidateEsignEnvelope.provider == "documenso",
+                CandidateEsignEnvelope.superseded_at.is_(None),
+            )
+            .execution_options(populate_existing=True)
+            .with_for_update()
         )
-        .execution_options(populate_existing=True)
-        .with_for_update()
-    )
     terminal = assignment.status == OnboardingAssignmentStatus.COMPLETED.value
     if terminal:
         if (
@@ -1430,16 +1472,37 @@ def complete_onboarding_assignment(
     _require_activatable_lifecycle(application=application, candidate=candidate)
     if not activation_ready(db, candidate_id=candidate.id, assignment_id=assignment.id):
         raise OnboardingError("the onboarding assignment is not activation ready")
-    executed_gate = _lock_gate(db, assignment_id=assignment.id, code="executed_agreements")
-    if (
-        envelope is None
-        or envelope.status != EsignEnvelopeStatus.COMPLETED.value
-        or envelope.envelope_url is None
-        or envelope.last_synced_at is None
-        or executed_gate is None
-        or executed_gate.status != GateStatus.SATISFIED.value
-    ):
-        raise OnboardingError("the current contractor agreement is not provider-confirmed")
+    executed_gate = _lock_gate(db, assignment_id=assignment.id, code=AGREEMENT_GATE_CODE)
+    if agreement_is_provider_managed(settings):
+        if (
+            envelope is None
+            or envelope.status != EsignEnvelopeStatus.COMPLETED.value
+            or envelope.envelope_url is None
+            or envelope.last_synced_at is None
+            or executed_gate is None
+            or executed_gate.status != GateStatus.SATISFIED.value
+        ):
+            raise OnboardingError("the current contractor agreement is not provider-confirmed")
+    else:
+        # Manual mode: the agreement was executed outside Keeper, so completion
+        # depends on a recorded administrator attestation, never on an envelope.
+        if executed_gate is None or executed_gate.status != GateStatus.SATISFIED.value:
+            raise OnboardingError("the executed contractor agreement has not been recorded")
+        attestation = db.scalar(
+            select(GateEvidenceEvent)
+            .where(
+                GateEvidenceEvent.gate_id == executed_gate.id,
+                GateEvidenceEvent.event_type == "satisfied",
+            )
+            .order_by(GateEvidenceEvent.created_at.desc(), GateEvidenceEvent.id.desc())
+            .limit(1)
+        )
+        if (
+            attestation is None
+            or not (attestation.evidence_source or "").strip()
+            or not (attestation.evidence_reference or "").strip()
+        ):
+            raise OnboardingError("the executed agreement attestation is incomplete")
 
     previous_application = application.status
     previous_candidate = candidate.status
@@ -1491,11 +1554,14 @@ def complete_onboarding_assignment(
 
 __all__ = [
     "ACTIVATION_GATE_CODES",
+    "AGREEMENT_GATE_CODE",
     "DERIVED_GATE_CODES",
+    "EXECUTED_AGREEMENT_EVIDENCE_SOURCES",
     "MANUAL_GATE_CODES",
     "OnboardingError",
     "acknowledge_policy",
     "activation_ready",
+    "agreement_is_provider_managed",
     "assign_onboarding_plan",
     "candidate_acknowledgements",
     "candidate_assigned_documents",
@@ -1504,12 +1570,14 @@ __all__ = [
     "complete_onboarding_assignment",
     "create_onboarding_plan",
     "current_document_version",
+    "derived_gate_codes",
     "get_candidate_tasks",
     "get_onboarding_plan",
     "issue_ica_envelope_for_assignment",
     "link_esign_envelope",
     "list_controlled_documents",
     "list_onboarding_plans",
+    "manual_gate_codes",
     "refresh_esign_envelope",
     "reopen_gate",
     "replace_esign_envelope",

@@ -39,12 +39,12 @@ from keeper_api.schemas.review_onboarding import (
 from keeper_api.services.auth import Principal, require_admin, require_admin_aal2
 from keeper_api.services.documenso import DocumensoError
 from keeper_api.services.onboarding import (
-    DERIVED_GATE_CODES,
     OnboardingError,
     activation_ready,
     candidate_esign_envelopes,
     candidate_gates,
     complete_onboarding_assignment,
+    derived_gate_codes,
     get_candidate_tasks,
     issue_ica_envelope_for_assignment,
     link_esign_envelope,
@@ -119,7 +119,7 @@ def _plan_out(db: Session, plan: object) -> PlanWithTasks:
     )
 
 
-def _gate_out(gate: object) -> ActivationGateResponse:
+def _gate_out(gate: object, settings: Settings) -> ActivationGateResponse:
     from keeper_api.models.domain import ProgrammaticGate
 
     assert isinstance(gate, ProgrammaticGate)
@@ -131,7 +131,7 @@ def _gate_out(gate: object) -> ActivationGateResponse:
         label=gate.label,
         status=gate.status,
         satisfied_at=gate.satisfied_at,
-        evidence_kind="derived" if gate.code in DERIVED_GATE_CODES else "manual",
+        evidence_kind="derived" if gate.code in derived_gate_codes(settings) else "manual",
     )
 
 
@@ -457,6 +457,7 @@ def get_assignment(
     response: Response,
     _principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AdminOnboardingAssignmentDetail:
     response.headers.update(NO_STORE)
     try:
@@ -473,7 +474,7 @@ def get_assignment(
             )
         ],
         gates=[
-            _gate_out(gate)
+            _gate_out(gate, settings)
             for gate in candidate_gates(
                 db, candidate_id=assignment.candidate_id, assignment_id=assignment.id
             )
@@ -505,6 +506,7 @@ def satisfy_activation_gate(
     response: Response,
     principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> ActivationGateResponse:
     response.headers.update(NO_STORE)
     assignment = db.get(CandidateOnboardingAssignment, assignment_id)
@@ -520,10 +522,11 @@ def satisfy_activation_gate(
             evidence_reference=payload.evidence_reference,
             actor_user_id=principal.user_id,
             request_id=request.state.request_id,
+            settings=settings,
         )
     except OnboardingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _gate_out(gate)
+    return _gate_out(gate, settings)
 
 
 @router.post(
@@ -544,6 +547,7 @@ def reopen_activation_gate(
     response: Response,
     principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> ActivationGateResponse:
     response.headers.update(NO_STORE)
     assignment = db.get(CandidateOnboardingAssignment, assignment_id)
@@ -557,10 +561,11 @@ def reopen_activation_gate(
             reason=payload.reason,
             actor_user_id=principal.user_id,
             request_id=request.state.request_id,
+            settings=settings,
         )
     except OnboardingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _gate_out(gate)
+    return _gate_out(gate, settings)
 
 
 @router.post(
@@ -732,6 +737,7 @@ def complete_assignment(
     response: Response,
     principal: Principal = Depends(require_admin_aal2),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> OnboardingCompletionResponse:
     response.headers.update(NO_STORE)
     try:
@@ -740,6 +746,7 @@ def complete_assignment(
             assignment_id=assignment_id,
             actor_user_id=principal.user_id,
             request_id=request.state.request_id,
+            settings=settings,
         )
     except LookupError as exc:
         db.rollback()

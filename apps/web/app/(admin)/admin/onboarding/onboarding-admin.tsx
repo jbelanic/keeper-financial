@@ -781,15 +781,34 @@ export function OnboardingAdmin({
                       id="gate-evidence-source"
                       label="Evidence source (required)"
                     >
-                      <input
-                        id="gate-evidence-source"
-                        value={evidenceSource}
-                        maxLength={120}
-                        onChange={(event) =>
-                          setEvidenceSource(event.target.value)
-                        }
-                        required
-                      />
+                      {gateCode === "executed_agreements" ? (
+                        <select
+                          id="gate-evidence-source"
+                          value={evidenceSource}
+                          onChange={(event) =>
+                            setEvidenceSource(event.target.value)
+                          }
+                          required
+                        >
+                          <option value="">Select a source…</option>
+                          <option value="external_esign_provider">
+                            External e-sign provider
+                          </option>
+                          <option value="signed_copy_on_file">
+                            Signed copy on file
+                          </option>
+                        </select>
+                      ) : (
+                        <input
+                          id="gate-evidence-source"
+                          value={evidenceSource}
+                          maxLength={120}
+                          onChange={(event) =>
+                            setEvidenceSource(event.target.value)
+                          }
+                          required
+                        />
+                      )}
                     </FormField>
                     <FormField
                       id="gate-evidence-reference"
