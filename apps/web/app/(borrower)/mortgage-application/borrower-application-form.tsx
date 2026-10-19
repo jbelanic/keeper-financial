@@ -216,16 +216,19 @@ function saveErrorMessages(error: unknown) {
 }
 
 export function BorrowerApplicationForm({
-  preferredAgentSlug = "",
+  agentCode = "",
   api = defaultApi,
 }: {
-  preferredAgentSlug?: string;
+  agentCode?: string;
   api?: FormApi;
 }) {
   const [draft, setDraft] = useState<DraftSummary | null>(null);
   const [recovered, setRecovered] = useState(false);
   const [restoredData, setRestoredData] = useState(false);
   const [startError, setStartError] = useState(false);
+  const [attributedAgentName, setAttributedAgentName] = useState<string | null>(
+    null,
+  );
   const [step, setStep] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errors, setErrors] = useState<string[]>([]);
@@ -236,7 +239,8 @@ export function BorrowerApplicationForm({
     requested_amount: "",
     estimated_property_value: "",
     expected_closing_date: "",
-    preferred_agent_slug: preferredAgentSlug,
+    preferred_agent_slug: "",
+    preferred_agent_name: "",
     down_payment_sources: [],
   });
   const [primary, setPrimary] = useState<BorrowerState>(emptyBorrower);
@@ -286,11 +290,16 @@ export function BorrowerApplicationForm({
   useEffect(() => {
     let active = true;
     api
-      .recoverOrStart()
+      .recoverOrStart(agentCode)
       .then(({ draft: nextDraft, recovered: wasRecovered }) => {
         if (!active) return;
         setDraft(nextDraft);
         setRecovered(wasRecovered);
+        setAttributedAgentName(
+          "attributed_agent_name" in nextDraft
+            ? (nextDraft.attributed_agent_name ?? null)
+            : null,
+        );
         if (
           wasRecovered &&
           "payload" in nextDraft &&
@@ -300,7 +309,7 @@ export function BorrowerApplicationForm({
         ) {
           const restored = hydrateBorrowerDraft(
             nextDraft.payload as Record<string, unknown>,
-            preferredAgentSlug,
+            "",
           );
           setMortgage(restored.mortgage);
           setPrimary(restored.primary);
@@ -341,7 +350,7 @@ export function BorrowerApplicationForm({
     return () => {
       active = false;
     };
-  }, [api, preferredAgentSlug]);
+  }, [api, agentCode]);
 
   useEffect(() => {
     if (errors.length) errorRef.current?.focus();
@@ -512,7 +521,8 @@ export function BorrowerApplicationForm({
               mortgage.estimated_property_value,
             ),
             expected_closing_date: mortgage.expected_closing_date || undefined,
-            preferred_agent_slug: mortgage.preferred_agent_slug || undefined,
+            preferred_agent_name:
+              mortgage.preferred_agent_name.trim() || undefined,
             down_payment_sources: mortgage.down_payment_sources.map((source) =>
               compact({
                 source: source.source,
@@ -723,7 +733,13 @@ export function BorrowerApplicationForm({
           )
         ) : null}
       </header>
-      <AgentPreferenceSection slug={preferredAgentSlug} />
+      <AgentPreferenceSection
+        attributedAgentName={attributedAgentName}
+        value={mortgage.preferred_agent_name}
+        onChange={(next) =>
+          setMortgage((current) => ({ ...current, preferred_agent_name: next }))
+        }
+      />
       <nav className="progress-nav" aria-label="Application sections">
         <p className="progress-nav-title">
           Section {step + 1} of {steps.length}

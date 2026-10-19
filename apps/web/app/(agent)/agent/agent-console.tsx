@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, DataTable, ErrorSummary, StatusBadge } from "@keeper/ui";
 import type {
+  BorrowerAgentDraftProjection,
   BorrowerAgentProjection,
   BorrowerDocumentListResponse,
   BorrowerReviewQueueItem,
@@ -73,15 +74,67 @@ export function AgentAssignedConsole({
   requester?: Requester;
 }) {
   const [selected, setSelected] = useState<SelectedReview | null>(null);
+  const [draftView, setDraftView] = useState<{
+    item: BorrowerReviewQueueItem;
+    detail: BorrowerAgentDraftProjection;
+  } | null>(null);
+  const [applyLink, setApplyLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    requester("/api/v1/agent-referral-link")
+      .then(async (response) => {
+        if (!active || !response.ok) return;
+        const body = (await response.json()) as { apply_url?: string };
+        if (active && typeof body.apply_url === "string") {
+          setApplyLink(body.apply_url);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [requester]);
+
+  async function copyApplyLink() {
+    if (!applyLink) return;
+    try {
+      await navigator.clipboard.writeText(applyLink);
+      setLinkCopied(true);
+    } catch {
+      setLinkCopied(false);
+    }
+  }
 
   async function loadReview(item: BorrowerReviewQueueItem) {
     if (busy) return;
     setBusy(true);
     setErrors([]);
     setNotice("Loading assigned application...");
+    if (item.lifecycle_status === "draft") {
+      try {
+        const response = await requester(
+          `/api/v1/borrower-applications/${item.application_id}/agent/draft`,
+        );
+        if (!response.ok) throw new Error("draft unavailable");
+        setSelected(null);
+        setDraftView({
+          item,
+          detail: (await response.json()) as BorrowerAgentDraftProjection,
+        });
+        setNotice("In-progress application loaded.");
+      } catch {
+        setErrors(["The in-progress application could not be loaded."]);
+        setNotice("");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const [detailResponse, documentResponse] = await Promise.all([
         requester(`/api/v1/borrower-applications/${item.application_id}/agent`),
@@ -146,6 +199,26 @@ export function AgentAssignedConsole({
       </p>
       <ErrorSummary errors={errors} />
 
+      <Card aria-labelledby="agent-link-heading">
+        <h2 id="agent-link-heading">Your application link</h2>
+        {applyLink ? (
+          <>
+            <p>
+              Share this link with clients. Applications they start from it are
+              assigned to you automatically.
+            </p>
+            <p>
+              <code id="agent-apply-link">{applyLink}</code>
+            </p>
+            <Button type="button" onClick={copyApplyLink}>
+              {linkCopied ? "Copied" : "Copy link"}
+            </Button>
+          </>
+        ) : (
+          <p className="muted">Your link is not available yet.</p>
+        )}
+      </Card>
+
       <section aria-labelledby="agent-queue-heading">
         <h2 id="agent-queue-heading">
           Assigned applications ({initialQueue.total})
@@ -176,6 +249,52 @@ export function AgentAssignedConsole({
           />
         )}
       </section>
+
+      {draftView ? (
+        <Card aria-labelledby="agent-draft-heading">
+          <h2 id="agent-draft-heading">In-progress application</h2>
+          <p>
+            Status: <StatusBadge tone="warning">in progress</StatusBadge>{" "}
+            <span className="muted">
+              Last activity{" "}
+              {new Date(draftView.detail.last_activity_at).toLocaleString()}
+              {draftView.detail.draft_expires_at
+                ? ` · draft expires ${new Date(
+                    draftView.detail.draft_expires_at,
+                  ).toLocaleDateString()}`
+                : ""}
+            </span>
+          </p>
+          <p className="muted">
+            This application is still being completed. The SIN is masked here and
+            documents appear after the applicant submits.
+          </p>
+          {draftView.detail.primary_borrower ? (
+            <section aria-labelledby="agent-draft-contact-heading">
+              <h3 id="agent-draft-contact-heading">Primary borrower contact</h3>
+              <pre>{formatJson(draftView.detail.primary_borrower)}</pre>
+            </section>
+          ) : (
+            <p>The applicant has not completed their details yet.</p>
+          )}
+          <section aria-labelledby="agent-draft-request-heading">
+            <h3 id="agent-draft-request-heading">Mortgage request</h3>
+            <pre>{formatJson(draftView.detail.mortgage_request ?? null)}</pre>
+          </section>
+          <section aria-labelledby="agent-draft-progress-heading">
+            <h3 id="agent-draft-progress-heading">Progress</h3>
+            <ul>
+              {Object.entries(draftView.detail.progress ?? {}).map(
+                ([key, done]) => (
+                  <li key={key}>
+                    {key.replace(/_/g, " ")}: {done ? "started" : "not started"}
+                  </li>
+                ),
+              )}
+            </ul>
+          </section>
+        </Card>
+      ) : null}
 
       {selected ? (
         <Card aria-labelledby="agent-detail-heading">

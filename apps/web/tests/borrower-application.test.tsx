@@ -35,7 +35,7 @@ describe("accountless borrower application form", () => {
     const patch = vi.fn().mockResolvedValue(saved);
     render(
       <BorrowerApplicationForm
-        preferredAgentSlug="published-agent"
+        agentCode="abc123def456abc12345"
         api={{ recoverOrStart, patch }}
       />,
     );
@@ -65,7 +65,6 @@ describe("accountless borrower application form", () => {
         mortgage_request: {
           mortgage_objective: "purchase",
           requested_amount: 250000,
-          preferred_agent_slug: "published-agent",
           down_payment_sources: [],
         },
       }),

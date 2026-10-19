@@ -212,6 +212,7 @@ export function hydrateBorrowerDraft(
       expected_closing_date: text(mortgageRequest.expected_closing_date),
       preferred_agent_slug:
         text(mortgageRequest.preferred_agent_slug) || preferredAgentSlug,
+      preferred_agent_name: text(mortgageRequest.preferred_agent_name),
       down_payment_sources: downPayments(mortgageRequest.down_payment_sources),
     },
     primary: borrower(primarySource),

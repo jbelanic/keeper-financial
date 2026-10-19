@@ -100,6 +100,8 @@ export function ApplyForm({
         ? { preferred_agent_slug: preferredAgentSlug }
         : {}),
       message: data.get("message") || null,
+      preferred_agent_name:
+        (data.get("preferred_agent_name") as string | null)?.trim() || null,
       service_contact_acknowledged:
         data.get("service_contact_acknowledged") === "on",
       marketing_consent: data.get("marketing_consent") === "on",
@@ -243,6 +245,19 @@ export function ApplyForm({
           </select>
         </FormField>
       </div>
+      <FormField
+        id="preferred_agent_name"
+        label="Are you working with an agent? (optional)"
+        hint="Enter their name if you know it. This does not assign them — our team confirms the right agent."
+      >
+        <input
+          id="preferred_agent_name"
+          name="preferred_agent_name"
+          type="text"
+          maxLength={120}
+          autoComplete="off"
+        />
+      </FormField>
       <FormField
         id="message"
         label="Brief message (optional)"

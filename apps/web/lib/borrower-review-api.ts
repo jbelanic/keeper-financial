@@ -12,6 +12,8 @@ export type BorrowerInternalProjection =
 
 export type BorrowerAgentProjection =
   components["schemas"]["BorrowerAgentProjection"];
+export type BorrowerAgentDraftProjection =
+  components["schemas"]["BorrowerAgentDraftProjection"];
 
 export type BorrowerAgentInfo = components["schemas"]["BorrowerAgentInfo"];
 
