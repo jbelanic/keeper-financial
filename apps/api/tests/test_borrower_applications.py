@@ -2895,7 +2895,7 @@ class TestBorrowerPhaseDRouteIntegration:
         )
         assert mine.status_code == 200, mine.text
         first_code = mine.json()["code"]
-        assert mine.json()["apply_url"].endswith(f"?agent={first_code}")
+        assert mine.json()["apply_url"].endswith(f"/mortgage-application?agent={first_code}")
 
         admin_view = route_client.get(
             f"/api/v1/admin/agent-accounts/{agent_id}/referral-link",
