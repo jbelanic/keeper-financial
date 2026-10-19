@@ -78,7 +78,12 @@ MORTGAGE_APPLICATION_ALLOWED_HOSTS=apply.localhost
 
 BORROWER_APPLICATION_ENABLED=true
 BORROWER_REAL_DATA_ENABLED=false
-BORROWER_APPLICATION_ORIGIN=http://localhost:8000
+# Browser-facing origin of the mortgage-application web app. It is used to build
+# agent referral links, so it must be the application host the browser visits —
+# `apply.localhost:3000` — and not the API at :8000, which has no application page.
+# The local origin guard is unaffected: apps/web/proxy.ts rewrites Host/Origin to
+# localhost:8000 / http://localhost:8000 for proxied /api/v1 requests.
+BORROWER_APPLICATION_ORIGIN=http://apply.localhost:3000
 ```
 
 Keep `BORROWER_REAL_DATA_ENABLED=false` until the deployed runtime evidence is complete and the consent catalog marker is deliberately set for the exact approved version/digest.

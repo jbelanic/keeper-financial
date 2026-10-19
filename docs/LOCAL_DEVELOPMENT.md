@@ -220,6 +220,51 @@ confused with or replaced by a service-role credential.
 
 Local source-level/API tests may still use `APP_ENV=local`, local filesystem fixtures, `MALWARE_SCANNER_BACKEND=local_test`, and documented development headers. Those are not live Compose settings. The live stack uses MinIO and `MALWARE_SCANNER_BACKEND=clamav`; production startup rejects `local_test` and `disabled`. Scanner connection, timeout, protocol, or daemon failures return safe 503 responses and never fall back to accepting or storing bytes.
 
+## Application host and the borrower journey
+
+The borrower application is served on its **own host**, not on the ordinary
+`localhost:3000` site. Locally that host is `http://apply.localhost:3000`
+(`*.localhost` resolves to loopback; Cloudflare/Nginx does the same job in
+production with `apply.keeperfinancial.ca`).
+
+`apps/web/proxy.ts` forwards `/api/v1/borrower-applications/*` to the API **only
+when the request arrives on an application host**. On plain `localhost:3000` that
+branch never runs, Next answers the call itself, and the wizard shows
+"We could not prepare a private draft" — a generic start failure, not a data
+problem. It also rewrites `Host`/`Origin` to `localhost:8000` /
+`http://localhost:8000` on the forwarded request, which is exactly what the API's
+local origin guard expects (`services/borrower_authorization.py`).
+
+So: `BORROWER_APPLICATION_ORIGIN` must be the **browser-facing application host**
+— `http://apply.localhost:3000` locally, `https://apply.keeperfinancial.ca` in
+production. It is the base for agent referral links; pointing it at the API
+(`:8000`) produces links that land on an API route with no page.
+
+### Agent referral links
+
+The agent console at `/agent` shows the signed-in agent's link
+(`http://apply.localhost:3000/mortgage-application?agent=<code>`), minting the
+code on first read. Operator detail, eligibility, rotation, and verification
+queries: `docs/operations/agent-referral-links.md`.
+
+### Exercising start without a browser
+
+`POST /borrower-applications/start` enforces the same origin guard, so a direct
+API call has to supply the headers the proxy would otherwise rewrite:
+
+```bash
+CODE=<code from agent_referral_links>
+curl -sS -X POST "http://localhost:8000/api/v1/borrower-applications/start?agent=${CODE}" \
+  -H 'Host: localhost:8000' \
+  -H 'Origin: http://localhost:8000' \
+  -H 'x-keeper-borrower-csrf: 1' \
+  -H 'Content-Type: application/json'
+```
+
+Two traps: `http://127.0.0.1:8000` returns `403 {"detail":"forbidden"}` because the
+guard compares the host label and `127.0.0.1` is not `localhost`; and an unquoted
+`$<code>` in the URL is expanded by the shell to an empty string.
+
 ## Safe ClamAV verification
 
 Wait for `docker compose ps clamav` to report healthy, then run:
