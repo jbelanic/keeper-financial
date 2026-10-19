@@ -155,6 +155,8 @@ def start_borrower_application(
     db: Session,
     crypto_state: BorrowerCryptoState | None,
     settings: Settings | None = None,
+    *,
+    agent_code: str | None = None,
 ) -> tuple[BorrowerApplication, str]:
     if crypto_state is None:
         raise ValueError("borrower cryptography is unavailable")
@@ -174,6 +176,12 @@ def start_borrower_application(
     db.add(application)
     db.flush()
 
+    agent_link = None
+    if agent_code:
+        from keeper_api.services.agents import resolve_referral_code
+
+        agent_link = resolve_referral_code(db, agent_code)
+
     history = BorrowerApplicationStatusHistory(
         application_id=application.id,
         from_status=None,
@@ -186,6 +194,35 @@ def start_borrower_application(
         capability_session_id=application.capability_session_id,
     )
     db.add(history)
+
+    if agent_link is not None:
+        now = datetime.now(UTC)
+        application.attribution_source = "agent_link"
+        application.attribution_agent_user_id = agent_link.user_id
+        application.attribution_referral_link_id = agent_link.id
+        application.attribution_resolved_at = now
+        # Assigned at start so the agent can help the client finish the draft.
+        # Agent read access is still gated by exact assignment, AAL2 and an active
+        # agent relationship, and remains audited.
+        application.assigned_agent_id = agent_link.user_id
+        application.assigned_at = now
+        db.add(
+            BorrowerAssignmentHistory(
+                application_id=application.id,
+                agent_user_id=agent_link.user_id,
+                actor_user_id=None,
+                actor_source="public",
+                reason_category="attribution",
+                reason_detail=None,
+                assigned_at=now,
+            )
+        )
+        AuditService(db).record(
+            "borrower.application.attributed",
+            "borrower_application",
+            application.id,
+            safe_metadata={"source": "agent_link", "agent_user_id": str(agent_link.user_id)},
+        )
     db.commit()
 
     return application, capability
@@ -829,6 +866,11 @@ def list_admin_review_queue(db: Session) -> list[dict[str, Any]]:
         agent = (
             db.get(User, application.assigned_agent_id) if application.assigned_agent_id else None
         )
+        attributed_agent = (
+            db.get(User, application.attribution_agent_user_id)
+            if application.attribution_agent_user_id
+            else None
+        )
         rows.append(
             {
                 "application_id": str(application.id),
@@ -841,6 +883,10 @@ def list_admin_review_queue(db: Session) -> list[dict[str, Any]]:
                 else None,
                 "assigned_agent_name": agent.display_name if agent else None,
                 "assigned_agent_email": agent.email if agent else None,
+                "attribution_source": application.attribution_source,
+                "attributed_agent_name": attributed_agent.display_name
+                if attributed_agent
+                else None,
             }
         )
     return rows

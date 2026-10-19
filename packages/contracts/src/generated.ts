@@ -486,6 +486,63 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/agent-referral-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Own Referral Link
+     * @description The signed-in agent's own application link, minted on first read.
+     */
+    get: operations["get_own_referral_link_api_v1_agent_referral_link_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/agent-accounts/{user_id}/referral-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Agent Referral Link */
+    get: operations["get_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/admin/agent-accounts/{user_id}/referral-link/rotate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rotate Agent Referral Link
+     * @description Replace an agent's code; the previous link stops resolving immediately.
+     */
+    post: operations["rotate_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_rotate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/download": {
     parameters: {
       query?: never;
@@ -1488,6 +1545,31 @@ export interface components {
       /** Social Links */
       social_links?: components["schemas"]["AgentSocialLink"][] | null;
     };
+    /**
+     * AgentReferralLinkResponse
+     * @description Public entry link that attributes an application to one agent.
+     *
+     *     `apply_url` is the link the agent shares; the code inside it only affects
+     *     routing and grants no access to any data.
+     */
+    AgentReferralLinkResponse: {
+      /**
+       * User Id
+       * Format: uuid
+       */
+      user_id: string;
+      /** Code */
+      code: string;
+      /** Apply Url */
+      apply_url: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Rotated At */
+      rotated_at: string | null;
+    };
     /** AgentSocialLink */
     AgentSocialLink: {
       /** Label */
@@ -1718,6 +1800,8 @@ export interface components {
       revision: number;
       /** Lifecycle Status */
       lifecycle_status: string;
+      /** Attributed Agent Name */
+      attributed_agent_name?: string | null;
     };
     /** BorrowerApplicationSubmitRequest */
     BorrowerApplicationSubmitRequest: {
@@ -1859,6 +1943,10 @@ export interface components {
       assigned_agent_name: string | null;
       /** Assigned Agent Email */
       assigned_agent_email: string | null;
+      /** Attribution Source */
+      attribution_source?: string | null;
+      /** Attributed Agent Name */
+      attributed_agent_name?: string | null;
     };
     /** BorrowerReviewQueueResponse */
     BorrowerReviewQueueResponse: {
@@ -2567,6 +2655,8 @@ export interface components {
       preferred_contact_method: "email" | "telephone";
       /** Preferred Agent Slug */
       preferred_agent_slug?: string | null;
+      /** Preferred Agent Name */
+      preferred_agent_name?: string | null;
       /** Message */
       message?: string | null;
       /** Service Contact Acknowledged */
@@ -2627,6 +2717,8 @@ export interface components {
       preferred_contact_method: "email" | "telephone";
       /** Preferred Agent Slug */
       preferred_agent_slug: string | null;
+      /** Preferred Agent Name */
+      preferred_agent_name?: string | null;
       /** Message */
       message: string | null;
       /** Source */
@@ -4824,6 +4916,162 @@ export interface operations {
       };
     };
   };
+  get_own_referral_link_api_v1_agent_referral_link_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AgentReferralLinkResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Agent access is required */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AgentReferralLinkResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Admin denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Agent account not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  rotate_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_rotate_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AgentReferralLinkResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Admin denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Agent account not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   download_candidate_document_api_v1_documents__document_id__download_get: {
     parameters: {
       query?: never;
@@ -6537,7 +6785,9 @@ export interface operations {
   };
   start_application_api_v1_borrower_applications_start_post: {
     parameters: {
-      query?: never;
+      query?: {
+        agent?: string | null;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -6551,6 +6801,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["BorrowerApplicationStartResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

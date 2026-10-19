@@ -252,6 +252,9 @@ class MortgageRequest(BaseModel):
     expected_closing_date: date | None = None
     down_payment_sources: list[DownPaymentEntry] = Field(default_factory=list, max_length=10)
     preferred_agent_slug: str | None = Field(None, max_length=128)
+    # Applicant-supplied name of the agent they are working with. Routing hint only:
+    # it is never matched to an account automatically.
+    preferred_agent_name: str | None = Field(None, max_length=120)
     property_address: str | None = Field(None, max_length=200)
     property_city: str | None = Field(None, max_length=100)
     property_province: str | None = Field(None, max_length=2)
@@ -287,6 +290,7 @@ class MortgageRequestDraft(BaseModel):
     expected_closing_date: date | None = None
     down_payment_sources: list[DownPaymentEntry] | None = Field(None, max_length=10)
     preferred_agent_slug: str | None = Field(None, max_length=128)
+    preferred_agent_name: str | None = Field(None, max_length=120)
     property_address: str | None = Field(None, max_length=200)
     property_city: str | None = Field(None, max_length=100)
     property_province: str | None = Field(None, max_length=2)

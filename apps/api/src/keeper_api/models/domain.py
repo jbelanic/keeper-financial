@@ -590,6 +590,28 @@ class GateEvidenceEvent(IdTimestampsMixin, Base):
     )
 
 
+class AgentReferralLink(IdTimestampsMixin, Base):
+    """Stable public entry token that attributes an application to one agent.
+
+    Independent of AgentProfile publication: an onboarded agent has a working link
+    whether or not a profile exists or is published. The code only affects routing;
+    it grants no read access to anything.
+    """
+
+    __tablename__ = "agent_referral_links"
+    __table_args__ = (Index("ix_agent_referral_links_code", "code"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), unique=True
+    )
+    code: Mapped[str] = mapped_column(String(32), unique=True)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
 class AgentProfile(IdTimestampsMixin, Base):
     __tablename__ = "agent_profiles"
     __table_args__ = (
@@ -639,6 +661,7 @@ class LeadInquiry(IdTimestampsMixin, Base):
     mortgage_objective: Mapped[str] = mapped_column(String(40))
     preferred_contact_method: Mapped[str] = mapped_column(String(20))
     preferred_agent_slug: Mapped[str | None] = mapped_column(String(100))
+    preferred_agent_name: Mapped[str | None] = mapped_column(String(120))
     message: Mapped[str | None] = mapped_column(String(1000))
     source: Mapped[str] = mapped_column(String(100), default="website_apply")
     status: Mapped[str] = mapped_column(String(20), default="new")

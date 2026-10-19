@@ -52,6 +52,7 @@ def create_lead(
             mortgage_objective=payload.mortgage_objective,
             preferred_contact_method=payload.preferred_contact_method,
             preferred_agent_slug=payload.preferred_agent_slug,
+            preferred_agent_name=payload.preferred_agent_name,
             message=payload.message,
             source=WEBSITE_CAPTURE_SOURCE,
             status="new",

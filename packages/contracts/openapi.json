@@ -2577,6 +2577,244 @@
         }
       }
     },
+    "/api/v1/agent-referral-link": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get Own Referral Link",
+        "description": "The signed-in agent's own application link, minted on first read.",
+        "operationId": "get_own_referral_link_api_v1_agent_referral_link_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentReferralLinkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Agent access is required"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-accounts/{user_id}/referral-link": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Get Agent Referral Link",
+        "operationId": "get_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentReferralLinkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Agent account not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/agent-accounts/{user_id}/referral-link/rotate": {
+      "post": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Rotate Agent Referral Link",
+        "description": "Replace an agent's code; the previous link stops resolving immediately.",
+        "operationId": "rotate_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_rotate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentReferralLinkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Admin denied"
+          },
+          "404": {
+            "description": "Agent account not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/documents/{document_id}/download": {
       "get": {
         "tags": [
@@ -5194,6 +5432,24 @@
         ],
         "summary": "Start Application",
         "operationId": "start_application_api_v1_borrower_applications_start_post",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -5201,6 +5457,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BorrowerApplicationStartResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -7060,6 +7326,51 @@
         "type": "object",
         "title": "AgentProfileUpdate"
       },
+      "AgentReferralLinkResponse": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "apply_url": {
+            "type": "string",
+            "title": "Apply Url"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "rotated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "code",
+          "apply_url",
+          "created_at",
+          "rotated_at"
+        ],
+        "title": "AgentReferralLinkResponse",
+        "description": "Public entry link that attributes an application to one agent.\n\n`apply_url` is the link the agent shares; the code inside it only affects\nrouting and grants no access to any data."
+      },
       "AgentSocialLink": {
         "properties": {
           "label": {
@@ -7785,6 +8096,17 @@
           "lifecycle_status": {
             "type": "string",
             "title": "Lifecycle Status"
+          },
+          "attributed_agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributed Agent Name"
           }
         },
         "additionalProperties": false,
@@ -8234,6 +8556,28 @@
               }
             ],
             "title": "Assigned Agent Email"
+          },
+          "attribution_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution Source"
+          },
+          "attributed_agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributed Agent Name"
           }
         },
         "additionalProperties": false,
@@ -10157,6 +10501,18 @@
             ],
             "title": "Preferred Agent Slug"
           },
+          "preferred_agent_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Agent Name"
+          },
           "message": {
             "anyOf": [
               {
@@ -10271,6 +10627,17 @@
               }
             ],
             "title": "Preferred Agent Slug"
+          },
+          "preferred_agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Agent Name"
           },
           "message": {
             "anyOf": [

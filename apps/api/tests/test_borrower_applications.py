@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, update
+from sqlalchemy import create_engine, select, update
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -33,6 +33,7 @@ from keeper_api.models.borrower import (
 )
 from keeper_api.models.domain import AuditEvent, Candidate, Role, User, UserIdentity, UserRole
 from keeper_api.models.statuses import CandidateStatus
+from keeper_api.services.agents import ensure_referral_link, rotate_referral_link
 from keeper_api.services.audit import AuditService
 from keeper_api.services.borrower_applications import (
     assign_application,
@@ -2778,6 +2779,144 @@ class TestBorrowerPhaseDRouteIntegration:
         items = list_resp.json()["items"]
         assert len(items) == 1
         assert items[0]["application_id"] == application_id
+
+    def test_start_with_agent_referral_code_attributes_and_assigns(
+        self, route_client: TestClient
+    ) -> None:
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            agent = _create_review_user(
+                session,
+                subject="agent-link",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+            agent_name = agent.display_name
+            link = ensure_referral_link(session, agent_id)
+            code = link.code
+            link_id = link.id
+
+        started = route_client.post(
+            f"/api/v1/borrower-applications/start?agent={code}",
+            headers=self._headers(),
+        )
+        assert started.status_code == 201, started.text
+        assert started.json()["attributed_agent_name"] == agent_name
+
+        application_id = uuid.UUID(started.json()["application_id"])
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, application_id)
+            assert application is not None
+            assert application.attribution_source == "agent_link"
+            assert application.attribution_agent_user_id == agent_id
+            assert application.attribution_referral_link_id == link_id
+            assert application.attribution_resolved_at is not None
+            assert application.assigned_agent_id == agent_id
+            assert application.assigned_at is not None
+            history = session.scalars(
+                select(BorrowerAssignmentHistory).where(
+                    BorrowerAssignmentHistory.application_id == application_id
+                )
+            ).all()
+            assert [row.reason_category for row in history] == ["attribution"]
+            assert history[0].agent_user_id == agent_id
+            assert (
+                session.scalar(
+                    select(AuditEvent).where(
+                        AuditEvent.event_type == "borrower.application.attributed",
+                        AuditEvent.target_id == application_id,
+                    )
+                )
+                is not None
+            )
+
+    def test_start_with_unknown_agent_code_starts_unassigned(
+        self, route_client: TestClient
+    ) -> None:
+        started = route_client.post(
+            "/api/v1/borrower-applications/start?agent=deadbeefdeadbeefdead",
+            headers=self._headers(),
+        )
+        assert started.status_code == 201, started.text
+        assert started.json()["attributed_agent_name"] is None
+
+        application_id = uuid.UUID(started.json()["application_id"])
+        with route_client._keeper_session_factory() as session:
+            application = session.get(BorrowerApplication, application_id)
+            assert application is not None
+            assert application.attribution_source is None
+            assert application.attribution_agent_user_id is None
+            assert application.assigned_agent_id is None
+
+    def test_rotated_agent_code_no_longer_attributes(self, route_client: TestClient) -> None:
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            agent = _create_review_user(
+                session,
+                subject="agent-rotate",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+            stale_code = ensure_referral_link(session, agent_id).code
+            rotate_referral_link(session, agent_id, actor_user_id=agent_id)
+
+        started = route_client.post(
+            f"/api/v1/borrower-applications/start?agent={stale_code}",
+            headers=self._headers(),
+        )
+        assert started.status_code == 201, started.text
+        assert started.json()["attributed_agent_name"] is None
+
+        application_id = uuid.UUID(started.json()["application_id"])
+        with session_factory() as session:
+            application = session.get(BorrowerApplication, application_id)
+            assert application is not None
+            assert application.attribution_agent_user_id is None
+            assert application.assigned_agent_id is None
+
+    def test_agent_referral_link_self_service_and_admin_rotation(
+        self, route_client: TestClient
+    ) -> None:
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-link", role_code="brokerage_admin")
+            agent = _create_review_user(
+                session,
+                subject="agent-self",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+
+        mine = route_client.get(
+            "/api/v1/agent-referral-link", headers=self._auth_headers("agent-self")
+        )
+        assert mine.status_code == 200, mine.text
+        first_code = mine.json()["code"]
+        assert mine.json()["apply_url"].endswith(f"?agent={first_code}")
+
+        admin_view = route_client.get(
+            f"/api/v1/admin/agent-accounts/{agent_id}/referral-link",
+            headers=self._auth_headers("admin-link"),
+        )
+        assert admin_view.status_code == 200, admin_view.text
+        assert admin_view.json()["code"] == first_code
+
+        rotated = route_client.post(
+            f"/api/v1/admin/agent-accounts/{agent_id}/referral-link/rotate",
+            headers=self._auth_headers("admin-link", aal="aal2"),
+        )
+        assert rotated.status_code == 200, rotated.text
+        assert rotated.json()["code"] != first_code
+
+        stale = route_client.post(
+            f"/api/v1/borrower-applications/start?agent={first_code}",
+            headers=self._headers(),
+        )
+        assert stale.status_code == 201, stale.text
+        assert stale.json()["attributed_agent_name"] is None
 
     def test_assignment_email_failure_is_non_fatal(
         self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch

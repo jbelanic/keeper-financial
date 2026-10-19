@@ -24,6 +24,9 @@ class LeadInquiryCreate(BaseModel):
     mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
     preferred_contact_method: Literal["email", "telephone"]
     preferred_agent_slug: str | None = Field(default=None, max_length=100, pattern=r"^[a-z0-9-]+$")
+    # Applicant-supplied agent name when they have no referral link. Routing hint
+    # for administrator triage; never matched to an account automatically.
+    preferred_agent_name: str | None = Field(default=None, max_length=120)
     message: str | None = Field(default=None, max_length=1000)
     service_contact_acknowledged: bool
     marketing_consent: bool = False
@@ -101,6 +104,7 @@ class LeadListItem(BaseModel):
     mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
     preferred_contact_method: Literal["email", "telephone"]
     preferred_agent_slug: str | None
+    preferred_agent_name: str | None = None
     message: str | None
     source: str
     status: LeadStatus
