@@ -28,6 +28,7 @@ from keeper_api.models.borrower import (
 )
 from keeper_api.models.domain import User
 from keeper_api.schemas.borrower_internal import (
+    BorrowerAgentDraftProjection,
     BorrowerAgentProjection,
     BorrowerInternalProjection,
 )
@@ -36,6 +37,7 @@ from keeper_api.services.auth import Principal, get_current_principal
 from keeper_api.services.borrower_applications import (
     BorrowerSubmissionError,
     assign_submitted_application,
+    get_agent_draft_projection,
     get_agent_projection,
     get_application_summary,
     get_current_borrower_consent,
@@ -927,6 +929,40 @@ def list_assigned_agent_applications(
         BorrowerReviewQueueItem(**row) for row in list_agent_assigned_queue(db, principal.user_id)
     ]
     return BorrowerReviewQueueResponse(items=items, total=len(items))
+
+
+@router.get(
+    "/{application_id}/agent/draft",
+    response_model=BorrowerAgentDraftProjection,
+)
+def get_agent_draft_application(
+    application_id: uuid.UUID,
+    request: Request,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    """In-progress application view for the exact assigned agent."""
+    require_borrower_feature_enabled(settings)
+    require_internal_agent_access(principal, application_id, db, settings, allow_draft=True)
+
+    crypto_state = _get_crypto_state(request)
+
+    try:
+        result = get_agent_draft_projection(db, crypto_state, application_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="application not found") from exc
+
+    AuditService(db).record(
+        "borrower_application_agent_draft_viewed",
+        "borrower_application",
+        application_id,
+        actor_user_id=principal.user_id,
+        request_id=getattr(request.state, "request_id", None),
+        safe_metadata={"reviewer_role": "agent", "result": "success"},
+    )
+    db.commit()
+    return result
 
 
 @router.get(

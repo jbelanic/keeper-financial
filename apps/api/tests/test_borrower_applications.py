@@ -2918,6 +2918,122 @@ class TestBorrowerPhaseDRouteIntegration:
         assert stale.status_code == 201, stale.text
         assert stale.json()["attributed_agent_name"] is None
 
+    def test_assigned_agent_reads_draft_with_masked_sin_and_no_documents(
+        self, route_client: TestClient
+    ) -> None:
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            agent = _create_review_user(
+                session,
+                subject="agent-draft",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            agent_id = agent.id
+            code = ensure_referral_link(session, agent_id).code
+
+        started = route_client.post(
+            f"/api/v1/borrower-applications/start?agent={code}",
+            headers=self._headers(),
+        )
+        assert started.status_code == 201, started.text
+        application_id = started.json()["application_id"]
+        self._save_full_payload(route_client, application_id)
+
+        with session_factory() as session:
+            before = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert before is not None
+            last_activity_before = before.last_activity_at
+            expires_before = before.draft_expires_at
+
+        draft = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/agent/draft",
+            headers=self._auth_headers("agent-draft"),
+        )
+        assert draft.status_code == 200, draft.text
+        body = draft.json()
+        assert body["lifecycle_status"] == "draft"
+        assert body["attribution_source"] == "agent_link"
+        assert body["has_sin"] is True
+        assert set(body["primary_borrower"]["sin"].keys()) == {"last_three", "display"}
+        assert body["progress"]["primary_borrower"] is True
+        assert "documents" not in body
+
+        assigned = route_client.get(
+            "/api/v1/borrower-applications/agent/assigned",
+            headers=self._auth_headers("agent-draft"),
+        )
+        assert assigned.status_code == 200, assigned.text
+        assert [item["lifecycle_status"] for item in assigned.json()["items"]] == ["draft"]
+        assert assigned.json()["items"][0]["application_id"] == application_id
+
+        # Reading a draft must not extend retention.
+        with session_factory() as session:
+            after = session.get(BorrowerApplication, uuid.UUID(application_id))
+            assert after is not None
+            assert after.last_activity_at == last_activity_before
+            assert after.draft_expires_at == expires_before
+            assert (
+                session.scalar(
+                    select(AuditEvent).where(
+                        AuditEvent.event_type == "borrower_application_agent_draft_viewed",
+                        AuditEvent.target_id == uuid.UUID(application_id),
+                    )
+                )
+                is not None
+            )
+
+    def test_draft_read_is_denied_for_other_agent_and_expired_drafts(
+        self, route_client: TestClient
+    ) -> None:
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            owner_agent = _create_review_user(
+                session,
+                subject="agent-draft-owner",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+            code = ensure_referral_link(session, owner_agent.id).code
+            _create_review_user(
+                session,
+                subject="agent-draft-other",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            )
+
+        started = route_client.post(
+            f"/api/v1/borrower-applications/start?agent={code}",
+            headers=self._headers(),
+        )
+        assert started.status_code == 201, started.text
+        application_id = started.json()["application_id"]
+
+        other = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/agent/draft",
+            headers=self._auth_headers("agent-draft-other"),
+        )
+        assert other.status_code == 404
+
+        anonymous = route_client.get(f"/api/v1/borrower-applications/{application_id}/agent/draft")
+        assert anonymous.status_code in {401, 403}
+
+        with session_factory() as session:
+            session.execute(
+                update(BorrowerApplication)
+                .where(BorrowerApplication.id == uuid.UUID(application_id))
+                .values(
+                    draft_expires_at=datetime.now(UTC) - timedelta(days=1),
+                )
+            )
+            session.commit()
+
+        expired = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/agent/draft",
+            headers=self._auth_headers("agent-draft-owner"),
+        )
+        assert expired.status_code == 404
+
     def test_assignment_email_failure_is_non_fatal(
         self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -63,6 +63,32 @@ class BorrowerAgentInfo(BaseModel):
     relationship_to_primary: str | None = None
 
 
+class BorrowerAgentDraftProjection(BaseModel):
+    """Bounded in-progress projection for the exact assigned agent.
+
+    Owner-approved boundary (2026-10-19): enough to help an applicant finish —
+    contact details, mortgage request and completion progress — with the SIN
+    masked and no document access. Authorized only by
+    require_internal_agent_access(..., allow_draft=True).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    application_id: str
+    lifecycle_status: str
+    revision: int
+    last_activity_at: str
+    draft_expires_at: str | None = None
+    assigned_at: str | None = None
+    attribution_source: str | None = None
+    has_sin: bool
+    has_co_borrower: bool
+    primary_borrower: dict[str, Any] | None = None
+    co_borrower: dict[str, Any] | None = None
+    mortgage_request: dict[str, Any] | None = None
+    progress: dict[str, bool] = Field(default_factory=dict)
+
+
 class BorrowerAgentProjection(BaseModel):
     """Full submitted-application projection for the exact assigned agent.
 

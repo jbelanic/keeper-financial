@@ -6153,6 +6153,81 @@
         }
       }
     },
+    "/api/v1/borrower-applications/{application_id}/agent/draft": {
+      "get": {
+        "tags": [
+          "borrower-applications"
+        ],
+        "summary": "Get Agent Draft Application",
+        "description": "In-progress application view for the exact assigned agent.",
+        "operationId": "get_agent_draft_application_api_v1_borrower_applications__application_id__agent_draft_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerAgentDraftProjection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/borrower-applications/{application_id}/agent": {
       "get": {
         "tags": [
@@ -7729,6 +7804,122 @@
           "file"
         ],
         "title": "Body_upload_document_api_v1_upload_document_post"
+      },
+      "BorrowerAgentDraftProjection": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "lifecycle_status": {
+            "type": "string",
+            "title": "Lifecycle Status"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "last_activity_at": {
+            "type": "string",
+            "title": "Last Activity At"
+          },
+          "draft_expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Expires At"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "attribution_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution Source"
+          },
+          "has_sin": {
+            "type": "boolean",
+            "title": "Has Sin"
+          },
+          "has_co_borrower": {
+            "type": "boolean",
+            "title": "Has Co Borrower"
+          },
+          "primary_borrower": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Borrower"
+          },
+          "co_borrower": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Co Borrower"
+          },
+          "mortgage_request": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mortgage Request"
+          },
+          "progress": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Progress"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "lifecycle_status",
+          "revision",
+          "last_activity_at",
+          "has_sin",
+          "has_co_borrower"
+        ],
+        "title": "BorrowerAgentDraftProjection",
+        "description": "Bounded in-progress projection for the exact assigned agent.\n\nOwner-approved boundary (2026-10-19): enough to help an applicant finish \u2014\ncontact details, mortgage request and completion progress \u2014 with the SIN\nmasked and no document access. Authorized only by\nrequire_internal_agent_access(..., allow_draft=True)."
       },
       "BorrowerAgentInfo": {
         "properties": {
