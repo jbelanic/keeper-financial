@@ -319,7 +319,8 @@ def _referral_out(link: AgentReferralLink, settings: Settings) -> AgentReferralL
     return AgentReferralLinkResponse(
         user_id=link.user_id,
         code=link.code,
-        apply_url=f"{base}/?agent={link.code}",
+        # The wizard, not the landing page: the origin root does not read ?agent=.
+        apply_url=f"{base}/mortgage-application?agent={link.code}",
         created_at=link.created_at,
         rotated_at=link.rotated_at,
     )
