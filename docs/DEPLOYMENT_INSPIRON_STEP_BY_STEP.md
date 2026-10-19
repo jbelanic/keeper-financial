@@ -34,7 +34,7 @@ The following are **not solved by installation commands** and must not be guesse
 2. **First production administrator:** `seed_local.py` and `link_local_admin_identity.py` are deliberately local/synthetic-only. Use the production bootstrap command instead: `scripts/bootstrap_admin_identity.py` (requires `APP_ENV=production`) with the exact hosted-Supabase subject UUID, verified email, and display name. It never links by email alone, never uses service-role credentials, and never overwrites a genuine provider subject.
 3. **Real borrower data:** keep `BORROWER_REAL_DATA_ENABLED=false`. Real submission requires `BORROWER_APPLICATION_ENABLED=true` + `BORROWER_REAL_DATA_ENABLED=true` **and** the active consent-catalog `real_data_approved=true` marker, which is set via `scripts/approve_consent_real_data.py` (`APP_ENV=production`) with the exact approved version/digest — plus deployed evidence.
 4. **Transactional email:** SMTP2GO is the approved production provider (PR #44). Configure `SMTP_HOST`/`SMTP_PORT`/`SMTP_USE_TLS`/`SMTP_USERNAME`/`SMTP_PASSWORD`/`SMTP_FROM` in `.env`; Mailpit is local-capture only and is not production delivery.
-5. **Documenso:** Documenso is a separate self-hosted deployment served at `https://sign.keeperfinancial.ca`, not part of this host's Compose stack. Keep `ESIGN_PROVIDER=disabled` until that deployment and its ICA template are ready, then set `ESIGN_PROVIDER=documenso` + the `DOCUMENSO_*` URLs/token. Do **not** start `compose.documenso.yaml` on this host — it is a local-dev TLS bridge whose loopback `443` bind conflicts with host Nginx; production routes `sign.keeperfinancial.ca` through Nginx with a real certificate. Documenso may run on this same host behind Nginx (mind its own Postgres/app port collisions with Keeper's `db`/`web`). Full procedure: `docs/operations/documenso-deployment.md` + `infrastructure/nginx/documenso-financial.conf`.
+5. **E-sign and Documenso:** Documenso is **not deployable on this host**. Its image loads native addons (`@img/sharp-linuxmusl-x64`, `@napi-rs/canvas-linux-x64-musl`) that require SSE4.1/SSE4.2/AVX; this CPU (AMD Athlon II X4 630) lacks all three and the container dies with `Illegal instruction (core dumped)` / exit 132 on start. No Compose or environment change fixes that — see the CPU baseline and stop conditions in `docs/operations/documenso-deployment.md`. Consequently Keeper runs with **`ESIGN_PROVIDER=manual`**: the contractor agreement is sent, signed, and retained entirely outside Keeper, and an administrator records the executed-agreements attestation (`external_esign_provider` or `signed_copy_on_file` plus a reference and verified date) before onboarding can complete. `disabled` behaves the same way and remains the safe default if unset. Provider mode (`ESIGN_PROVIDER=documenso` + `DOCUMENSO_*`) stays available in code for a future host that supports the required instruction set; do not attempt it here. Do **not** start `compose.documenso.yaml` anywhere — it is a local-dev TLS bridge whose loopback `443` bind conflicts with host Nginx.
 6. **Production acceptance:** source tests and a successful deployment do not prove backup/restore, monitoring, incident response, privacy/legal review, or full operational readiness.
 
 If the intended launch requires candidate/admin login on day one, stop before public cutover and close items 1 and 2 through reviewed source changes.
@@ -413,8 +413,14 @@ MORTGAGE_APPLICATION_ALLOWED_HOSTS=apply.localhost
 
 BORROWER_APPLICATION_ENABLED=false
 BORROWER_REAL_DATA_ENABLED=false
-BORROWER_APPLICATION_ORIGIN=http://localhost:8000
-ESIGN_PROVIDER=disabled
+# Loopback-stage value only. While BORROWER_APPLICATION_ENABLED=false this variable
+# is neither validated nor used to serve the application; production enablement
+# requires exactly https://apply.keeperfinancial.ca (the configuration validator
+# enforces it). When enabled locally, it is the browser-facing application host.
+BORROWER_APPLICATION_ORIGIN=http://apply.localhost:3000
+# No e-sign provider on this host (§0.2 item 5). Onboarding completes by
+# administrator attestation of the externally signed contractor agreement.
+ESIGN_PROVIDER=manual
 ```
 
 `BORROWER_APPLICATION_ENABLED=false` is intentional during this production-mode loopback smoke test. Production borrower cryptography accepts only the exact HTTPS `apply.keeperfinancial.ca` origin, so do not combine production mode, borrower enablement, and a loopback borrower origin.
@@ -818,7 +824,8 @@ MORTGAGE_APPLICATION_ALLOWED_HOSTS=apply.keeperfinancial.ca
 BORROWER_APPLICATION_ENABLED=true
 BORROWER_REAL_DATA_ENABLED=false
 BORROWER_APPLICATION_ORIGIN=https://apply.keeperfinancial.ca
-ESIGN_PROVIDER=disabled
+# Manual attestation of the externally signed agreement; no provider on this host.
+ESIGN_PROVIDER=manual
 ```
 
 Important:
@@ -1023,6 +1030,15 @@ sudo journalctl -u nginx --since '-15 minutes' --no-pager
 
 Review locally. Do not upload raw logs. Stop and treat as an incident if they contain tokens, cookies, keys, private URLs, SIN, borrower payloads, document contents, or unexpected filenames.
 
+### 18.5 Agent referral links
+
+An onboarded agent's `/agent` console shows their application link. Eligibility,
+the link shape, administrator rotation, the assigned-agent draft-view boundary,
+and verification queries are in `docs/operations/agent-referral-links.md`. The
+link is built from `BORROWER_APPLICATION_ORIGIN`, which must be
+`https://apply.keeperfinancial.ca`; a link on the API origin has no application
+page behind it.
+
 ## 19. Rollback
 
 Rollback Nginx if any public smoke test fails or unrelated services are affected. This does not delete Keeper data.
@@ -1138,10 +1154,32 @@ sudo docker compose run --rm api alembic current --check-heads
 sudo docker compose run --rm api alembic check
 sudo docker compose up --build -d api web
 sudo docker compose ps --all
-curl --fail --silent --show-error http://127.0.0.1:8000/health >/dev/null
-curl --fail --silent --show-error http://127.0.0.1:8000/health/db >/dev/null
-curl --fail --silent --show-error https://keeperfinancial.ca/ >/dev/null
+git -C /home/inspiron/keeper-financial log --oneline -1
+curl --max-time 10 --fail --silent --show-error http://127.0.0.1:8000/health >/dev/null
+curl --max-time 10 --fail --silent --show-error http://127.0.0.1:8000/health/db >/dev/null
+# This host cannot reach its own public IP: the router does not hairpin NAT, so a
+# bare https://keeperfinancial.ca/ request hangs until interrupted. Resolve the
+# name to loopback to exercise the real Nginx vhost and TLS path instead.
+curl --max-time 10 --fail --silent --show-error \
+  --resolve keeperfinancial.ca:443:127.0.0.1 https://keeperfinancial.ca/ >/dev/null
+sudo docker compose logs --since=10m api | grep -iE "traceback|error" || echo "api log clean"
 ```
+
+### 21.3 Environment-only changes
+
+`env_file` values are applied when a container is **created**, so `docker compose
+restart api` keeps the previous environment and the change silently does not take
+effect. After editing `.env` (or whichever file `KEEPER_ENV_FILE` names) recreate
+the affected service:
+
+```bash
+sudo docker compose up -d --force-recreate api
+sudo docker compose exec -T api printenv | grep -oE "^(SMTP|LEAD|BORROWER|ESIGN)_[A-Z_]+" | sort
+```
+
+No image rebuild is needed for environment values. A rebuild is required only when
+source, dependencies, or Next.js `NEXT_PUBLIC_*` values change, because those are
+embedded into the web bundle at build time.
 
 Alembic downgrade is not the default rollback. If a forward migration has written data, restore/downgrade decisions require the migration-specific runbook and database owner.
 
