@@ -23,6 +23,7 @@ describe("candidate onboarding agreement", () => {
             documents: [],
             acknowledgements: [],
             activation_ready: false,
+            agreement_mode: "provider" as const,
             esign_envelopes: [
               {
                 id: "00000000-0000-4000-8000-000000000010",
@@ -86,6 +87,7 @@ describe("candidate onboarding agreement", () => {
             documents: [],
             acknowledgements: [],
             activation_ready: false,
+            agreement_mode: "provider" as const,
             esign_envelopes: [
               {
                 id: "00000000-0000-4000-8000-000000000011",
@@ -109,6 +111,42 @@ describe("candidate onboarding agreement", () => {
       screen.queryByRole("link", {
         name: "Review and sign contractor agreement",
       }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows no signing work at all when the agreement is attested manually", async () => {
+    const { CandidateOnboardingDashboardView } = await import(
+      "@/app/(candidate)/candidate/onboarding/candidate-onboarding-dashboard"
+    );
+    render(
+      <CandidateOnboardingDashboardView
+        dashboard={
+          {
+            assignment: {
+              id: "00000000-0000-4000-8000-000000000001",
+              candidate_id: "00000000-0000-4000-8000-000000000002",
+              application_id: "00000000-0000-4000-8000-000000000003",
+              onboarding_plan_id: "00000000-0000-4000-8000-000000000004",
+              generation: 1,
+              status: "active",
+              created_at: "2026-07-20T12:00:00Z",
+            },
+            tasks: [],
+            gates: [],
+            documents: [],
+            acknowledgements: [],
+            activation_ready: false,
+            agreement_mode: "manual",
+            esign_envelopes: [],
+          } as never
+        }
+      />,
+    );
+    expect(
+      screen.queryByRole("heading", { name: "External signing" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/contractor agreement has not been sent/i),
     ).not.toBeInTheDocument();
   });
 });

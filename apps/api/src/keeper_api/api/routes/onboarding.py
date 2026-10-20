@@ -41,6 +41,7 @@ from keeper_api.services.documenso import DocumensoError
 from keeper_api.services.onboarding import (
     OnboardingError,
     activation_ready,
+    agreement_is_provider_managed,
     candidate_esign_envelopes,
     candidate_gates,
     complete_onboarding_assignment,
@@ -79,6 +80,23 @@ class PlanCreateIn(OnboardingPlanCreate):
 
 class PlanUpdateIn(PlanCreateIn):
     pass
+
+
+def _require_esign_provider(settings: Settings) -> None:
+    """Envelope operations exist only when a provider owns the agreement.
+
+    In manual/disabled mode the agreement is executed outside Keeper, so linking,
+    issuing, refreshing or replacing an envelope would create state that can
+    never govern completion. Fail closed with a bounded explanation instead.
+    """
+    if not agreement_is_provider_managed(settings):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "no e-sign provider is configured; record the executed agreement "
+                "on the executed agreements gate instead"
+            ),
+        )
 
 
 def _plan_is_locked(db: Session, plan_id: uuid.UUID) -> bool:
@@ -485,6 +503,7 @@ def get_assignment(
                 db, candidate_id=assignment.candidate_id, assignment_id=assignment.id
             )
         ],
+        agreement_mode="provider" if agreement_is_provider_managed(settings) else "manual",
     )
 
 
@@ -586,8 +605,10 @@ def link_envelope(
     response: Response,
     principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> EsignEnvelopeResponse:
     response.headers.update(NO_STORE)
+    _require_esign_provider(settings)
     assignment = db.get(CandidateOnboardingAssignment, assignment_id)
     if assignment is None:
         raise HTTPException(status_code=404, detail="onboarding assignment not found")
@@ -624,6 +645,7 @@ def issue_ica(
     settings: Settings = Depends(get_settings),
 ) -> EsignEnvelopeResponse:
     response.headers.update(NO_STORE)
+    _require_esign_provider(settings)
     try:
         envelope = issue_ica_envelope_for_assignment(
             db,
@@ -660,8 +682,10 @@ def replace_envelope(
     response: Response,
     principal: Principal = Depends(require_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> EsignEnvelopeResponse:
     response.headers.update(NO_STORE)
+    _require_esign_provider(settings)
     assignment = db.get(CandidateOnboardingAssignment, assignment_id)
     envelope = db.get(CandidateEsignEnvelope, envelope_id)
     if assignment is None or envelope is None or envelope.assignment_id != assignment.id:
@@ -701,6 +725,7 @@ def refresh_envelope(
     settings: Settings = Depends(get_settings),
 ) -> EsignEnvelopeResponse:
     response.headers.update(NO_STORE)
+    _require_esign_provider(settings)
     assignment = db.get(CandidateOnboardingAssignment, assignment_id)
     envelope = db.get(CandidateEsignEnvelope, envelope_id)
     if assignment is None or envelope is None or envelope.assignment_id != assignment.id:

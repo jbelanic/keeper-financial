@@ -28,6 +28,7 @@ describe("administrator onboarding workspace", () => {
       tasks: [],
       gates: [],
       esign_envelopes: [],
+      agreement_mode: "provider" as const,
     };
     const issued = {
       id: "00000000-0000-4000-8000-000000000990",
@@ -112,6 +113,7 @@ describe("administrator onboarding workspace", () => {
       tasks: [],
       gates: [],
       esign_envelopes: [],
+      agreement_mode: "provider" as const,
     };
     const requester = vi
       .fn()
@@ -168,6 +170,7 @@ describe("administrator onboarding workspace", () => {
       tasks: [],
       gates: [],
       esign_envelopes: [rejected],
+      agreement_mode: "provider" as const,
     };
     const requester = vi
       .fn()
@@ -447,5 +450,44 @@ describe("administrator onboarding workspace", () => {
     expect(
       within(historicalCard!).queryByText("not activation-ready"),
     ).not.toBeInTheDocument();
+  });
+
+  it("hides provider issuance and points to the agreement gate when e-sign is manual", async () => {
+    const detail = {
+      ...assignment,
+      activation_ready: true,
+      tasks: [],
+      gates: [],
+      esign_envelopes: [],
+      agreement_mode: "manual" as const,
+    };
+    const requester = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => detail });
+    const { OnboardingAdmin } = await import(
+      "@/app/(admin)/admin/onboarding/onboarding-admin"
+    );
+    render(
+      <OnboardingAdmin
+        initialPlans={[]}
+        initialAssignments={[assignment]}
+        requester={requester}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Manage active assignment" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Contractor agreement" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Documenso agreement" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /contractor agreement/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/executed agreements received/i),
+    ).toBeInTheDocument();
   });
 });

@@ -852,95 +852,108 @@ export function OnboardingAdmin({
               </form>
             ) : null}
           </Card>
-          <Card>
-            <h3>Documenso agreement</h3>
-            <p>
-              The agreement is sent only to {detail.candidate_name} at{" "}
-              {detail.candidate_email}. The recipient cannot be changed here.
-            </p>
-            {canIssueAgreement ? (
-              <Button type="button" disabled={busy} onClick={issueAgreement}>
-                {currentEnvelope
-                  ? currentEnvelope.envelope_url
-                    ? "Resend contractor agreement"
-                    : "Send verified contractor agreement"
-                  : "Send contractor agreement"}
-              </Button>
-            ) : null}
-            {detail.esign_envelopes.length === 0 ? <p>Not sent.</p> : null}
-            <ul>
-              {detail.esign_envelopes.map((envelope) => (
-                <li key={envelope.id}>
-                  <StatusBadge
-                    tone={
-                      envelope.status === "completed"
-                        ? "success"
-                        : envelope.status === "rejected"
-                          ? "danger"
-                          : "warning"
-                    }
-                  >
-                    {envelope.status === "sent"
-                      ? "Sent / waiting for signature"
-                      : envelope.status}
-                  </StatusBadge>
-                  {envelope.superseded_at ? " — superseded" : ""}
-                  {!envelope.superseded_at && detail.status === "active" ? (
-                    <div className="button-row">
-                      <Button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => refreshEnvelope(envelope.id)}
-                      >
-                        Refresh from Documenso
-                      </Button>
-                      {["rejected", "voided"].includes(envelope.status) ? (
+          {detail.agreement_mode === "provider" ? (
+            <Card>
+              <h3>Documenso agreement</h3>
+              <p>
+                The agreement is sent only to {detail.candidate_name} at{" "}
+                {detail.candidate_email}. The recipient cannot be changed here.
+              </p>
+              {canIssueAgreement ? (
+                <Button type="button" disabled={busy} onClick={issueAgreement}>
+                  {currentEnvelope
+                    ? currentEnvelope.envelope_url
+                      ? "Resend contractor agreement"
+                      : "Send verified contractor agreement"
+                    : "Send contractor agreement"}
+                </Button>
+              ) : null}
+              {detail.esign_envelopes.length === 0 ? <p>Not sent.</p> : null}
+              <ul>
+                {detail.esign_envelopes.map((envelope) => (
+                  <li key={envelope.id}>
+                    <StatusBadge
+                      tone={
+                        envelope.status === "completed"
+                          ? "success"
+                          : envelope.status === "rejected"
+                            ? "danger"
+                            : "warning"
+                      }
+                    >
+                      {envelope.status === "sent"
+                        ? "Sent / waiting for signature"
+                        : envelope.status}
+                    </StatusBadge>
+                    {envelope.superseded_at ? " — superseded" : ""}
+                    {!envelope.superseded_at && detail.status === "active" ? (
+                      <div className="button-row">
                         <Button
                           type="button"
-                          onClick={() => setReplacementRecordId(envelope.id)}
+                          disabled={busy}
+                          onClick={() => refreshEnvelope(envelope.id)}
                         >
-                          Advanced recovery replacement
+                          Refresh from Documenso
                         </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-            <details>
-              <summary>Recovery / advanced controls</summary>
-              <p>
-                Manually link a provider envelope only for approved recovery.
-                Recovery links preserve status and history but cannot enable
-                completion.
-              </p>
-              {detail.status === "active" ? (
-                <form onSubmit={linkEnvelope} aria-busy={busy}>
-                  <FormField
-                    id="documenso-envelope-id"
-                    label={
-                      replacementRecordId
-                        ? "Replacement Documenso document ID (required)"
-                        : "Documenso document ID (required)"
-                    }
-                  >
-                    <input
+                        {["rejected", "voided"].includes(envelope.status) ? (
+                          <Button
+                            type="button"
+                            onClick={() => setReplacementRecordId(envelope.id)}
+                          >
+                            Advanced recovery replacement
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <details>
+                <summary>Recovery / advanced controls</summary>
+                <p>
+                  Manually link a provider envelope only for approved recovery.
+                  Recovery links preserve status and history but cannot enable
+                  completion.
+                </p>
+                {detail.status === "active" ? (
+                  <form onSubmit={linkEnvelope} aria-busy={busy}>
+                    <FormField
                       id="documenso-envelope-id"
-                      value={envelopeId}
-                      maxLength={255}
-                      onChange={(event) => setEnvelopeId(event.target.value)}
-                      required
-                    />
-                  </FormField>
-                  <Button type="submit" disabled={busy}>
-                    {replacementRecordId
-                      ? "Link replacement envelope"
-                      : "Link Documenso envelope"}
-                  </Button>
-                </form>
-              ) : null}
-            </details>
-          </Card>
+                      label={
+                        replacementRecordId
+                          ? "Replacement Documenso document ID (required)"
+                          : "Documenso document ID (required)"
+                      }
+                    >
+                      <input
+                        id="documenso-envelope-id"
+                        value={envelopeId}
+                        maxLength={255}
+                        onChange={(event) => setEnvelopeId(event.target.value)}
+                        required
+                      />
+                    </FormField>
+                    <Button type="submit" disabled={busy}>
+                      {replacementRecordId
+                        ? "Link replacement envelope"
+                        : "Link Documenso envelope"}
+                    </Button>
+                  </form>
+                ) : null}
+              </details>
+            </Card>
+          ) : (
+            <Card>
+              <h3>Contractor agreement</h3>
+              <p>
+                This deployment does not use an e-sign provider. The contractor
+                agreement is sent, signed, and retained outside Keeper. Record
+                the signed copy on the Executed agreements received gate with
+                the verification date, the evidence source, and a reference to
+                where the signed copy is kept.
+              </p>
+            </Card>
+          )}
           <Card>
             <h3>Readiness</h3>
             {detail.status === "active" ? (

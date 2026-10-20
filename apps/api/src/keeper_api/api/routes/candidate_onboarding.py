@@ -33,6 +33,7 @@ from keeper_api.services.onboarding import (
     OnboardingError,
     acknowledge_policy,
     activation_ready,
+    agreement_is_provider_managed,
     candidate_acknowledgements,
     candidate_assigned_documents,
     candidate_esign_envelopes,
@@ -148,6 +149,7 @@ def onboarding_dashboard(
             acknowledgements=[],
             esign_envelopes=[],
             activation_ready=False,
+            agreement_mode="provider" if agreement_is_provider_managed(settings) else "manual",
         )
     documents = candidate_assigned_documents(
         db, candidate_id=candidate.id, assignment_id=assignment.id
@@ -178,6 +180,7 @@ def onboarding_dashboard(
         activation_ready=activation_ready(
             db, candidate_id=candidate.id, assignment_id=assignment.id
         ),
+        agreement_mode="provider" if agreement_is_provider_managed(settings) else "manual",
     )
 
 

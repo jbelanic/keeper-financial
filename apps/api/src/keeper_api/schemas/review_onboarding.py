@@ -430,6 +430,11 @@ class AdminOnboardingAssignmentDetail(AdminOnboardingAssignmentSummary):
     tasks: list[CandidateOnboardingTaskResponse]
     gates: list[ActivationGateResponse]
     esign_envelopes: list[EsignEnvelopeResponse]
+    # Which side owns the contractor agreement for this deployment. "provider"
+    # means the configured e-sign provider issues and owns the agreement;
+    # "manual" means it is executed outside Keeper and attested on the
+    # executed_agreements gate. Derived from ESIGN_PROVIDER only.
+    agreement_mode: Literal["provider", "manual"]
 
 
 class OnboardingCompletionResponse(BaseModel):
@@ -468,3 +473,6 @@ class CandidateOnboardingDashboard(BaseModel):
     acknowledgements: list[PolicyAcknowledgementResponse]
     esign_envelopes: list[EsignEnvelopeResponse]
     activation_ready: bool
+    # See AdminOnboardingAssignmentDetail.agreement_mode: candidates only have
+    # signing work to do when a provider owns the agreement.
+    agreement_mode: Literal["provider", "manual"]

@@ -25,7 +25,7 @@ export default async function OnboardingAdminPage() {
         <h1>Onboarding administration</h1>
         <p>
           Manage onboarding plan templates, assign plans to selected candidates,
-          link externally hosted e-signature envelopes, and satisfy activation
+          record the executed contractor agreement, and satisfy activation
           gates. Activation is gated by server-owned controls only.
         </p>
       </header>
