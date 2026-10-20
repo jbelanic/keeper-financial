@@ -152,8 +152,10 @@ def assign(
 
 
 def test_admin_issues_configured_ica_to_assignment_linked_user(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
 ) -> None:
+    # Envelope operations only exist while a provider owns the agreement.
+    settings.esign_provider = "documenso"
     create_admin(db)
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
     user = db.get(User, candidate.user_id)
@@ -197,8 +199,10 @@ def test_admin_issues_configured_ica_to_assignment_linked_user(
 
 
 def test_ica_issue_requires_admin_and_rejects_provider_failure_and_duplicate(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
 ) -> None:
+    # Envelope operations only exist while a provider owns the agreement.
+    settings.esign_provider = "documenso"
     create_admin(db)
     candidate, application, candidate_subject = make_candidate(
         db, CandidateStatus.CONDITIONALLY_SELECTED
@@ -252,8 +256,10 @@ def test_ica_issue_requires_admin_and_rejects_provider_failure_and_duplicate(
 
 
 def test_ica_issue_rejects_withdrawn_application_before_provider_call(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
 ) -> None:
+    # Envelope operations only exist while a provider owns the agreement.
+    settings.esign_provider = "documenso"
     create_admin(db)
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
     assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
@@ -281,8 +287,10 @@ def test_ica_issue_rejects_withdrawn_application_before_provider_call(
 
 
 def test_rejected_keeper_issued_agreement_can_be_safely_reissued(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
 ) -> None:
+    # Envelope operations only exist while a provider owns the agreement.
+    settings.esign_provider = "documenso"
     create_admin(db)
     candidate, application, _ = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
     assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
@@ -411,10 +419,13 @@ def test_completion_rejects_stale_application_or_relationship_lifecycle(
     client: TestClient,
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
+    settings,
     application_state: str,
     application_status: str,
     candidate_status: str | None,
 ) -> None:
+    # Envelope operations only exist while a provider owns the agreement.
+    settings.esign_provider = "documenso"
     create_admin(db)
     if db.scalar(select(Role).where(Role.code == "agent")) is None:
         db.add(Role(code="agent", description="Synthetic existing agent role"))
@@ -1242,6 +1253,7 @@ def test_dashboard_requires_current_application_bound_assignment(
         "acknowledgements": [],
         "esign_envelopes": [],
         "activation_ready": False,
+        "agreement_mode": "manual",
     }
 
 
@@ -1366,8 +1378,10 @@ def test_superseded_and_cross_candidate_assignment_versions_are_rejected(
 
 
 def test_activation_ready_requires_assignment_tasks_policies_and_all_gates(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, settings
 ) -> None:
+    # Envelope operations only exist while a provider owns the agreement.
+    settings.esign_provider = "documenso"
     create_admin(db)
     version = make_document(db)
     candidate, application, subject = make_candidate(db, CandidateStatus.CONDITIONALLY_SELECTED)
@@ -1760,3 +1774,64 @@ def test_admin_assignment_summaries_project_readiness_for_the_exact_assignment(
         uuid.UUID(first_assignment_id),
         uuid.UUID(second_assignment_id),
     }
+
+
+def test_manual_mode_reports_manual_agreement_and_refuses_envelope_operations(
+    client: TestClient, db: Session
+) -> None:
+    """With no provider, neither portal may offer e-sign work Keeper cannot own."""
+    create_admin(db)
+    candidate, application, candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+
+    detail = client.get(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}", headers=ADMIN_HEADERS
+    )
+    assert detail.status_code == 200
+    assert detail.json()["agreement_mode"] == "manual"
+
+    linked = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes",
+        json={"provider_envelope_id": "synthetic-manual-envelope"},
+        headers=ADMIN_HEADERS,
+    )
+    assert linked.status_code == 409
+    assert "no e-sign provider is configured" in linked.json()["detail"]
+
+    issued = client.post(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}/esign-envelopes/issue-ica",
+        headers=ADMIN_HEADERS,
+    )
+    assert issued.status_code == 409
+
+    dashboard = client.get(
+        "/api/v1/candidate/onboarding", headers={"X-Dev-Auth-Sub": candidate_subject}
+    )
+    assert dashboard.status_code == 200
+    assert dashboard.json()["agreement_mode"] == "manual"
+    assert db.scalars(select(CandidateEsignEnvelope)).all() == []
+
+
+def test_documenso_mode_reports_provider_owned_agreement(
+    client: TestClient, db: Session, settings
+) -> None:
+    create_admin(db)
+    settings.esign_provider = "documenso"
+    candidate, application, candidate_subject = make_candidate(
+        db, CandidateStatus.CONDITIONALLY_SELECTED
+    )
+    assignment_id = assign(client, candidate, application, make_plan(db)).json()["assignment_id"]
+
+    detail = client.get(
+        f"/api/v1/admin/onboarding/assignments/{assignment_id}", headers=ADMIN_HEADERS
+    )
+    assert detail.status_code == 200
+    assert detail.json()["agreement_mode"] == "provider"
+
+    dashboard = client.get(
+        "/api/v1/candidate/onboarding", headers={"X-Dev-Auth-Sub": candidate_subject}
+    )
+    assert dashboard.status_code == 200
+    assert dashboard.json()["agreement_mode"] == "provider"

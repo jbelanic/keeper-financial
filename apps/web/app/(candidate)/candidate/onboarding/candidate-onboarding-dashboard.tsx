@@ -254,46 +254,50 @@ export function CandidateOnboardingDashboardView({
         )}
       </section>
 
-      <section aria-labelledby="esign-heading">
-        <h2 id="esign-heading">External signing</h2>
-        {!currentEnvelope ? (
-          <p>The contractor agreement has not been sent yet.</p>
-        ) : (
-          <Card>
-            <p>
-              Agreement status:{" "}
-              <StatusBadge
-                tone={
-                  currentEnvelope.status === "completed" ? "success" : "warning"
-                }
-              >
-                {currentEnvelope.status === "sent"
-                  ? "sent / waiting for signature"
-                  : currentEnvelope.status}
-              </StatusBadge>
-            </p>
-            {!assignmentCompleted &&
-            currentEnvelope.status === "sent" &&
-            currentEnvelope.envelope_url ? (
+      {dashboard.agreement_mode === "provider" ? (
+        <section aria-labelledby="esign-heading">
+          <h2 id="esign-heading">External signing</h2>
+          {!currentEnvelope ? (
+            <p>The contractor agreement has not been sent yet.</p>
+          ) : (
+            <Card>
               <p>
-                <a
-                  href={currentEnvelope.envelope_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                Agreement status:{" "}
+                <StatusBadge
+                  tone={
+                    currentEnvelope.status === "completed"
+                      ? "success"
+                      : "warning"
+                  }
                 >
-                  Review and sign contractor agreement
-                </a>
+                  {currentEnvelope.status === "sent"
+                    ? "sent / waiting for signature"
+                    : currentEnvelope.status}
+                </StatusBadge>
               </p>
-            ) : null}
-            {!assignmentCompleted && currentEnvelope.status === "sent" ? (
-              <p>
-                After signing, an administrator may need to refresh the provider
-                status.
-              </p>
-            ) : null}
-          </Card>
-        )}
-      </section>
+              {!assignmentCompleted &&
+              currentEnvelope.status === "sent" &&
+              currentEnvelope.envelope_url ? (
+                <p>
+                  <a
+                    href={currentEnvelope.envelope_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Review and sign contractor agreement
+                  </a>
+                </p>
+              ) : null}
+              {!assignmentCompleted && currentEnvelope.status === "sent" ? (
+                <p>
+                  After signing, an administrator may need to refresh the
+                  provider status.
+                </p>
+              ) : null}
+            </Card>
+          )}
+        </section>
+      ) : null}
 
       {tasks.length > 0 ? (
         <section aria-labelledby="progress-heading">

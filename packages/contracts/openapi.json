@@ -6859,6 +6859,14 @@
             },
             "type": "array",
             "title": "Esign Envelopes"
+          },
+          "agreement_mode": {
+            "type": "string",
+            "enum": [
+              "provider",
+              "manual"
+            ],
+            "title": "Agreement Mode"
           }
         },
         "additionalProperties": false,
@@ -6877,7 +6885,8 @@
           "activation_ready",
           "tasks",
           "gates",
-          "esign_envelopes"
+          "esign_envelopes",
+          "agreement_mode"
         ],
         "title": "AdminOnboardingAssignmentDetail"
       },
@@ -9485,6 +9494,14 @@
           "activation_ready": {
             "type": "boolean",
             "title": "Activation Ready"
+          },
+          "agreement_mode": {
+            "type": "string",
+            "enum": [
+              "provider",
+              "manual"
+            ],
+            "title": "Agreement Mode"
           }
         },
         "type": "object",
@@ -9495,7 +9512,8 @@
           "documents",
           "acknowledgements",
           "esign_envelopes",
-          "activation_ready"
+          "activation_ready",
+          "agreement_mode"
         ],
         "title": "CandidateOnboardingDashboard"
       },

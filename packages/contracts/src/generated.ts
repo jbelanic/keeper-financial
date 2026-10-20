@@ -1402,6 +1402,11 @@ export interface components {
       gates: components["schemas"]["ActivationGateResponse"][];
       /** Esign Envelopes */
       esign_envelopes: components["schemas"]["EsignEnvelopeResponse"][];
+      /**
+       * Agreement Mode
+       * @enum {string}
+       */
+      agreement_mode: "provider" | "manual";
     };
     /** AdminOnboardingAssignmentSummary */
     AdminOnboardingAssignmentSummary: {
@@ -2258,6 +2263,11 @@ export interface components {
       esign_envelopes: components["schemas"]["EsignEnvelopeResponse"][];
       /** Activation Ready */
       activation_ready: boolean;
+      /**
+       * Agreement Mode
+       * @enum {string}
+       */
+      agreement_mode: "provider" | "manual";
     };
     /** CandidateOnboardingTaskResponse */
     CandidateOnboardingTaskResponse: {
