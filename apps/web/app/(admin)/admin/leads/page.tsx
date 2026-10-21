@@ -3,12 +3,18 @@ import Link from "next/link";
 import { EmptyState, ErrorState } from "@keeper/ui";
 import {
   fetchAdminLeadList,
+  fetchAssignableAgents,
   LEAD_STATUSES,
   parseLeadQueueSearchParams,
   type AdminLeadList,
+  type AssignableAgent,
   type LeadStatus,
 } from "@/lib/admin-leads";
-import { updateLeadStatus, withdrawMarketingConsent } from "./actions";
+import {
+  assignLeadAgent,
+  updateLeadStatus,
+  withdrawMarketingConsent,
+} from "./actions";
 import { WithdrawalControl } from "./withdrawal-control";
 
 export const metadata: Metadata = { title: "Lead queue" };
@@ -35,13 +41,17 @@ export function LeadQueue({
   data,
   page,
   status,
+  agents = [],
   withdrawAction = withdrawMarketingConsent,
+  assignAction = assignLeadAgent,
   statusAction = updateLeadStatus,
 }: {
   data: AdminLeadList;
   page: number;
   status?: LeadStatus;
+  agents?: AssignableAgent[];
   withdrawAction?: (formData: FormData) => Promise<void>;
+  assignAction?: (formData: FormData) => Promise<void>;
   statusAction?: (formData: FormData) => Promise<void>;
 }) {
   if (data.items.length === 0) {
@@ -89,9 +99,17 @@ export function LeadQueue({
                 <dd>{lead.source}</dd>
               </div>
               <div>
-                <dt>Preferred agent</dt>
-                <dd>{lead.preferred_agent_slug ?? "None"}</dd>
+                <dt>Assigned agent</dt>
+                <dd>{lead.assigned_agent_name ?? "Unassigned"}</dd>
               </div>
+              {lead.preferred_agent_slug || lead.preferred_agent_name ? (
+                <div>
+                  <dt>Legacy agent note</dt>
+                  <dd>
+                    {lead.preferred_agent_name ?? lead.preferred_agent_slug}
+                  </dd>
+                </div>
+              ) : null}
             </dl>
             <section aria-label="Lead message">
               <h3>Message</h3>
@@ -116,6 +134,39 @@ export function LeadQueue({
               {lead.marketing_consent?.state === "granted" ? (
                 <WithdrawalControl leadId={lead.id} action={withdrawAction} />
               ) : null}
+            </section>
+            <section aria-label="Lead assignment" className="lead-actions">
+              <h3>Assign to an agent</h3>
+              <p>
+                {lead.assigned_agent_name
+                  ? `Owned by ${lead.assigned_agent_name}${
+                      lead.assigned_at
+                        ? ` since ${timestamp(lead.assigned_at)}`
+                        : ""
+                    }.`
+                  : "Unassigned: this request is in the shared queue."}
+              </p>
+              <form action={assignAction} className="inline-form">
+                <input type="hidden" name="lead_id" value={lead.id} />
+                <label htmlFor={`lead-${lead.id}-agent`}>
+                  Owning agent for {lead.name}
+                </label>
+                <select
+                  id={`lead-${lead.id}-agent`}
+                  name="agent_user_id"
+                  defaultValue={lead.assigned_agent_user_id ?? ""}
+                >
+                  <option value="">Unassigned</option>
+                  {agents.map((agent) => (
+                    <option key={agent.user_id} value={agent.user_id}>
+                      {agent.display_name}
+                    </option>
+                  ))}
+                </select>
+                <button className="button" type="submit">
+                  Save assignment for {lead.name}
+                </button>
+              </form>
             </section>
             <section aria-label="Lead status action" className="lead-actions">
               <h3>Lead status</h3>
@@ -178,10 +229,17 @@ export default async function AdminLeadsPage({
 }) {
   const params = parseLeadQueueSearchParams(await searchParams);
   let data: AdminLeadList;
+  let agents: AssignableAgent[];
   try {
     data = await fetchAdminLeadList(params);
   } catch {
     return <LeadQueueError />;
+  }
+  try {
+    agents = (await fetchAssignableAgents()).items;
+  } catch {
+    // Assignment stays unavailable rather than blocking the queue view.
+    agents = [];
   }
   return (
     <>
@@ -204,7 +262,7 @@ export default async function AdminLeadsPage({
           Filter
         </button>
       </form>
-      <LeadQueue data={data} {...params} />
+      <LeadQueue data={data} agents={agents} {...params} />
     </>
   );
 }

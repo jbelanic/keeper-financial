@@ -56,10 +56,10 @@ function validateFields(form: HTMLFormElement): FieldErrors {
 
 export function ApplyForm({
   unavailableContact = "our phone number or email address",
-  preferredAgentSlug,
+  agentReference,
 }: {
   unavailableContact?: string;
-  preferredAgentSlug?: string;
+  agentReference?: string;
 }) {
   const [errors, setErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -96,12 +96,8 @@ export function ApplyForm({
       telephone: data.get("telephone"),
       mortgage_objective: data.get("mortgage_objective"),
       preferred_contact_method: data.get("preferred_contact_method"),
-      ...(preferredAgentSlug
-        ? { preferred_agent_slug: preferredAgentSlug }
-        : {}),
+      ...(agentReference ? { agent_reference: agentReference } : {}),
       message: data.get("message") || null,
-      preferred_agent_name:
-        (data.get("preferred_agent_name") as string | null)?.trim() || null,
       service_contact_acknowledged:
         data.get("service_contact_acknowledged") === "on",
       marketing_consent: data.get("marketing_consent") === "on",
@@ -154,12 +150,8 @@ export function ApplyForm({
   return (
     <form ref={formRef} onSubmit={submit} noValidate aria-busy={pending}>
       <input type="hidden" name="website" value="" autoComplete="off" />
-      {preferredAgentSlug ? (
-        <input
-          type="hidden"
-          name="preferred_agent_slug"
-          value={preferredAgentSlug}
-        />
+      {agentReference ? (
+        <input type="hidden" name="agent_reference" value={agentReference} />
       ) : null}
       <ErrorSummary errors={errors} />
       {submitted ? (
@@ -245,19 +237,6 @@ export function ApplyForm({
           </select>
         </FormField>
       </div>
-      <FormField
-        id="preferred_agent_name"
-        label="Are you working with an agent? (optional)"
-        hint="Enter their name if you know it. This does not assign them — our team confirms the right agent."
-      >
-        <input
-          id="preferred_agent_name"
-          name="preferred_agent_name"
-          type="text"
-          maxLength={120}
-          autoComplete="off"
-        />
-      </FormField>
       <FormField
         id="message"
         label="Brief message (optional)"

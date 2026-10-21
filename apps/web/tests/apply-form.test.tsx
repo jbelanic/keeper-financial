@@ -78,6 +78,19 @@ describe("minimal contact form", () => {
     expect(screen.queryByLabelText(/bank account/i)).not.toBeInTheDocument();
   });
 
+  it("does not ask the visitor to name an agent any more", () => {
+    const { container } = render(<ApplyForm />);
+
+    expect(screen.queryByLabelText(/working with an agent/i)).toBeNull();
+    expect(
+      container.querySelector('input[name="preferred_agent_name"]'),
+    ).toBeNull();
+    expect(container.querySelector('input[name="agent_reference"]')).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Send contact request/i }),
+    ).toBeInTheDocument();
+  });
+
   it("uses a browser-valid telephone pattern under the Unicode Sets flag", () => {
     render(<ApplyForm />);
     const pattern = screen.getByLabelText("Telephone").getAttribute("pattern");
@@ -90,7 +103,7 @@ describe("minimal contact form", () => {
     const fetcher = vi.fn().mockResolvedValue(response(201));
     vi.stubGlobal("fetch", fetcher);
     const { container } = render(
-      <ApplyForm preferredAgentSlug="published-agent" />,
+      <ApplyForm agentReference="published-agent" />,
     );
     fillRequiredFields();
     fireEvent.change(screen.getByLabelText("Brief message (optional)"), {
@@ -102,7 +115,8 @@ describe("minimal contact form", () => {
     await screen.findByRole("status");
     expect(fetcher).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetcher.mock.calls[0][1].body as string);
-    expect(body.preferred_agent_slug).toBe("published-agent");
+    expect(body.agent_reference).toBe("published-agent");
+    expect(body).not.toHaveProperty("preferred_agent_name");
     expect(body).not.toHaveProperty("service_wording_version");
     expect(screen.getByLabelText("Name")).toHaveValue("");
   });
