@@ -75,11 +75,47 @@ export function AgentProfileManager({
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [slug, setSlug] = useState("");
   const [slugAvailability, setSlugAvailability] = useState("");
+  // The list owns the page; the create/edit form is opened explicitly.
+  const [formOpen, setFormOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const actionTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   function restoreActionFocus() {
     requestAnimationFrame(() => actionTriggerRef.current?.focus());
+  }
+
+  function revealEditor() {
+    requestAnimationFrame(() => {
+      document
+        .getElementById("agent-profile-editor")
+        ?.scrollIntoView?.({ block: "start" });
+    });
+  }
+
+  function openCreateForm() {
+    setEditing(null);
+    setSelectedAgentId("");
+    setSlug("");
+    setSlugAvailability("");
+    setFormOpen(true);
+    revealEditor();
+  }
+
+  function openEditForm(profile: AdminAgentProfile) {
+    setEditing(profile);
+    setSelectedAgentId(profile.user_id);
+    setSlug(profile.slug);
+    setSlugAvailability("");
+    setFormOpen(true);
+    revealEditor();
+  }
+
+  function closeForm() {
+    setEditing(null);
+    setSelectedAgentId("");
+    setSlug("");
+    setSlugAvailability("");
+    setFormOpen(false);
   }
 
   function closeDialog() {
@@ -148,11 +184,8 @@ export function AgentProfileManager({
           ? items.map((item) => (item.id === profile.id ? profile : item))
           : [profile, ...items];
       });
-      setEditing(null);
-      setSelectedAgentId("");
-      setSlug("");
-      setSlugAvailability("");
       formElement.reset();
+      closeForm();
       setNotice(
         editing
           ? "Profile changes saved for approval."
@@ -249,237 +282,29 @@ export function AgentProfileManager({
       </p>
       <ErrorSummary errors={errors} />
 
-      <form
-        className="card agent-profile-form"
-        onSubmit={save}
-        aria-busy={busy}
-        key={editing?.id ?? "new-agent-profile"}
-      >
-        <h2>{editing ? "Edit agent profile" : "Create agent profile"}</h2>
-        <p>
-          Only approved public profile and regulatory information belongs here.
-          Do not enter borrower, underwriting, identity-document, or financial
-          data.
-        </p>
-        <div className="form-grid">
-          <FormField
-            id="agent-user-id"
-            label="Eligible agent (required)"
-            hint="Only an active local agent without an existing profile is listed."
-          >
-            <select
-              id="agent-user-id"
-              name="user_id"
-              value={editing?.user_id ?? selectedAgentId}
-              disabled={Boolean(editing)}
-              onChange={(event) => {
-                const userId = event.target.value;
-                setSelectedAgentId(userId);
-                const agent = initialEligibleAgents.find(
-                  (item) => item.user_id === userId,
-                );
-                if (agent && !slug) setSlug(publicSlug(agent.display_name));
-              }}
-              required
-            >
-              <option value="">Select an eligible agent</option>
-              {initialEligibleAgents.map((agent) => (
-                <option key={agent.user_id} value={agent.user_id}>
-                  {agent.display_name} — {agent.email}
-                </option>
-              ))}
-              {editing &&
-              !initialEligibleAgents.some(
-                (item) => item.user_id === editing.user_id,
-              ) ? (
-                <option value={editing.user_id}>{editing.licensed_name}</option>
-              ) : null}
-            </select>
-          </FormField>
-          <FormField
-            id="agent-slug"
-            label="Slug (required)"
-            hint={
-              editing?.slug_locked_at
-                ? "Locked permanently on first publication."
-                : "Generated from the selected agent; lowercase words separated by hyphens."
-            }
-          >
-            <input
-              id="agent-slug"
-              name="slug"
-              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              maxLength={100}
-              value={editing?.slug_locked_at ? editing.slug : slug}
-              disabled={Boolean(editing?.slug_locked_at)}
-              onChange={(event) => {
-                setSlug(publicSlug(event.target.value));
-                setSlugAvailability("");
-              }}
-              onBlur={(event) => checkSlugAvailability(event.target.value)}
-              required
-            />
-            <span aria-live="polite">{slugAvailability}</span>
-          </FormField>
-          <FormField id="agent-licensed-name" label="Licensed name (required)">
-            <input
-              id="agent-licensed-name"
-              name="licensed_name"
-              maxLength={160}
-              defaultValue={editing?.licensed_name ?? ""}
-              required
-            />
-          </FormField>
-          <FormField
-            id="agent-approved-title"
-            label="Approved title (required)"
-          >
-            <input
-              id="agent-approved-title"
-              name="approved_title"
-              maxLength={160}
-              defaultValue={editing?.approved_title ?? ""}
-              required
-            />
-          </FormField>
-          <FormField
-            id="agent-licence-number"
-            label="Licence number (required)"
-          >
-            <input
-              id="agent-licence-number"
-              name="licence_number"
-              maxLength={80}
-              defaultValue={editing?.licence_number ?? ""}
-              required
-            />
-          </FormField>
-          <FormField id="agent-public-email" label="Approved public email">
-            <input
-              id="agent-public-email"
-              name="public_email"
-              type="email"
-              maxLength={320}
-              defaultValue={editing?.public_email ?? ""}
-            />
-          </FormField>
-          <FormField id="agent-public-phone" label="Approved public phone">
-            <input
-              id="agent-public-phone"
-              name="public_phone"
-              type="tel"
-              maxLength={32}
-              defaultValue={editing?.public_phone ?? ""}
-            />
-          </FormField>
-          <FormField
-            id="agent-languages"
-            label="Languages"
-            hint="Comma-separated, public-safe values."
-          >
-            <input
-              id="agent-languages"
-              name="languages"
-              defaultValue={editing?.languages.join(", ") ?? ""}
-            />
-          </FormField>
-          <FormField
-            id="agent-service-areas"
-            label="Service areas"
-            hint="Comma-separated, public-safe values."
-          >
-            <input
-              id="agent-service-areas"
-              name="service_areas"
-              defaultValue={editing?.service_areas.join(", ") ?? ""}
-            />
-          </FormField>
-          <FormField
-            id="agent-specialties"
-            label="Specialties"
-            hint="Comma-separated, public-safe values."
-          >
-            <input
-              id="agent-specialties"
-              name="specialties"
-              defaultValue={editing?.specialties.join(", ") ?? ""}
-            />
-          </FormField>
-          <FormField id="agent-photo-url" label="Approved photo HTTPS URL">
-            <input
-              id="agent-photo-url"
-              name="photo_url"
-              type="url"
-              maxLength={2048}
-              defaultValue={editing?.photo_url ?? ""}
-            />
-          </FormField>
-          <FormField id="agent-photo-alt" label="Photo alternative text">
-            <input
-              id="agent-photo-alt"
-              name="photo_alt_text"
-              maxLength={300}
-              defaultValue={editing?.photo_alt_text ?? ""}
-            />
-          </FormField>
-        </div>
-        <FormField
-          id="agent-biography"
-          label="Biography (required)"
-          hint="Bounded plain text; no HTML."
-        >
-          <textarea
-            id="agent-biography"
-            name="biography"
-            maxLength={3000}
-            defaultValue={editing?.biography ?? ""}
-            required
-          />
-        </FormField>
-        <FormField
-          id="agent-social-links"
-          label="Approved social links"
-          hint="One per line as Label | https://approved.example/path."
-        >
-          <textarea
-            id="agent-social-links"
-            name="social_links"
-            defaultValue={
-              editing?.social_links
-                .map((link) => `${link.label} | ${link.url}`)
-                .join("\n") ?? ""
-            }
-          />
-        </FormField>
-        {editing?.status === "published" ? (
-          <p className="notice">
-            Saving published content returns the profile to pending approval and
-            removes it from public rendering.
-          </p>
-        ) : null}
-        <div className="button-row">
-          <Button type="submit" disabled={busy}>
-            {editing ? "Save profile changes" : "Create draft profile"}
-          </Button>
-          {editing ? (
-            <Button
-              type="button"
-              onClick={() => {
-                setEditing(null);
-                setSelectedAgentId("");
-                setSlug("");
-                setSlugAvailability("");
-              }}
-              disabled={busy}
-            >
-              Cancel editing
-            </Button>
-          ) : null}
-        </div>
-      </form>
-
       <section aria-labelledby="agent-profile-list-heading">
         <h2 id="agent-profile-list-heading">Agent profiles</h2>
+        <p>
+          Create, edit, approve, publish, suspend, and archive public-safe
+          profiles through the explicit lifecycle.
+        </p>
+        <div className="button-row admin-toolbar">
+          <Button
+            type="button"
+            onClick={openCreateForm}
+            disabled={busy || initialEligibleAgents.length === 0}
+            aria-expanded={formOpen}
+            aria-controls="agent-profile-editor"
+          >
+            Create new profile
+          </Button>
+        </div>
+        {initialEligibleAgents.length === 0 ? (
+          <p className="notice">
+            No active agent is available for a new profile: every agent already
+            has one.
+          </p>
+        ) : null}
         {profiles.length === 0 ? (
           <p>No agent profiles have been created.</p>
         ) : (
@@ -498,12 +323,7 @@ export function AgentProfileManager({
                   {profile.status !== "archived" ? (
                     <Button
                       type="button"
-                      onClick={() => {
-                        setEditing(profile);
-                        setSelectedAgentId(profile.user_id);
-                        setSlug(profile.slug);
-                        setSlugAvailability("");
-                      }}
+                      onClick={() => openEditForm(profile)}
                       disabled={busy}
                       aria-label={`Edit ${profile.licensed_name}`}
                     >
@@ -603,6 +423,232 @@ export function AgentProfileManager({
           </div>
         )}
       </section>
+
+      {formOpen ? (
+        <form
+          id="agent-profile-editor"
+          className="card agent-profile-form"
+          onSubmit={save}
+          aria-busy={busy}
+          key={editing?.id ?? "new-agent-profile"}
+        >
+          <h2>{editing ? "Edit agent profile" : "Create agent profile"}</h2>
+          <p>
+            Only approved public profile and regulatory information belongs
+            here. Do not enter borrower, underwriting, identity-document, or
+            financial data.
+          </p>
+          <div className="form-grid">
+            <FormField
+              id="agent-user-id"
+              label="Eligible agent (required)"
+              hint="Only an active local agent without an existing profile is listed."
+            >
+              <select
+                id="agent-user-id"
+                name="user_id"
+                value={editing?.user_id ?? selectedAgentId}
+                disabled={Boolean(editing)}
+                onChange={(event) => {
+                  const userId = event.target.value;
+                  setSelectedAgentId(userId);
+                  const agent = initialEligibleAgents.find(
+                    (item) => item.user_id === userId,
+                  );
+                  if (agent && !slug) setSlug(publicSlug(agent.display_name));
+                }}
+                required
+              >
+                <option value="">Select an eligible agent</option>
+                {initialEligibleAgents.map((agent) => (
+                  <option key={agent.user_id} value={agent.user_id}>
+                    {agent.display_name} — {agent.email}
+                  </option>
+                ))}
+                {editing &&
+                !initialEligibleAgents.some(
+                  (item) => item.user_id === editing.user_id,
+                ) ? (
+                  <option value={editing.user_id}>
+                    {editing.licensed_name}
+                  </option>
+                ) : null}
+              </select>
+            </FormField>
+            <FormField
+              id="agent-slug"
+              label="Slug (required)"
+              hint={
+                editing?.slug_locked_at
+                  ? "Locked permanently on first publication."
+                  : "Generated from the selected agent; lowercase words separated by hyphens."
+              }
+            >
+              <input
+                id="agent-slug"
+                name="slug"
+                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                maxLength={100}
+                value={editing?.slug_locked_at ? editing.slug : slug}
+                disabled={Boolean(editing?.slug_locked_at)}
+                onChange={(event) => {
+                  setSlug(publicSlug(event.target.value));
+                  setSlugAvailability("");
+                }}
+                onBlur={(event) => checkSlugAvailability(event.target.value)}
+                required
+              />
+              <span aria-live="polite">{slugAvailability}</span>
+            </FormField>
+            <FormField
+              id="agent-licensed-name"
+              label="Licensed name (required)"
+            >
+              <input
+                id="agent-licensed-name"
+                name="licensed_name"
+                maxLength={160}
+                defaultValue={editing?.licensed_name ?? ""}
+                required
+              />
+            </FormField>
+            <FormField
+              id="agent-approved-title"
+              label="Approved title (required)"
+            >
+              <input
+                id="agent-approved-title"
+                name="approved_title"
+                maxLength={160}
+                defaultValue={editing?.approved_title ?? ""}
+                required
+              />
+            </FormField>
+            <FormField
+              id="agent-licence-number"
+              label="Licence number (required)"
+            >
+              <input
+                id="agent-licence-number"
+                name="licence_number"
+                maxLength={80}
+                defaultValue={editing?.licence_number ?? ""}
+                required
+              />
+            </FormField>
+            <FormField id="agent-public-email" label="Approved public email">
+              <input
+                id="agent-public-email"
+                name="public_email"
+                type="email"
+                maxLength={320}
+                defaultValue={editing?.public_email ?? ""}
+              />
+            </FormField>
+            <FormField id="agent-public-phone" label="Approved public phone">
+              <input
+                id="agent-public-phone"
+                name="public_phone"
+                type="tel"
+                maxLength={32}
+                defaultValue={editing?.public_phone ?? ""}
+              />
+            </FormField>
+            <FormField
+              id="agent-languages"
+              label="Languages"
+              hint="Comma-separated, public-safe values."
+            >
+              <input
+                id="agent-languages"
+                name="languages"
+                defaultValue={editing?.languages.join(", ") ?? ""}
+              />
+            </FormField>
+            <FormField
+              id="agent-service-areas"
+              label="Service areas"
+              hint="Comma-separated, public-safe values."
+            >
+              <input
+                id="agent-service-areas"
+                name="service_areas"
+                defaultValue={editing?.service_areas.join(", ") ?? ""}
+              />
+            </FormField>
+            <FormField
+              id="agent-specialties"
+              label="Specialties"
+              hint="Comma-separated, public-safe values."
+            >
+              <input
+                id="agent-specialties"
+                name="specialties"
+                defaultValue={editing?.specialties.join(", ") ?? ""}
+              />
+            </FormField>
+            <FormField id="agent-photo-url" label="Approved photo HTTPS URL">
+              <input
+                id="agent-photo-url"
+                name="photo_url"
+                type="url"
+                maxLength={2048}
+                defaultValue={editing?.photo_url ?? ""}
+              />
+            </FormField>
+            <FormField id="agent-photo-alt" label="Photo alternative text">
+              <input
+                id="agent-photo-alt"
+                name="photo_alt_text"
+                maxLength={300}
+                defaultValue={editing?.photo_alt_text ?? ""}
+              />
+            </FormField>
+          </div>
+          <FormField
+            id="agent-biography"
+            label="Biography (required)"
+            hint="Bounded plain text; no HTML."
+          >
+            <textarea
+              id="agent-biography"
+              name="biography"
+              maxLength={3000}
+              defaultValue={editing?.biography ?? ""}
+              required
+            />
+          </FormField>
+          <FormField
+            id="agent-social-links"
+            label="Approved social links"
+            hint="One per line as Label | https://approved.example/path."
+          >
+            <textarea
+              id="agent-social-links"
+              name="social_links"
+              defaultValue={
+                editing?.social_links
+                  .map((link) => `${link.label} | ${link.url}`)
+                  .join("\n") ?? ""
+              }
+            />
+          </FormField>
+          {editing?.status === "published" ? (
+            <p className="notice">
+              Saving published content returns the profile to pending approval
+              and removes it from public rendering.
+            </p>
+          ) : null}
+          <div className="button-row">
+            <Button type="submit" disabled={busy}>
+              {editing ? "Save profile changes" : "Create draft profile"}
+            </Button>
+            <Button type="button" onClick={closeForm} disabled={busy}>
+              {editing ? "Cancel editing" : "Cancel"}
+            </Button>
+          </div>
+        </form>
+      ) : null}
 
       <ConfirmationDialog
         title={
