@@ -96,7 +96,7 @@ export function LeadTable({
                   <td>
                     <Button
                       type="button"
-                      className="button-secondary lead-toggle"
+                      className="lead-toggle"
                       aria-expanded={open}
                       aria-controls={detailId}
                       onClick={() => setOpenLeadId(open ? null : lead.id)}

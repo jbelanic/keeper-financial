@@ -1616,7 +1616,25 @@ p {
   vertical-align: top;
 }
 .lead-table .lead-toggle {
+  background: none;
+  border: 0;
+  color: var(--color-accent-strong);
+  font-size: 0.85rem;
+  letter-spacing: normal;
+  min-height: 2rem;
+  padding: 0.35rem 0.15rem;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-transform: none;
+  text-underline-offset: 0.18em;
   white-space: nowrap;
+  width: auto;
+}
+.lead-table .lead-toggle:hover {
+  background: none;
+  border: 0;
+  color: var(--color-accent);
+  text-decoration-thickness: 0.13em;
 }
 .lead-detail-cell {
   background: var(--color-surface);
