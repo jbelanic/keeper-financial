@@ -128,6 +128,18 @@ alter deployment, real-data, retention, migration, or operational-readiness
 status. The full before/after change list and the implementation record are in
 `docs/38_PUBLIC_COPY_REVIEW.md`.
 
+On 2026-10-21 the owner requested an administration-portal usability pass
+(decision 54). The lead queue is now a compact table whose full record expands
+per row and which defaults to the `new` status filter, so assigned and closed
+inquiries leave the default view; the candidate-review empty state no longer
+renders an inert `Send request` button; assignable-agent options and the
+applicant account name now distinguish agents that were all labelled
+`Candidate`; and the onboarding and agent-profile pages put their lists first
+with explicit create/view controls. No API contract, endpoint, migration, model,
+lifecycle, authorization, audit, retention, deployment, or real-data status
+changes; the affected surfaces and exclusions are recorded in decision 54 and
+`docs/06` §Admin portal.
+
 On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 
 On 2026-07-27 the owner approved (a) the assigned-agent full-data retrieval
