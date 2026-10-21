@@ -85,13 +85,46 @@ describe("admin lead queue", () => {
       page: 2,
       status: "contacted",
     });
+    expect(parseLeadQueueSearchParams({ status: "all" })).toEqual({
+      page: 1,
+      status: "all",
+    });
     expect(
       parseLeadQueueSearchParams({
         page: "-1",
         status: "pending",
         email: "private@example.com",
       }),
-    ).toEqual({ page: 1, status: undefined });
+    ).toEqual({ page: 1, status: "new" });
+  });
+
+  it("defaults the queue to new leads so assigned and closed work stays opt-in", () => {
+    expect(parseLeadQueueSearchParams({})).toEqual({ page: 1, status: "new" });
+    expect(parseLeadQueueSearchParams({ status: "closed" })).toEqual({
+      page: 1,
+      status: "closed",
+    });
+  });
+
+  it("omits the status parameter only for the explicit all-statuses filter", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => data,
+    });
+    const fetcher = fetchMock as unknown as typeof fetch;
+
+    await adminLeadListRequest(
+      "synthetic-token",
+      { page: 1, status: "all" },
+      fetcher,
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/leads?limit=25&offset=0",
+      {
+        headers: { Authorization: "Bearer synthetic-token" },
+        cache: "no-store",
+      },
+    );
   });
 
   it("withdraws through the authenticated no-store API boundary without a payload", async () => {
@@ -146,7 +179,7 @@ describe("admin lead queue", () => {
     );
   });
 
-  it("renders necessary lead details, text consent states, and bounded pagination", () => {
+  it("renders a compact table and expands one lead's details on request", () => {
     render(
       <LeadQueue
         data={data}
@@ -157,13 +190,34 @@ describe("admin lead queue", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { name: "Synthetic Lead" }),
+      screen.getByRole("table", { name: /lead queue/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Name" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Synthetic Lead")).toBeInTheDocument();
     expect(screen.getByText("lead@example.com")).toBeInTheDocument();
+    // Detail, consent state, and per-lead actions stay collapsed by default.
+    expect(screen.queryByText(/Service acknowledgement: Granted/i)).toBeNull();
+    expect(screen.queryByLabelText("Set status for Synthetic Lead")).toBeNull();
+
+    const toggle = screen.getByRole("button", {
+      name: /View details for Synthetic Lead/i,
+    });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(
       screen.getByText(/Service acknowledgement: Granted/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/Marketing consent: Granted/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Set status for Synthetic Lead")).toHaveValue(
+      "new",
+    );
+    expect(
+      screen.getByRole("button", { name: "Update status for Synthetic Lead" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Next page" })).toHaveAttribute(
       "href",
       "/admin/leads?page=2&status=new",
@@ -171,12 +225,9 @@ describe("admin lead queue", () => {
     expect(
       screen.queryByRole("link", { name: "Previous page" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Set status for Synthetic Lead")).toHaveValue(
-      "new",
-    );
-    expect(
-      screen.getByRole("button", { name: "Update status for Synthetic Lead" }),
-    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Hide details/i }));
+    expect(screen.queryByLabelText("Set status for Synthetic Lead")).toBeNull();
   });
 
   it("renders a useful empty state", () => {
@@ -313,7 +364,7 @@ describe("admin lead queue", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("shows the owning agent and offers the assignment control", () => {
+  it("shows the owning agent and offers a distinguishable assignment control", () => {
     const agentId = "00000000-0000-4000-8000-0000000000aa";
     const assigned: AdminLeadList = {
       ...data,
@@ -339,15 +390,37 @@ describe("admin lead queue", () => {
             email: "agent-a@example.test",
             has_referral_link: true,
           },
+          {
+            // Candidate-provisioned accounts keep the placeholder name.
+            user_id: "00000000-0000-4000-8000-0000000000bb",
+            display_name: "Candidate",
+            email: "agent-b@example.test",
+            has_referral_link: true,
+          },
         ]}
         assignAction={vi.fn()}
       />,
     );
 
+    expect(screen.getByText(/Synthetic Agent A/)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /view details for synthetic lead/i }),
+    );
     expect(screen.getByText(/owned by synthetic agent a/i)).toBeInTheDocument();
     expect(
       screen.getByLabelText(/owning agent for synthetic lead/i),
     ).toHaveValue(agentId);
+    // Every option stays distinguishable, including placeholder-named accounts.
+    expect(
+      screen.getByRole("option", {
+        name: "Synthetic Agent A — agent-a@example.test",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", {
+        name: "Candidate — agent-b@example.test",
+      }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: /save assignment for synthetic lead/i,

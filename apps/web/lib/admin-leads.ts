@@ -1,14 +1,23 @@
 import type { components } from "@keeper/contracts";
 import { getSupabaseServerClient } from "./supabase-server";
 
+import {
+  DEFAULT_LEAD_STATUS_FILTER,
+  LEAD_STATUSES,
+  LEAD_STATUS_FILTERS,
+  type LeadStatus,
+  type LeadStatusFilter,
+} from "./lead-statuses";
+
+export {
+  DEFAULT_LEAD_STATUS_FILTER,
+  LEAD_STATUSES,
+  LEAD_STATUS_FILTERS,
+  type LeadStatus,
+  type LeadStatusFilter,
+} from "./lead-statuses";
+
 export const LEADS_PAGE_SIZE = 25;
-export const LEAD_STATUSES = [
-  "new",
-  "assigned",
-  "contacted",
-  "closed",
-] as const;
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export type ConsentState = components["schemas"]["ConsentState"];
 export type AdminLead = components["schemas"]["LeadListItem"];
@@ -18,7 +27,7 @@ export type AssignableAgent = components["schemas"]["LeadAssignableAgent"];
 export type AssignableAgentList =
   components["schemas"]["LeadAssignableAgentList"];
 
-type QueueParams = { page: number; status?: LeadStatus };
+type QueueParams = { page: number; status: LeadStatusFilter };
 
 export function parseLeadQueueSearchParams(
   input: Record<string, string | string[] | undefined>,
@@ -26,11 +35,10 @@ export function parseLeadQueueSearchParams(
   const rawPage = typeof input.page === "string" ? input.page : "";
   const parsedPage = /^\d+$/.test(rawPage) ? Number(rawPage) : 1;
   const page = parsedPage >= 1 && parsedPage <= 10_000 ? parsedPage : 1;
-  const status =
-    typeof input.status === "string" &&
-    LEAD_STATUSES.includes(input.status as LeadStatus)
-      ? (input.status as LeadStatus)
-      : undefined;
+  const rawStatus = typeof input.status === "string" ? input.status : "";
+  const status = LEAD_STATUS_FILTERS.includes(rawStatus as LeadStatusFilter)
+    ? (rawStatus as LeadStatusFilter)
+    : DEFAULT_LEAD_STATUS_FILTER;
   return { page, status };
 }
 
@@ -43,7 +51,7 @@ export async function adminLeadListRequest(
     limit: String(LEADS_PAGE_SIZE),
     offset: String((params.page - 1) * LEADS_PAGE_SIZE),
   });
-  if (params.status) query.set("status", params.status);
+  if (params.status !== "all") query.set("status", params.status);
   const baseUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8000";
   const response = await fetcher(
     `${baseUrl}/api/v1/leads?${query.toString()}`,
