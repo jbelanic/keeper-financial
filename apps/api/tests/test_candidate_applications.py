@@ -560,3 +560,49 @@ def test_candidate_status_is_minimal_and_withdrawal_is_application_specific(
     )
     assert clean_read.status_code == 200
     assert db.get(CandidateApplication, uuid.UUID(second["id"])).status == "application_started"
+
+
+def test_submission_replaces_the_provisional_account_name(client: TestClient, db: Session) -> None:
+    """Administrators must be able to tell agents apart in assignment selectors."""
+    application_id = start_application(client, db)["id"]
+    user = db.query(User).filter_by(email="new-candidate@example.test").one()
+    assert user.display_name == "Candidate"
+
+    saved = client.patch(
+        f"/api/v1/candidate/applications/{application_id}",
+        json=complete_draft(),
+        headers=candidate_headers(),
+    )
+    assert saved.status_code == 200
+    submitted = client.post(
+        f"/api/v1/candidate/applications/{application_id}/submit",
+        json={"expected_revision": 2},
+        headers=candidate_headers(),
+    )
+    assert submitted.status_code == 200
+    db.refresh(user)
+    assert user.display_name == "Synthetic Candidate"
+
+
+def test_submission_preserves_an_existing_non_placeholder_account_name(
+    client: TestClient, db: Session
+) -> None:
+    application_id = start_application(client, db)["id"]
+    user = db.query(User).filter_by(email="new-candidate@example.test").one()
+    user.display_name = "Administrator Verified Name"
+    db.commit()
+
+    saved = client.patch(
+        f"/api/v1/candidate/applications/{application_id}",
+        json=complete_draft(),
+        headers=candidate_headers(),
+    )
+    assert saved.status_code == 200
+    submitted = client.post(
+        f"/api/v1/candidate/applications/{application_id}/submit",
+        json={"expected_revision": 2},
+        headers=candidate_headers(),
+    )
+    assert submitted.status_code == 200
+    db.refresh(user)
+    assert user.display_name == "Administrator Verified Name"

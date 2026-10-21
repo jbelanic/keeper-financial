@@ -50,6 +50,31 @@ NONTERMINAL_APPLICATION_STATUSES: tuple[str, ...] = tuple(
     }
 )
 
+# Placeholder account name assigned when an application is provisioned.
+PROVISIONAL_DISPLAY_NAME = "Candidate"
+
+
+def _sync_candidate_display_name(
+    db: Session, candidate: Candidate, application: CandidateApplication
+) -> None:
+    """Replace the placeholder account name with the name the applicant supplied.
+
+    The account is provisioned at application start, before any name is known, so
+    every candidate-provisioned user starts as "Candidate". Submission is the first
+    point where a real name exists; without this, administrators cannot tell agents
+    apart in assignment selectors and e-sign envelopes are issued to "Candidate".
+    An administrator-set or already-correct name is never overwritten.
+    """
+    user = db.get(User, candidate.user_id)
+    if user is None or user.display_name.strip() not in {"", PROVISIONAL_DISPLAY_NAME}:
+        return
+    name = " ".join(
+        part.strip() for part in (application.given_name, application.family_name) if part
+    ).strip()
+    if not name:
+        return
+    user.display_name = name[:160]
+
 
 def candidate_application_response(
     db: Session, application: CandidateApplication
@@ -119,7 +144,7 @@ def provision_application(
             )
             if existing_email is not None:
                 raise CandidateApplicationConflict("email is already linked to another identity")
-            user = User(email=identity.email, display_name="Candidate", is_active=True)
+            user = User(email=identity.email, display_name=PROVISIONAL_DISPLAY_NAME, is_active=True)
             db.add(user)
             db.flush()
             user_identity = UserIdentity(
@@ -392,6 +417,8 @@ def submit_application(
     candidate = db.get(Candidate, application.candidate_id)
     if candidate is not None and candidate.status == "application_started":
         candidate.status = "application_submitted"
+    if candidate is not None:
+        _sync_candidate_display_name(db, candidate, application)
     db.commit()
     db.refresh(application)
     return application
