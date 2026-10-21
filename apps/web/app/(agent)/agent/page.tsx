@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ErrorState } from "@keeper/ui";
 import { getAgentAssignedBootstrap } from "@/lib/borrower-review-api";
 import { AgentAssignedConsole } from "./agent-console";
+import { AgentLeads } from "./agent-leads";
 import { AgentLinkCard } from "./agent-link-card";
 
 export const metadata: Metadata = { title: "My assigned applications" };
@@ -19,6 +20,7 @@ export default async function AgentApplicationsPage() {
         </p>
       </header>
       <AgentLinkCard />
+      <AgentLeads />
       {queue ? (
         <AgentAssignedConsole initialQueue={queue} />
       ) : (

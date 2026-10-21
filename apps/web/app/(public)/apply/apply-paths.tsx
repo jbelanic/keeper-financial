@@ -6,14 +6,14 @@ import { ApplyForm } from "./apply-form";
 type PublicSiteConfig = ReturnType<typeof getPublicSiteConfig>;
 
 export function ApplyPaths({
-  agentSlug,
+  agentReference,
   config = siteConfig,
 }: {
-  agentSlug?: string;
+  agentReference?: string;
   config?: PublicSiteConfig;
 }) {
-  const attribution = agentSlug
-    ? `?${new URLSearchParams({ agent: agentSlug }).toString()}`
+  const attribution = agentReference
+    ? `?${new URLSearchParams({ agent: agentReference }).toString()}`
     : "";
   return (
     <>
@@ -50,7 +50,7 @@ export function ApplyPaths({
               ) : null}
             </p>
             <ApplyForm
-              preferredAgentSlug={agentSlug}
+              agentReference={agentReference}
               unavailableContact={`${config.phoneDisplay} or ${config.email}`}
             />
           </Card>

@@ -40,7 +40,7 @@ describe("apply paths and attribution", () => {
 
   it("renders balanced minimal-contact and Keeper-native application paths", () => {
     const config = getPublicSiteConfig({});
-    render(<ApplyPaths agentSlug="published-agent" config={config} />);
+    render(<ApplyPaths agentReference="published-agent" config={config} />);
 
     expect(
       screen.getByRole("heading", { name: "Ask a general question" }),

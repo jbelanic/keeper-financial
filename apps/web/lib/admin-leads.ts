@@ -14,6 +14,9 @@ export type ConsentState = components["schemas"]["ConsentState"];
 export type AdminLead = components["schemas"]["LeadListItem"];
 export type AdminLeadList = components["schemas"]["LeadListResponse"];
 export type LeadStatusUpdated = components["schemas"]["LeadStatusUpdated"];
+export type AssignableAgent = components["schemas"]["LeadAssignableAgent"];
+export type AssignableAgentList =
+  components["schemas"]["LeadAssignableAgentList"];
 
 type QueueParams = { page: number; status?: LeadStatus };
 
@@ -106,6 +109,49 @@ export async function adminLeadStatusRequest(
   return (await response.json()) as LeadStatusUpdated;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function adminAssignableAgentsRequest(
+  token: string,
+  fetcher: typeof fetch = fetch,
+): Promise<AssignableAgentList> {
+  const baseUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8000";
+  const response = await fetcher(`${baseUrl}/api/v1/leads/assignable-agents`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("assignable agents unavailable");
+  return (await response.json()) as AssignableAgentList;
+}
+
+export async function adminLeadAssignmentRequest(
+  token: string,
+  leadId: string,
+  agentUserId: string | null,
+  fetcher: typeof fetch = fetch,
+): Promise<LeadStatusUpdated> {
+  if (!UUID_PATTERN.test(leadId)) throw new Error("invalid lead identifier");
+  if (agentUserId !== null && !UUID_PATTERN.test(agentUserId)) {
+    throw new Error("invalid agent identifier");
+  }
+  const baseUrl = process.env.API_INTERNAL_URL ?? "http://localhost:8000";
+  const response = await fetcher(
+    `${baseUrl}/api/v1/leads/${leadId}/assignment`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ agent_user_id: agentUserId }),
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw new Error("lead assignment unavailable");
+  return (await response.json()) as LeadStatusUpdated;
+}
+
 async function adminToken(): Promise<string> {
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase.auth.getSession();
@@ -131,4 +177,15 @@ export async function updateAdminLeadStatus(
   status: LeadStatus,
 ): Promise<LeadStatusUpdated> {
   return adminLeadStatusRequest(await adminToken(), leadId, status);
+}
+
+export async function fetchAssignableAgents(): Promise<AssignableAgentList> {
+  return adminAssignableAgentsRequest(await adminToken());
+}
+
+export async function assignAdminLeadAgent(
+  leadId: string,
+  agentUserId: string | null,
+): Promise<LeadStatusUpdated> {
+  return adminLeadAssignmentRequest(await adminToken(), leadId, agentUserId);
 }

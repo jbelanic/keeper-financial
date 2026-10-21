@@ -653,6 +653,12 @@ class LeadInquiry(IdTimestampsMixin, Base):
         status_check("status", ["new", "assigned", "contacted", "closed"], "ck_lead_status"),
         Index("ix_lead_inquiries_created_at_id", "created_at", "id"),
         Index("ix_lead_inquiries_status_created_at_id", "status", "created_at", "id"),
+        Index(
+            "ix_lead_inquiries_agent_created_at_id",
+            "assigned_agent_user_id",
+            "created_at",
+            "id",
+        ),
     )
 
     name: Mapped[str] = mapped_column(String(120))
@@ -660,11 +666,27 @@ class LeadInquiry(IdTimestampsMixin, Base):
     telephone: Mapped[str] = mapped_column(String(32))
     mortgage_objective: Mapped[str] = mapped_column(String(40))
     preferred_contact_method: Mapped[str] = mapped_column(String(20))
+    # Legacy, pre-assignment attribution columns. New submissions never populate
+    # them: the submitted reference is resolved to `assigned_agent_user_id` at
+    # capture time and the raw fields are no longer accepted from clients.
     preferred_agent_slug: Mapped[str | None] = mapped_column(String(100))
     preferred_agent_name: Mapped[str | None] = mapped_column(String(120))
     message: Mapped[str | None] = mapped_column(String(1000))
     source: Mapped[str] = mapped_column(String(100), default="website_apply")
     status: Mapped[str] = mapped_column(String(20), default="new")
+    # Exactly one owning agent, resolved server-side from an opaque referral code
+    # or a published profile slug, or set by an administrator.
+    assigned_agent_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), default=None
+    )
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    attribution_source: Mapped[str | None] = mapped_column(String(40), default=None)
+    attributed_referral_link_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agent_referral_links.id", ondelete="SET NULL"), default=None
+    )
 
 
 class ConsentRecord(IdTimestampsMixin, Base):

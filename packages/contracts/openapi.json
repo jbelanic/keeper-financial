@@ -292,6 +292,174 @@
         }
       }
     },
+    "/api/v1/leads/assignable-agents": {
+      "get": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "List Lead Assignable Agents",
+        "description": "Onboarded agents an inquiry may be assigned to.",
+        "operationId": "list_lead_assignable_agents_api_v1_leads_assignable_agents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadAssignableAgentList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator access denied"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leads/{lead_id}/assignment": {
+      "post": {
+        "tags": [
+          "leads"
+        ],
+        "summary": "Assign Lead Agent",
+        "description": "Assign the inquiry to one onboarded agent, or clear the assignment.",
+        "operationId": "assign_lead_agent_api_v1_leads__lead_id__assignment_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lead_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lead Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadAssignmentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadStatusUpdated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrator access denied"
+          },
+          "404": {
+            "description": "Lead unavailable"
+          },
+          "409": {
+            "description": "Selected account is not an onboarded agent"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/leads/{lead_id}/marketing-consent/withdrawal": {
       "post": {
         "tags": [
@@ -2801,6 +2969,184 @@
           },
           "404": {
             "description": "Agent account not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/leads": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Agent Leads",
+        "description": "Inquiries assigned to the signed-in agent account only.",
+        "operationId": "agent_leads_api_v1_agent_leads_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLeadListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Agent access with MFA is required"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/leads/{lead_id}": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Agent Lead Detail",
+        "description": "Full contact details for one inquiry assigned to this agent.",
+        "operationId": "agent_lead_detail_api_v1_agent_leads__lead_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lead_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Lead Id"
+            }
+          },
+          {
+            "name": "x-dev-auth-sub",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-Auth-Sub"
+            }
+          },
+          {
+            "name": "x-dev-auth-aal",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "aal1",
+              "title": "X-Dev-Auth-Aal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentLeadDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Agent access with MFA is required"
+          },
+          "404": {
+            "description": "Lead unavailable"
           },
           "422": {
             "description": "Validation Error",
@@ -7089,6 +7435,216 @@
         ],
         "title": "AdminPostingList"
       },
+      "AgentLeadDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email",
+            "title": "Email"
+          },
+          "telephone": {
+            "type": "string",
+            "title": "Telephone"
+          },
+          "mortgage_objective": {
+            "type": "string",
+            "enum": [
+              "purchase",
+              "refinance",
+              "renewal",
+              "investment",
+              "other"
+            ],
+            "title": "Mortgage Objective"
+          },
+          "preferred_contact_method": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telephone"
+            ],
+            "title": "Preferred Contact Method"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "assigned",
+              "contacted",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "service_consent": {
+            "$ref": "#/components/schemas/ConsentState"
+          },
+          "marketing_consent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConsentState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "telephone",
+          "mortgage_objective",
+          "preferred_contact_method",
+          "message",
+          "status",
+          "assigned_at",
+          "created_at",
+          "service_consent",
+          "marketing_consent"
+        ],
+        "title": "AgentLeadDetail"
+      },
+      "AgentLeadListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLeadSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AgentLeadListResponse"
+      },
+      "AgentLeadSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "mortgage_objective": {
+            "type": "string",
+            "enum": [
+              "purchase",
+              "refinance",
+              "renewal",
+              "investment",
+              "other"
+            ],
+            "title": "Mortgage Objective"
+          },
+          "preferred_contact_method": {
+            "type": "string",
+            "enum": [
+              "email",
+              "telephone"
+            ],
+            "title": "Preferred Contact Method"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "assigned",
+              "contacted",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "mortgage_objective",
+          "preferred_contact_method",
+          "status",
+          "assigned_at",
+          "created_at"
+        ],
+        "title": "AgentLeadSummary"
+      },
       "AgentProfileCreate": {
         "properties": {
           "user_id": {
@@ -10657,6 +11213,74 @@
         ],
         "title": "InterviewStatusUpdate"
       },
+      "LeadAssignableAgent": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "has_referral_link": {
+            "type": "boolean",
+            "title": "Has Referral Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "display_name",
+          "email",
+          "has_referral_link"
+        ],
+        "title": "LeadAssignableAgent"
+      },
+      "LeadAssignableAgentList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LeadAssignableAgent"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "LeadAssignableAgentList"
+      },
+      "LeadAssignmentUpdate": {
+        "properties": {
+          "agent_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent User Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "agent_user_id"
+        ],
+        "title": "LeadAssignmentUpdate",
+        "description": "Assign an inquiry to one onboarded agent, or clear the assignment."
+      },
       "LeadInquiryCreate": {
         "properties": {
           "name": {
@@ -10697,7 +11321,7 @@
             ],
             "title": "Preferred Contact Method"
           },
-          "preferred_agent_slug": {
+          "agent_reference": {
             "anyOf": [
               {
                 "type": "string",
@@ -10708,19 +11332,7 @@
                 "type": "null"
               }
             ],
-            "title": "Preferred Agent Slug"
-          },
-          "preferred_agent_name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 120
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preferred Agent Name"
+            "title": "Agent Reference"
           },
           "message": {
             "anyOf": [
@@ -10872,6 +11484,52 @@
               "closed"
             ],
             "title": "Status"
+          },
+          "assigned_agent_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent User Id"
+          },
+          "assigned_agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Agent Name"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "attribution_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution Source"
           },
           "created_at": {
             "type": "string",

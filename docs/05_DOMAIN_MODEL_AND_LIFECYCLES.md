@@ -267,6 +267,15 @@ new → assigned → contacted → closed
 
 This is not a full CRM lifecycle. It exists only to prevent website inquiries from being lost.
 
+Lead ownership (decision 53):
+
+- An inquiry has **at most one owning agent account** (`assigned_agent_user_id`). Ownership is resolved server-side from one opaque submitted reference — the agent referral code or a legacy published-profile slug — mapped onto an *eligible* agent account (active user, `agent` role, active candidate relationship). Profile publication is never a prerequisite.
+- An unknown, revoked, unpublished or ineligible reference is treated exactly like no reference: the inquiry is created unassigned and the response is unchanged, so a code cannot be probed for validity and the applicant is never blocked.
+- An administrator may assign, reassign or clear ownership from the lead queue (`attribution_source = administrator`), with append-only audit evidence.
+- An agent may read **only** inquiries assigned to them, under `agent` role **plus** AAL2 **plus** an active relationship. The list is a summary; the detail read returns the full contact details the applicant entered and appends an `agent_lead_viewed` audit event. An inquiry owned by another agent is indistinguishable from a missing one.
+- The applicant-facing free-text "are you working with an agent?" field is removed; every inquiry without a resolvable reference lands in the shared administrator queue for assignment.
+- Legacy `preferred_agent_slug` / `preferred_agent_name` columns are retained for historical rows only and are not accepted from clients.
+
 ## Borrower application lifecycle
 
 Phase B implements lifecycle metadata, transition validation, and consent/snapshot schema primitives only. No public submit route is mounted. A draft cannot become visible through the internal projection without durable submission evidence, and only the future Phase D submission coordinator may perform the successful `draft → submitted` operation after verifying encrypted immutable snapshot and consent evidence.

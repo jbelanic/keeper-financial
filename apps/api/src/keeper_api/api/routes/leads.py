@@ -9,6 +9,9 @@ from keeper_api.db.session import get_db
 from keeper_api.models.domain import ConsentRecord
 from keeper_api.schemas.leads import (
     ConsentState,
+    LeadAssignableAgent,
+    LeadAssignableAgentList,
+    LeadAssignmentUpdate,
     LeadInquiryCreate,
     LeadInquiryCreated,
     LeadListItem,
@@ -24,10 +27,13 @@ from keeper_api.services.consent_registry import (
 )
 from keeper_api.services.lead_notifications import send_lead_notification_emails
 from keeper_api.services.leads import (
-    InvalidLeadAttribution,
+    LeadAssignmentInvalid,
     LeadInquiryNotFound,
     LeadMarketingConsentNotFound,
+    assign_lead,
+    assigned_agent_names,
     create_lead,
+    list_assignable_agents,
     list_leads,
     update_lead_status,
     withdraw_marketing_consent,
@@ -49,12 +55,9 @@ def submit_lead(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> LeadInquiryCreated:
-    try:
-        lead, marketing_recorded = create_lead(db, payload, request_id=request.state.request_id)
-    except InvalidLeadAttribution as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
-        ) from exc
+    # An unknown or ineligible agent reference resolves to no attribution and is
+    # treated exactly like a submission without one, so a code cannot be probed.
+    lead, marketing_recorded = create_lead(db, payload, request_id=request.state.request_id)
     send_lead_notification_emails(db, settings=settings, lead=lead)
     return LeadInquiryCreated(
         id=lead.id,
@@ -93,6 +96,7 @@ def get_leads(
         offset=query.offset,
     )
     items: list[LeadListItem] = []
+    agent_names = assigned_agent_names(db, leads)
     for lead in leads:
         lead_consents = consents.get(lead.id, {})
         service = lead_consents.get(SERVICE_CONTACT_CONSENT.purpose)
@@ -115,12 +119,91 @@ def get_leads(
                 message=lead.message,
                 source=lead.source,
                 status=lead.status,
+                assigned_agent_user_id=lead.assigned_agent_user_id,
+                assigned_agent_name=(
+                    agent_names.get(lead.assigned_agent_user_id)
+                    if lead.assigned_agent_user_id
+                    else None
+                ),
+                assigned_at=lead.assigned_at,
+                attribution_source=lead.attribution_source,
                 created_at=lead.created_at,
                 service_consent=_consent_state(service),
                 marketing_consent=_consent_state(marketing) if marketing else None,
             )
         )
     return LeadListResponse(items=items, total=total, limit=query.limit, offset=query.offset)
+
+
+@router.get(
+    "/assignable-agents",
+    response_model=LeadAssignableAgentList,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Administrator access denied"},
+    },
+)
+def list_lead_assignable_agents(
+    response: Response,
+    _: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> LeadAssignableAgentList:
+    """Onboarded agents an inquiry may be assigned to."""
+    response.headers.update(NO_STORE)
+    return LeadAssignableAgentList(
+        items=[
+            LeadAssignableAgent(
+                user_id=user_id,
+                display_name=display_name,
+                email=email,
+                has_referral_link=has_link,
+            )
+            for user_id, display_name, email, has_link in list_assignable_agents(db)
+        ]
+    )
+
+
+@router.post(
+    "/{lead_id}/assignment",
+    response_model=LeadStatusUpdated,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Administrator access denied"},
+        404: {"description": "Lead unavailable"},
+        409: {"description": "Selected account is not an onboarded agent"},
+    },
+)
+def assign_lead_agent(
+    lead_id: uuid.UUID,
+    payload: LeadAssignmentUpdate,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> LeadStatusUpdated:
+    """Assign the inquiry to one onboarded agent, or clear the assignment."""
+    response.headers.update(NO_STORE)
+    try:
+        lead = assign_lead(
+            db,
+            lead_id=lead_id,
+            agent_user_id=payload.agent_user_id,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except LeadInquiryNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="lead is unavailable",
+            headers=NO_STORE,
+        ) from exc
+    except LeadAssignmentInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+            headers=NO_STORE,
+        ) from exc
+    return LeadStatusUpdated(id=lead.id, status=lead.status)
 
 
 @router.post(
