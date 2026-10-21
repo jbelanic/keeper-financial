@@ -13,10 +13,13 @@ from conftest import create_user
 from keeper_api.core.config import Settings
 from keeper_api.models.domain import (
     AgentProfile,
+    AgentReferralLink,
     AuditEvent,
+    Candidate,
     ConsentRecord,
     LeadInquiry,
-    User,
+    Role,
+    UserRole,
 )
 from keeper_api.services.audit import AuditService
 from keeper_api.services.submission_guard import LeadSubmissionGuard, SubmissionRateLimited
@@ -72,7 +75,11 @@ def test_marketing_consent_is_optional_and_separate(client: TestClient, db: Sess
     audit_event = db.query(AuditEvent).one()
     assert audit_event.event_type == "lead.created"
     assert audit_event.target_id == uuid.UUID(response.json()["id"])
-    assert audit_event.safe_metadata == {"status": "new", "source": "website_apply"}
+    assert audit_event.safe_metadata == {
+        "status": "new",
+        "source": "website_apply",
+        "assigned": False,
+    }
 
 
 def test_selected_marketing_consent_creates_separate_record(
@@ -151,23 +158,36 @@ def test_contact_form_rejects_unapproved_fields(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_contact_form_rejects_unknown_agent_attribution(client: TestClient) -> None:
+def test_contact_form_ignores_an_unknown_agent_reference(client: TestClient, db: Session) -> None:
     payload = valid_payload()
-    payload["preferred_agent_slug"] = "unapproved-agent"
+    payload["agent_reference"] = "not-an-agent"
     response = client.post("/api/v1/leads", json=payload)
-    assert response.status_code == 422
+
+    # An unknown reference is indistinguishable from no reference, so a code cannot
+    # be probed for validity and the applicant is never blocked.
+    assert response.status_code == 201
+    lead = db.query(LeadInquiry).one()
+    assert lead.assigned_agent_user_id is None
+    assert lead.attribution_source is None
+    assert lead.status == "new"
 
 
-@pytest.mark.parametrize("profile_status,expected", [("published", 201), ("draft", 422)])
-def test_contact_form_accepts_only_published_agent_profile_attribution(
-    client: TestClient, db: Session, profile_status: str, expected: int
+def test_contact_form_rejects_the_former_free_text_agent_name(client: TestClient) -> None:
+    payload = valid_payload()
+    payload["preferred_agent_name"] = "Some Agent"
+    assert client.post("/api/v1/leads", json=payload).status_code == 422
+
+
+@pytest.mark.parametrize("profile_status,assigned", [("published", True), ("draft", False)])
+def test_contact_form_assigns_the_owner_from_a_profile_slug(
+    client: TestClient, db: Session, profile_status: str, assigned: bool
 ) -> None:
-    user = User(
-        email=f"agent-{profile_status}@example.test",
-        display_name=f"Synthetic {profile_status} agent",
+    user, _ = create_user(
+        db,
+        subject=f"slug-agent-{profile_status}",
+        role_code="agent",
+        candidate_status="active",
     )
-    db.add(user)
-    db.flush()
     db.add(
         AgentProfile(
             user_id=user.id,
@@ -180,17 +200,49 @@ def test_contact_form_accepts_only_published_agent_profile_attribution(
     )
     db.commit()
     payload = valid_payload()
-    payload["preferred_agent_slug"] = f"agent-{profile_status}"
+    payload["agent_reference"] = f"agent-{profile_status}"
 
     response = client.post("/api/v1/leads", json=payload)
 
-    assert response.status_code == expected
-    if expected == 201:
-        assert db.query(LeadInquiry).one().preferred_agent_slug == "agent-published"
+    assert response.status_code == 201
+    lead = db.query(LeadInquiry).one()
+    if assigned:
+        assert lead.assigned_agent_user_id == user.id
+        assert lead.attribution_source == "agent_profile_slug"
+        assert lead.status == "assigned"
     else:
-        assert db.query(LeadInquiry).count() == 0
-        assert db.query(ConsentRecord).count() == 0
-        assert db.query(AuditEvent).count() == 0
+        assert lead.assigned_agent_user_id is None
+        assert lead.status == "new"
+
+
+def test_contact_form_assigns_the_owner_from_a_referral_code_without_a_public_profile(
+    client: TestClient, db: Session
+) -> None:
+    """The onboarded-agent link works with no profile at all."""
+    user, _ = create_user(db, subject="coded-agent")
+    role = db.query(Role).filter(Role.code == "agent").one_or_none()
+    if role is None:
+        role = Role(code="agent", description="Synthetic agent")
+        db.add(role)
+        db.flush()
+    db.add(UserRole(user_id=user.id, role_id=role.id))
+    db.add(Candidate(user_id=user.id, status="active"))
+    link = AgentReferralLink(user_id=user.id, code="0123456789abcdef0123")
+    db.add(link)
+    db.commit()
+
+    payload = valid_payload()
+    payload["agent_reference"] = link.code
+
+    response = client.post("/api/v1/leads", json=payload)
+
+    assert response.status_code == 201
+    lead = db.query(LeadInquiry).one()
+    assert lead.assigned_agent_user_id == user.id
+    assert lead.attribution_source == "agent_code"
+    assert lead.attributed_referral_link_id == link.id
+    assert lead.status == "assigned"
+    assert lead.assigned_at is not None
 
 
 def test_contact_form_rejects_filled_automation_trap(client: TestClient) -> None:
@@ -633,29 +685,22 @@ def enable_lead_notifications(settings: Settings) -> None:
     settings.lead_notification_broker_email = "broker@example.test"
 
 
-def test_contact_lead_notifies_selected_agent_and_admin_without_pii(
+def test_contact_lead_notifies_the_owning_agent_and_admin_without_pii(
     client: TestClient, db: Session, settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_lead_notifications(settings)
     settings.smtp_port = 1025
     FakeLeadSMTP.messages = []
     monkeypatch.setattr("keeper_api.services.lead_notifications.smtplib.SMTP", FakeLeadSMTP)
-    agent = User(email="agent@example.test", display_name="Synthetic Agent")
-    db.add(agent)
-    db.flush()
-    db.add(
-        AgentProfile(
-            user_id=agent.id,
-            slug="published-agent",
-            licensed_name="Synthetic Agent",
-            approved_title="Mortgage Agent",
-            licence_number="SYNTHETIC",
-            status="published",
-        )
+    agent, _ = create_user(
+        db, subject="notified-agent", role_code="agent", candidate_status="active"
     )
+    agent.email = "agent@example.test"
+    link = AgentReferralLink(user_id=agent.id, code="abcdef0123456789abcd")
+    db.add(link)
     db.commit()
     payload = valid_payload()
-    payload["preferred_agent_slug"] = "published-agent"
+    payload["agent_reference"] = link.code
 
     response = client.post("/api/v1/leads", json=payload)
 
@@ -667,6 +712,7 @@ def test_contact_lead_notifies_selected_agent_and_admin_without_pii(
     bodies = "\n".join(message_text(message) for message in FakeLeadSMTP.messages)
     assert str(response.json()["id"]) in bodies
     assert "/admin/leads" in bodies
+    assert "assigned to an agent" in bodies
     assert "Synthetic Visitor" not in bodies
     assert "visitor@example.com" not in bodies
     assert "+1 (416) 555-0100" not in bodies

@@ -9,6 +9,7 @@ import Loading from "@/app/(admin)/admin/leads/loading";
 import { LeadQueue, LeadQueueError } from "@/app/(admin)/admin/leads/page";
 import { WithdrawalControl } from "@/app/(admin)/admin/leads/withdrawal-control";
 import {
+  adminLeadAssignmentRequest,
   adminLeadListRequest,
   adminMarketingWithdrawalRequest,
   adminLeadStatusRequest,
@@ -273,5 +274,84 @@ describe("admin lead queue", () => {
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
       /could not be completed/i,
     );
+  });
+
+  it("assigns a lead to an onboarded agent through the authenticated API", async () => {
+    const agentId = "00000000-0000-4000-8000-0000000000aa";
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: data.items[0].id, status: "assigned" }),
+    });
+
+    await expect(
+      adminLeadAssignmentRequest(
+        "synthetic-token",
+        data.items[0].id,
+        agentId,
+        fetchMock as unknown as typeof fetch,
+      ),
+    ).resolves.toEqual({ id: data.items[0].id, status: "assigned" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://localhost:8000/api/v1/leads/${data.items[0].id}/assignment`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ agent_user_id: agentId }),
+      }),
+    );
+  });
+
+  it("rejects a malformed agent identifier before calling the API", async () => {
+    const fetchMock = vi.fn();
+    await expect(
+      adminLeadAssignmentRequest(
+        "synthetic-token",
+        data.items[0].id,
+        "not-a-uuid",
+        fetchMock as unknown as typeof fetch,
+      ),
+    ).rejects.toThrow(/invalid agent identifier/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the owning agent and offers the assignment control", () => {
+    const agentId = "00000000-0000-4000-8000-0000000000aa";
+    const assigned: AdminLeadList = {
+      ...data,
+      items: [
+        {
+          ...data.items[0],
+          status: "assigned",
+          assigned_agent_user_id: agentId,
+          assigned_agent_name: "Synthetic Agent A",
+          assigned_at: "2026-07-15T12:00:00Z",
+          attribution_source: "administrator",
+        },
+      ],
+    };
+    render(
+      <LeadQueue
+        data={assigned}
+        page={1}
+        agents={[
+          {
+            user_id: agentId,
+            display_name: "Synthetic Agent A",
+            email: "agent-a@example.test",
+            has_referral_link: true,
+          },
+        ]}
+        assignAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/owned by synthetic agent a/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/owning agent for synthetic lead/i),
+    ).toHaveValue(agentId);
+    expect(
+      screen.getByRole("button", {
+        name: /save assignment for synthetic lead/i,
+      }),
+    ).toBeInTheDocument();
   });
 });

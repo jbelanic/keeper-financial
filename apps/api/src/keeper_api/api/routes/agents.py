@@ -23,6 +23,12 @@ from keeper_api.schemas.agents import (
     PublicAgentProfileSummary,
     SlugAvailability,
 )
+from keeper_api.schemas.leads import (
+    AgentLeadDetail,
+    AgentLeadListResponse,
+    AgentLeadSummary,
+    ConsentState,
+)
 from keeper_api.schemas.lifecycle import AgentStatusResponse, AgentTransitionRequest
 from keeper_api.services.agents import (
     AgentProfileConflict,
@@ -44,6 +50,13 @@ from keeper_api.services.auth import (
     get_current_principal,
     require_admin,
     require_admin_aal2,
+)
+from keeper_api.services.borrower_authorization import require_agent_role_access
+from keeper_api.services.consent_registry import MARKETING_CONSENT, SERVICE_CONTACT_CONSENT
+from keeper_api.services.leads import (
+    LeadInquiryNotFound,
+    get_agent_lead,
+    list_agent_leads,
 )
 
 router = APIRouter(tags=["agents"])
@@ -406,3 +419,114 @@ def rotate_agent_referral_link(
     except AgentProfileConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _referral_out(link, settings)
+
+
+# --------------------------------------------------------------------------- #
+# Agent-owned lead inquiries
+# --------------------------------------------------------------------------- #
+
+
+def _lead_consent(consent: object | None) -> ConsentState | None:
+    from keeper_api.models.domain import ConsentRecord
+
+    if not isinstance(consent, ConsentRecord):
+        return None
+    return ConsentState(
+        state="withdrawn" if consent.withdrawn_at else "granted",
+        granted_at=consent.granted_at,
+        withdrawn_at=consent.withdrawn_at,
+    )
+
+
+@router.get(
+    "/agent/leads",
+    response_model=AgentLeadListResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Agent access with MFA is required"},
+    },
+)
+def agent_leads(
+    response: Response,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AgentLeadListResponse:
+    """Inquiries assigned to the signed-in agent account only."""
+    response.headers.update(NO_STORE)
+    require_agent_role_access(principal, db, settings)
+    leads, _consents, total = list_agent_leads(
+        db, agent_user_id=principal.user_id, limit=limit, offset=offset
+    )
+    return AgentLeadListResponse(
+        items=[
+            AgentLeadSummary(
+                id=lead.id,
+                name=lead.name,
+                mortgage_objective=lead.mortgage_objective,
+                preferred_contact_method=lead.preferred_contact_method,
+                status=lead.status,
+                assigned_at=lead.assigned_at,
+                created_at=lead.created_at,
+            )
+            for lead in leads
+        ],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/agent/leads/{lead_id}",
+    response_model=AgentLeadDetail,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Agent access with MFA is required"},
+        404: {"description": "Lead unavailable"},
+    },
+)
+def agent_lead_detail(
+    lead_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> AgentLeadDetail:
+    """Full contact details for one inquiry assigned to this agent."""
+    response.headers.update(NO_STORE)
+    require_agent_role_access(principal, db, settings)
+    try:
+        lead, consents = get_agent_lead(
+            db,
+            lead_id=lead_id,
+            agent_user_id=principal.user_id,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+        )
+    except LeadInquiryNotFound as exc:
+        raise HTTPException(status_code=404, detail="lead is unavailable") from exc
+    service_consent = _lead_consent(consents.get(SERVICE_CONTACT_CONSENT.purpose))
+    if service_consent is None:
+        raise HTTPException(
+            status_code=500,
+            detail="lead consent evidence is unavailable",
+            headers=NO_STORE,
+        )
+    return AgentLeadDetail(
+        id=lead.id,
+        name=lead.name,
+        email=lead.email,
+        telephone=lead.telephone,
+        mortgage_objective=lead.mortgage_objective,
+        preferred_contact_method=lead.preferred_contact_method,
+        message=lead.message,
+        status=lead.status,
+        assigned_at=lead.assigned_at,
+        created_at=lead.created_at,
+        service_consent=service_consent,
+        marketing_consent=_lead_consent(consents.get(MARKETING_CONSENT.purpose)),
+    )

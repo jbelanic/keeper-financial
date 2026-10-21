@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from keeper_api.core.config import Settings
-from keeper_api.models.domain import AgentProfile, LeadInquiry, User
+from keeper_api.models.domain import LeadInquiry, User
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +28,14 @@ def _recipient_message(
     message["From"] = settings.smtp_from
     message["To"] = recipient_email
     message["Subject"] = settings.lead_notification_subject
-    preferred_agent = lead.preferred_agent_slug or "none selected"
+    assignment = "assigned to an agent" if lead.assigned_agent_user_id else "not assigned"
     text = (
         "A new Keeper contact request has been received.\n\n"
         f"Notification recipient: {recipient_label}\n"
         f"Lead reference: {lead.id}\n"
         f"Status: {lead.status}\n"
         f"Source: {lead.source}\n"
-        f"Preferred agent: {preferred_agent}\n\n"
+        f"Assignment: {assignment}\n\n"
         f"Review the request in the protected admin lead queue:\n{ADMIN_LEADS_PATH}\n\n"
         "No applicant name, email address, phone number, or free-text message is included "
         "in this notification.\n"
@@ -46,7 +46,7 @@ def _recipient_message(
         f"<p><strong>Lead reference:</strong> <code>{lead.id}</code></p>"
         f"<p><strong>Status:</strong> {lead.status}<br />"
         f"<strong>Source:</strong> {lead.source}<br />"
-        f"<strong>Preferred agent:</strong> {preferred_agent}</p>"
+        f"<strong>Assignment:</strong> {assignment}</p>"
         f'<p>Review the request in the protected <a href="{ADMIN_LEADS_PATH}">admin lead queue</a>.</p>'
         "<p>No applicant name, email address, phone number, or free-text message is included "
         "in this notification.</p>"
@@ -57,14 +57,12 @@ def _recipient_message(
 
 
 def _agent_email_for_lead(db: Session, lead: LeadInquiry) -> str | None:
-    if not lead.preferred_agent_slug:
+    """The owning agent account, when the inquiry is assigned to one."""
+    if lead.assigned_agent_user_id is None:
         return None
     return db.scalar(
-        select(User.email)
-        .join(AgentProfile, AgentProfile.user_id == User.id)
-        .where(
-            AgentProfile.slug == lead.preferred_agent_slug,
-            AgentProfile.status == "published",
+        select(User.email).where(
+            User.id == lead.assigned_agent_user_id,
             User.is_active.is_(True),
         )
     )

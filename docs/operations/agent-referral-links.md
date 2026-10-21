@@ -64,6 +64,29 @@ attribution source (`via agent link: <name>`), backed by these
 Assignment at start appends `borrower_assignment_history` with
 `reason_category = attribution`.
 
+## Lead inquiries
+
+The same reference also owns **contact-form inquiries** (decision 53):
+
+- The contact form carries no free-text agent field. Every inquiry lands in the
+  administrator lead queue.
+- When the submission carries `?agent=<code>` (or a legacy published-profile
+  slug), the reference is resolved server-side to an *eligible* agent account and
+  the inquiry is created assigned to them (`attribution_source = agent_code` or
+  `agent_profile_slug`). An unknown, revoked, unpublished or ineligible reference
+  is ignored exactly like no reference — the response is unchanged, so a code
+  cannot be probed.
+- An administrator may assign, reassign or clear ownership from
+  `/admin/leads` (`attribution_source = administrator`), with audit evidence.
+- The assigned agent sees the inquiry in the agent console and reads the full
+  details the applicant submitted — name, email, telephone, objective, preferred
+  contact method, message, consent state — through
+  `GET /api/v1/agent/leads/{lead_id}` (agent role + AAL2 + active relationship;
+  every detail read appends `agent_lead_viewed`). An inquiry owned by another
+  agent returns `404`.
+- Lead notification email follows the assigned agent; it stays PII-minimized
+  (reference, status, assignment only).
+
 ## Assigned-agent draft access
 
 The assigned agent can open an in-progress draft of an application attributed to
@@ -100,6 +123,13 @@ docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
          (select count(*) from candidates c where c.user_id = u.id and c.status = '"'"'active'"'"') as active_candidates
   from agent_referral_links l join users u on u.id = l.user_id
   order by l.created_at desc;"'
+```
+
+```bash
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+  select id, status, assigned_agent_user_id, attribution_source, assigned_at
+  from lead_inquiries
+  order by created_at desc limit 10;"'
 ```
 
 ```bash

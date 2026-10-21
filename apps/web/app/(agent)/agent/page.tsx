@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ErrorState } from "@keeper/ui";
 import { getAgentAssignedBootstrap } from "@/lib/borrower-review-api";
 import { AgentAssignedConsole } from "./agent-console";
+import { AgentLeads } from "./agent-leads";
 
 export const metadata: Metadata = { title: "My assigned applications" };
 
@@ -17,6 +18,7 @@ export default async function AgentApplicationsPage() {
           details needed to open the deal in your origination system.
         </p>
       </header>
+      <AgentLeads />
       {queue ? (
         <AgentAssignedConsole initialQueue={queue} />
       ) : (

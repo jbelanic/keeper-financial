@@ -23,10 +23,10 @@ class LeadInquiryCreate(BaseModel):
     telephone: str = Field(min_length=7, max_length=32, pattern=r"^[0-9+().\- x]+$")
     mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
     preferred_contact_method: Literal["email", "telephone"]
-    preferred_agent_slug: str | None = Field(default=None, max_length=100, pattern=r"^[a-z0-9-]+$")
-    # Applicant-supplied agent name when they have no referral link. Routing hint
-    # for administrator triage; never matched to an account automatically.
-    preferred_agent_name: str | None = Field(default=None, max_length=120)
+    # One opaque reference from the agent link (`?agent=`), resolved server-side to
+    # an eligible agent account. Accepts the current referral code and the legacy
+    # published-profile slug; never a client-supplied account identifier.
+    agent_reference: str | None = Field(default=None, max_length=100, pattern=r"^[a-z0-9-]+$")
     message: str | None = Field(default=None, max_length=1000)
     service_contact_acknowledged: bool
     marketing_consent: bool = False
@@ -103,11 +103,16 @@ class LeadListItem(BaseModel):
     telephone: str
     mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
     preferred_contact_method: Literal["email", "telephone"]
+    # Legacy pre-assignment attribution, retained for historical rows only.
     preferred_agent_slug: str | None
     preferred_agent_name: str | None = None
     message: str | None
     source: str
     status: LeadStatus
+    assigned_agent_user_id: uuid.UUID | None = None
+    assigned_agent_name: str | None = None
+    assigned_at: datetime | None = None
+    attribution_source: str | None = None
     created_at: datetime
     service_consent: ConsentState
     marketing_consent: ConsentState | None
@@ -118,3 +123,54 @@ class LeadListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class LeadAssignmentUpdate(BaseModel):
+    """Assign an inquiry to one onboarded agent, or clear the assignment."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    agent_user_id: uuid.UUID | None
+
+
+class LeadAssignableAgent(BaseModel):
+    user_id: uuid.UUID
+    display_name: str
+    email: str
+    has_referral_link: bool
+
+
+class LeadAssignableAgentList(BaseModel):
+    items: list[LeadAssignableAgent]
+
+
+class AgentLeadSummary(BaseModel):
+    id: uuid.UUID
+    name: str
+    mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
+    preferred_contact_method: Literal["email", "telephone"]
+    status: LeadStatus
+    assigned_at: datetime | None
+    created_at: datetime
+
+
+class AgentLeadListResponse(BaseModel):
+    items: list[AgentLeadSummary]
+    total: int
+    limit: int
+    offset: int
+
+
+class AgentLeadDetail(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str = Field(max_length=320, json_schema_extra={"format": "email"})
+    telephone: str
+    mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
+    preferred_contact_method: Literal["email", "telephone"]
+    message: str | None
+    status: LeadStatus
+    assigned_at: datetime | None
+    created_at: datetime
+    service_consent: ConsentState
+    marketing_consent: ConsentState | None

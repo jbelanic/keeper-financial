@@ -15,6 +15,6 @@ export default async function ApplyPage({
 }: {
   searchParams?: Promise<{ agent?: string | string[] }>;
 }) {
-  const agentSlug = safeAgentAttribution((await searchParams)?.agent);
-  return <ApplyPaths agentSlug={agentSlug} />;
+  const agentReference = safeAgentAttribution((await searchParams)?.agent);
+  return <ApplyPaths agentReference={agentReference} />;
 }

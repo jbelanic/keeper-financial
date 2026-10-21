@@ -73,6 +73,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/leads/assignable-agents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Lead Assignable Agents
+     * @description Onboarded agents an inquiry may be assigned to.
+     */
+    get: operations["list_lead_assignable_agents_api_v1_leads_assignable_agents_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/leads/{lead_id}/assignment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Assign Lead Agent
+     * @description Assign the inquiry to one onboarded agent, or clear the assignment.
+     */
+    post: operations["assign_lead_agent_api_v1_leads__lead_id__assignment_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/leads/{lead_id}/marketing-consent/withdrawal": {
     parameters: {
       query?: never;
@@ -537,6 +577,46 @@ export interface paths {
      * @description Replace an agent's code; the previous link stops resolving immediately.
      */
     post: operations["rotate_agent_referral_link_api_v1_admin_agent_accounts__user_id__referral_link_rotate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/agent/leads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Agent Leads
+     * @description Inquiries assigned to the signed-in agent account only.
+     */
+    get: operations["agent_leads_api_v1_agent_leads_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/agent/leads/{lead_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Agent Lead Detail
+     * @description Full contact details for one inquiry assigned to this agent.
+     */
+    get: operations["agent_lead_detail_api_v1_agent_leads__lead_id__get"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1493,6 +1573,102 @@ export interface components {
       limit: number;
       /** Offset */
       offset: number;
+    };
+    /** AgentLeadDetail */
+    AgentLeadDetail: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      /** Telephone */
+      telephone: string;
+      /**
+       * Mortgage Objective
+       * @enum {string}
+       */
+      mortgage_objective:
+        | "purchase"
+        | "refinance"
+        | "renewal"
+        | "investment"
+        | "other";
+      /**
+       * Preferred Contact Method
+       * @enum {string}
+       */
+      preferred_contact_method: "email" | "telephone";
+      /** Message */
+      message: string | null;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "new" | "assigned" | "contacted" | "closed";
+      /** Assigned At */
+      assigned_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      service_consent: components["schemas"]["ConsentState"];
+      marketing_consent: components["schemas"]["ConsentState"] | null;
+    };
+    /** AgentLeadListResponse */
+    AgentLeadListResponse: {
+      /** Items */
+      items: components["schemas"]["AgentLeadSummary"][];
+      /** Total */
+      total: number;
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+    };
+    /** AgentLeadSummary */
+    AgentLeadSummary: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Mortgage Objective
+       * @enum {string}
+       */
+      mortgage_objective:
+        | "purchase"
+        | "refinance"
+        | "renewal"
+        | "investment"
+        | "other";
+      /**
+       * Preferred Contact Method
+       * @enum {string}
+       */
+      preferred_contact_method: "email" | "telephone";
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "new" | "assigned" | "contacted" | "closed";
+      /** Assigned At */
+      assigned_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
     };
     /** AgentProfileCreate */
     AgentProfileCreate: {
@@ -2702,6 +2878,33 @@ export interface components {
       /** Notes */
       notes?: string | null;
     };
+    /** LeadAssignableAgent */
+    LeadAssignableAgent: {
+      /**
+       * User Id
+       * Format: uuid
+       */
+      user_id: string;
+      /** Display Name */
+      display_name: string;
+      /** Email */
+      email: string;
+      /** Has Referral Link */
+      has_referral_link: boolean;
+    };
+    /** LeadAssignableAgentList */
+    LeadAssignableAgentList: {
+      /** Items */
+      items: components["schemas"]["LeadAssignableAgent"][];
+    };
+    /**
+     * LeadAssignmentUpdate
+     * @description Assign an inquiry to one onboarded agent, or clear the assignment.
+     */
+    LeadAssignmentUpdate: {
+      /** Agent User Id */
+      agent_user_id: string | null;
+    };
     /** LeadInquiryCreate */
     LeadInquiryCreate: {
       /** Name */
@@ -2728,10 +2931,8 @@ export interface components {
        * @enum {string}
        */
       preferred_contact_method: "email" | "telephone";
-      /** Preferred Agent Slug */
-      preferred_agent_slug?: string | null;
-      /** Preferred Agent Name */
-      preferred_agent_name?: string | null;
+      /** Agent Reference */
+      agent_reference?: string | null;
       /** Message */
       message?: string | null;
       /** Service Contact Acknowledged */
@@ -2803,6 +3004,14 @@ export interface components {
        * @enum {string}
        */
       status: "new" | "assigned" | "contacted" | "closed";
+      /** Assigned Agent User Id */
+      assigned_agent_user_id?: string | null;
+      /** Assigned Agent Name */
+      assigned_agent_name?: string | null;
+      /** Assigned At */
+      assigned_at?: string | null;
+      /** Attribution Source */
+      attribution_source?: string | null;
       /**
        * Created At
        * Format: date-time
@@ -3440,6 +3649,118 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  list_lead_assignable_agents_api_v1_leads_assignable_agents_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadAssignableAgentList"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Administrator access denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  assign_lead_agent_api_v1_leads__lead_id__assignment_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        lead_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadAssignmentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadStatusUpdated"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Administrator access denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Lead unavailable */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Selected account is not an onboarded agent */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
       };
     };
   };
@@ -5130,6 +5451,110 @@ export interface operations {
         content?: never;
       };
       /** @description Agent account not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  agent_leads_api_v1_agent_leads_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AgentLeadListResponse"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Agent access with MFA is required */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  agent_lead_detail_api_v1_agent_leads__lead_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path: {
+        lead_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AgentLeadDetail"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Agent access with MFA is required */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Lead unavailable */
       404: {
         headers: {
           [name: string]: unknown;
