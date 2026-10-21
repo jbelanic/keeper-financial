@@ -30,7 +30,8 @@ export default async function Page({
 }) {
   const params = await searchParams;
   const requestedPosting = scalar(params.posting) ?? "";
-  const returnTo = safeReturnTo(scalar(params.returnTo));
+  const requestedReturnTo = scalar(params.returnTo);
+  const returnTo = safeReturnTo(requestedReturnTo);
   let posting = null;
   if (requestedPosting) {
     try {
@@ -89,6 +90,7 @@ export default async function Page({
             <SignInForm
               posting={posting?.slug}
               returnTo={returnTo}
+              returnToExplicit={Boolean(requestedReturnTo)}
               error={scalar(params.error)}
             />
             {posting ? (

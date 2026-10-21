@@ -3,14 +3,22 @@ import { NextRequest } from "next/server";
 
 const signInWithPassword = vi.fn();
 const exchangeCodeForSession = vi.fn();
+const getAuthenticatorAssuranceLevel = vi.fn();
+const portalAccessRequest = vi.fn();
 const startCandidateApplication = vi.fn();
 const getPublishedPosting = vi.fn();
 
 vi.mock("@/lib/supabase-server", () => ({
   getSupabaseServerClient: async () => ({
-    auth: { signInWithPassword, exchangeCodeForSession },
+    auth: {
+      signInWithPassword,
+      exchangeCodeForSession,
+      mfa: { getAuthenticatorAssuranceLevel },
+    },
   }),
 }));
+
+vi.mock("@/lib/portal-access", () => ({ portalAccessRequest }));
 
 vi.mock("@/lib/candidate-provisioning", async (importOriginal) => {
   const actual =
@@ -40,6 +48,10 @@ describe("posting-bound existing-user sign-in", () => {
     exchangeCodeForSession.mockReset();
     startCandidateApplication.mockReset();
     getPublishedPosting.mockReset();
+    portalAccessRequest.mockReset().mockResolvedValue(null);
+    getAuthenticatorAssuranceLevel
+      .mockReset()
+      .mockResolvedValue({ data: { currentLevel: "aal1" }, error: null });
   });
 
   it("renders an explicit posting-bound native form", async () => {
@@ -335,5 +347,85 @@ describe("posting-bound confirmation callback", () => {
       "http://localhost:3000/auth/sign-in?error=verification&posting=synthetic-opportunity",
     );
     expect(response.headers.get("location")).not.toContain("provider");
+  });
+
+  it("lands an activated agent in the agent console instead of the candidate portal", async () => {
+    signInWithPassword.mockResolvedValue({
+      data: { session: { access_token: "agent-access-token" } },
+      error: null,
+    });
+    portalAccessRequest.mockResolvedValue({
+      roles: ["candidate", "agent"],
+    });
+    const { POST } = await import("@/app/auth/sign-in/submit/route");
+    const response = await POST(
+      request(
+        new URLSearchParams({
+          email: "agent@example.test",
+          password: "synthetic-password",
+          returnTo: "/candidate",
+        }),
+      ),
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/auth/mfa?returnTo=/agent",
+    );
+    expect(portalAccessRequest).toHaveBeenCalledWith(
+      "agent-access-token",
+      "candidate",
+    );
+  });
+
+  it("sends an agent already at AAL2 straight to the agent console", async () => {
+    signInWithPassword.mockResolvedValue({
+      data: { session: { access_token: "agent-access-token" } },
+      error: null,
+    });
+    portalAccessRequest.mockResolvedValue({
+      roles: ["candidate", "agent"],
+    });
+    getAuthenticatorAssuranceLevel.mockResolvedValue({
+      data: { currentLevel: "aal2" },
+      error: null,
+    });
+    const { POST } = await import("@/app/auth/sign-in/submit/route");
+    const response = await POST(
+      request(
+        new URLSearchParams({
+          email: "agent@example.test",
+          password: "synthetic-password",
+          returnTo: "/candidate",
+        }),
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/agent",
+    );
+  });
+
+  it("honours an explicitly requested candidate portal for an agent", async () => {
+    signInWithPassword.mockResolvedValue({
+      data: { session: { access_token: "agent-access-token" } },
+      error: null,
+    });
+    portalAccessRequest.mockResolvedValue({
+      roles: ["candidate", "agent"],
+    });
+    const { POST } = await import("@/app/auth/sign-in/submit/route");
+    const response = await POST(
+      request(
+        new URLSearchParams({
+          email: "agent@example.test",
+          password: "synthetic-password",
+          returnTo: "/candidate",
+          returnToExplicit: "1",
+        }),
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/candidate",
+    );
+    expect(portalAccessRequest).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@ import { ErrorState } from "@keeper/ui";
 import { getAgentAssignedBootstrap } from "@/lib/borrower-review-api";
 import { AgentAssignedConsole } from "./agent-console";
 import { AgentLeads } from "./agent-leads";
+import { AgentLinkCard } from "./agent-link-card";
 
 export const metadata: Metadata = { title: "My assigned applications" };
 
@@ -14,10 +15,11 @@ export default async function AgentApplicationsPage() {
         <p className="eyebrow">Agent</p>
         <h1>My assigned applications</h1>
         <p>
-          Review the borrower applications assigned to you and retrieve the full
-          details needed to open the deal in your origination system.
+          Share your application link with clients, and review the borrower
+          applications assigned to you.
         </p>
       </header>
+      <AgentLinkCard />
       <AgentLeads />
       {queue ? (
         <AgentAssignedConsole initialQueue={queue} />
