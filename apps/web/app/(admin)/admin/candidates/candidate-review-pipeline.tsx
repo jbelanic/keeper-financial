@@ -564,12 +564,29 @@ export function CandidateReviewPipeline({
         <Card>
           <h2>Application actions</h2>
           <p>
-            Select an exact opportunity and application attempt from the review
-            queue.
+            Select an application from the review queue above to open its
+            actions. Every action is recorded against that exact opportunity and
+            application attempt.
           </p>
-          <Button type="button" disabled>
-            Send request
-          </Button>
+          <ul>
+            <li>
+              <strong>Begin review</strong> — move a newly submitted application
+              into review.
+            </li>
+            <li>
+              <strong>Record interview status</strong> — scheduled, completed,
+              cancelled, or no show, with plain-text notes.
+            </li>
+            <li>
+              <strong>Request information</strong> — send one bounded message to
+              the candidate; the application moves to “more information
+              required” and the request appears in the candidate portal.
+            </li>
+            <li>
+              <strong>Decide</strong> — conditionally select, decline, or mark
+              the application withdrawn, with a reason and audit evidence.
+            </li>
+          </ul>
         </Card>
       )}
 

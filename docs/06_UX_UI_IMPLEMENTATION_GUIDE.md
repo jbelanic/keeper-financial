@@ -167,6 +167,26 @@ over the FastAPI authorization boundary.
 - Reason required for high-risk status changes.
 - No hidden status changes.
 
+Implementation conventions (2026-10-21 queue usability pass, decision 54):
+
+- The lead queue renders one compact table row per inquiry (received, name,
+  contact, objective, status, owning agent) and reveals the full record —
+  message, consent state, withdrawal control, assignment, and status actions —
+  only for the row an administrator expands. Never render every lead fully
+  expanded; the queue must stay scannable as volume grows.
+- The default status filter is `new`. Assigned and closed inquiries leave the
+  default view (assignment sets `assigned`) and stay reachable through the
+  status filter, including an explicit `all` option.
+- An empty selection state explains the available actions. Do not render a
+  disabled action button as a placeholder for "nothing selected".
+- Agent selectors label every option with the account email as well as the
+  display name, because candidate-provisioned accounts start with the
+  placeholder name `Candidate`.
+- Primary work owns the top of an administration page: onboarding assignments
+  and agent profiles list first, with one explicit button that opens the
+  create/edit form, and onboarding plan templates stay collapsed behind an
+  explicit *View plan templates* / *Create new plan* control.
+
 ## Agent profiles
 
 Standard fields:

@@ -60,6 +60,9 @@ describe("admin agent profile manager", () => {
       />,
     );
 
+    // The list owns the page; the create form is opened explicitly.
+    expect(screen.queryByLabelText(/eligible agent/i)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Create new profile" }));
     fireEvent.change(screen.getByLabelText(/eligible agent/i), {
       target: { value: draft.user_id },
     });
@@ -102,6 +105,56 @@ describe("admin agent profile manager", () => {
     );
     expect(
       screen.getByRole("heading", { name: /edit agent profile/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("lists profiles first and opens editing from the list", async () => {
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
+        requester={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Create new profile" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/eligible agent/i)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit synthetic agent/i }),
+    );
+    expect(
+      screen.getByRole("heading", { name: /edit agent profile/i }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel editing" }));
+    expect(
+      screen.queryByRole("heading", { name: /edit agent profile/i }),
+    ).toBeNull();
+  });
+
+  it("explains when no eligible agent is available for a new profile", async () => {
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={[]}
+        requester={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Create new profile" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(/every agent already has one/i),
     ).toBeInTheDocument();
   });
 

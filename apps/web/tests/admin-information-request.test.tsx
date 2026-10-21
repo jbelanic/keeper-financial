@@ -116,10 +116,14 @@ describe("application-specific administrator information requests", () => {
       />,
     );
 
-    const initiallyDisabled = screen.getByRole("button", {
-      name: /send request/i,
-    });
-    expect(initiallyDisabled).toBeDisabled();
+    // Before a selection there is no action control at all — only guidance.
+    expect(screen.queryByRole("button", { name: /send request/i })).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: /application actions/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/select an application from the review queue/i),
+    ).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole("button", {
         name: /review synthetic for selected opportunity, attempt 1/i,

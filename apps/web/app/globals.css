@@ -409,6 +409,12 @@ svg {
 .grid-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+/* Card grids are used as lists; list markers would sit outside the cards. */
+ul.grid-2,
+ul.grid-3 {
+  list-style: none;
+  padding-inline-start: 0;
+}
 .card {
   background: var(--color-paper);
   border: 1px solid var(--color-border);
@@ -1599,12 +1605,47 @@ p {
   margin-bottom: 2rem;
   max-width: none;
 }
-.lead-queue {
-  display: grid;
-  gap: 1.25rem;
+.admin-toolbar {
+  align-items: center;
+  margin-block: 1rem 1.5rem;
 }
-.lead-card {
-  box-shadow: none;
+.lead-table table {
+  min-width: 56rem;
+}
+.lead-table .lead-summary td {
+  vertical-align: top;
+}
+.lead-table .lead-toggle {
+  background: none;
+  border: 0;
+  color: var(--color-accent-strong);
+  font-size: 0.85rem;
+  letter-spacing: normal;
+  min-height: 2rem;
+  padding: 0.35rem 0.15rem;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-transform: none;
+  text-underline-offset: 0.18em;
+  white-space: nowrap;
+  width: auto;
+}
+.lead-table .lead-toggle:hover {
+  background: none;
+  border: 0;
+  color: var(--color-accent);
+  text-decoration-thickness: 0.13em;
+}
+.lead-detail-cell {
+  background: var(--color-surface);
+}
+.lead-detail-panel {
+  display: grid;
+  gap: 1rem;
+}
+.lead-detail-panel h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
 }
 .lead-details {
   display: grid;

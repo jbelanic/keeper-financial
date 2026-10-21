@@ -59,6 +59,10 @@ export function OnboardingAdmin({
   const [envelopeId, setEnvelopeId] = useState("");
   const [replacementRecordId, setReplacementRecordId] = useState("");
   const [completionSucceeded, setCompletionSucceeded] = useState(false);
+  // Plan templates are a rarely-used back office: candidate assignments own the
+  // primary real estate, and each template view/editor is explicitly opened.
+  const [plansOpen, setPlansOpen] = useState(false);
+  const [planEditorOpen, setPlanEditorOpen] = useState(false);
 
   function fail(message: string) {
     setErrors([message]);
@@ -86,6 +90,16 @@ export function OnboardingAdmin({
     setPlanName("");
     setPlanDescription("");
     setTasks([emptyTask()]);
+  }
+
+  function openPlanEditor() {
+    resetPlanEditor();
+    setPlanEditorOpen(true);
+  }
+
+  function cancelPlanEditor() {
+    resetPlanEditor();
+    setPlanEditorOpen(false);
   }
 
   async function savePlan(event: React.FormEvent<HTMLFormElement>) {
@@ -128,6 +142,7 @@ export function OnboardingAdmin({
           : "Onboarding plan created. It remains editable until its first assignment.",
       );
       resetPlanEditor();
+      setPlanEditorOpen(false);
     } catch {
       fail(
         editingPlanId
@@ -183,6 +198,7 @@ export function OnboardingAdmin({
           : [emptyTask()],
       );
       setExpanded(null);
+      setPlanEditorOpen(true);
       setNotice("Editing unused onboarding plan.");
     } catch {
       fail("The plan could not be loaded for editing.");
@@ -434,191 +450,13 @@ export function OnboardingAdmin({
       </p>
       <ErrorSummary errors={errors} />
 
-      <section aria-labelledby="plans-heading">
-        <h2 id="plans-heading">Onboarding plan templates</h2>
-        <p>
-          Build and revise the ordered task list before assignment. The first
-          assignment permanently locks the plan content and availability.
-        </p>
-        <form className="card" onSubmit={savePlan} aria-busy={busy}>
-          <h3>
-            {editingPlanId ? "Edit unused plan" : "Create onboarding plan"}
-          </h3>
-          <FormField id="plan-name" label="Plan name (required)">
-            <input
-              id="plan-name"
-              value={planName}
-              maxLength={160}
-              onChange={(event) => setPlanName(event.target.value)}
-              required
-            />
-          </FormField>
-          <FormField id="plan-description" label="Description">
-            <textarea
-              id="plan-description"
-              value={planDescription}
-              maxLength={1000}
-              onChange={(event) => setPlanDescription(event.target.value)}
-            />
-          </FormField>
-          <fieldset>
-            <legend>Ordered onboarding tasks</legend>
-            <p>
-              At least one task is required. Task changes are not persisted
-              until you create the plan or save plan changes.
-            </p>
-            {tasks.map((task, index) => (
-              <Card key={index}>
-                <h4>Task {index + 1}</h4>
-                <FormField
-                  id={`task-title-${index}`}
-                  label="Task title (required)"
-                >
-                  <input
-                    id={`task-title-${index}`}
-                    value={task.title}
-                    maxLength={160}
-                    onChange={(event) =>
-                      updateTask(index, { title: event.target.value })
-                    }
-                    required
-                  />
-                </FormField>
-                <FormField
-                  id={`task-instructions-${index}`}
-                  label="Instructions"
-                >
-                  <textarea
-                    id={`task-instructions-${index}`}
-                    value={task.instructions}
-                    maxLength={2000}
-                    onChange={(event) =>
-                      updateTask(index, { instructions: event.target.value })
-                    }
-                  />
-                </FormField>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={task.is_required}
-                    onChange={(event) =>
-                      updateTask(index, { is_required: event.target.checked })
-                    }
-                  />{" "}
-                  Required for readiness
-                </label>
-                <div className="button-row">
-                  <Button
-                    type="button"
-                    disabled={index === 0 || busy}
-                    onClick={() => moveTask(index, -1)}
-                  >
-                    Move up
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={index === tasks.length - 1 || busy}
-                    onClick={() => moveTask(index, 1)}
-                  >
-                    Move down
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={tasks.length === 1 || busy}
-                    onClick={() => removeTask(index)}
-                  >
-                    Remove task
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </fieldset>
-          <div className="button-row">
-            <Button
-              type="button"
-              disabled={busy}
-              onClick={() => setTasks((items) => [...items, emptyTask()])}
-            >
-              Add task
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {editingPlanId ? "Save plan changes" : "Create plan"}
-            </Button>
-            {editingPlanId ? (
-              <Button type="button" disabled={busy} onClick={resetPlanEditor}>
-                Cancel edit
-              </Button>
-            ) : null}
-          </div>
-        </form>
-
-        <ul className="grid-2">
-          {plans.map((plan) => (
-            <li key={plan.id}>
-              <Card>
-                <h3>{plan.name}</h3>
-                <p>{plan.description}</p>
-                <StatusBadge tone={plan.is_active ? "success" : "neutral"}>
-                  {plan.is_active ? "active" : "inactive"}
-                </StatusBadge>
-                {plan.is_locked ? (
-                  <p>
-                    <strong>Locked after first assignment.</strong>
-                  </p>
-                ) : (
-                  <p>Editable until first assignment.</p>
-                )}
-                <div className="button-row">
-                  <Button
-                    type="button"
-                    onClick={() => viewPlan(plan.id)}
-                    disabled={busy}
-                  >
-                    View tasks
-                  </Button>
-                  {!plan.is_locked ? (
-                    <Button
-                      type="button"
-                      onClick={() => editPlan(plan)}
-                      disabled={busy}
-                    >
-                      Edit plan
-                    </Button>
-                  ) : null}
-                  {!plan.is_locked ? (
-                    <Button
-                      type="button"
-                      onClick={() => togglePlan(plan)}
-                      disabled={busy}
-                    >
-                      {plan.is_active ? "Deactivate plan" : "Reactivate plan"}
-                    </Button>
-                  ) : null}
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
-        {expanded ? (
-          <Card>
-            <h3>
-              {expanded.name} —{" "}
-              {expanded.is_locked ? "locked task order" : "editable task order"}
-            </h3>
-            <ol>
-              {(expanded.tasks ?? []).map((task) => (
-                <li key={task.id}>
-                  <strong>{task.title}</strong>
-                  {task.instructions ? ` — ${task.instructions}` : ""}
-                </li>
-              ))}
-            </ol>
-          </Card>
-        ) : null}
-      </section>
-
       <section aria-labelledby="assignments-heading">
         <h2 id="assignments-heading">Candidate onboarding assignments</h2>
+        <p>
+          Candidates currently onboarding, their assigned plan, and activation
+          readiness. Open an assignment to review its tasks, gates, and
+          contractor agreement.
+        </p>
         {assignments.length === 0 ? (
           <p>No onboarding assignments are available.</p>
         ) : (
@@ -663,6 +501,236 @@ export function OnboardingAdmin({
             ))}
           </ul>
         )}
+      </section>
+
+      <section aria-labelledby="plans-heading">
+        <h2 id="plans-heading">Onboarding plan templates</h2>
+        <p>
+          Plans are authored once and locked by their first assignment. Open the
+          templates only when you need to review, revise, or author one.
+        </p>
+        <div className="button-row admin-toolbar">
+          <Button
+            type="button"
+            aria-expanded={plansOpen}
+            aria-controls="plan-templates-panel"
+            onClick={() => setPlansOpen((open) => !open)}
+            disabled={busy}
+          >
+            {plansOpen ? "Hide plan templates" : "View plan templates"}
+          </Button>
+          {plansOpen ? (
+            <Button
+              type="button"
+              aria-expanded={planEditorOpen}
+              aria-controls="plan-editor"
+              onClick={openPlanEditor}
+              disabled={busy}
+            >
+              Create new plan
+            </Button>
+          ) : null}
+        </div>
+        {plansOpen ? (
+          <div id="plan-templates-panel">
+            {planEditorOpen ? (
+              <form
+                id="plan-editor"
+                className="card"
+                onSubmit={savePlan}
+                aria-busy={busy}
+              >
+                <h3>
+                  {editingPlanId
+                    ? "Edit unused plan"
+                    : "Create onboarding plan"}
+                </h3>
+                <FormField id="plan-name" label="Plan name (required)">
+                  <input
+                    id="plan-name"
+                    value={planName}
+                    maxLength={160}
+                    onChange={(event) => setPlanName(event.target.value)}
+                    required
+                  />
+                </FormField>
+                <FormField id="plan-description" label="Description">
+                  <textarea
+                    id="plan-description"
+                    value={planDescription}
+                    maxLength={1000}
+                    onChange={(event) => setPlanDescription(event.target.value)}
+                  />
+                </FormField>
+                <fieldset>
+                  <legend>Ordered onboarding tasks</legend>
+                  <p>
+                    At least one task is required. Task changes are not
+                    persisted until you create the plan or save plan changes.
+                  </p>
+                  {tasks.map((task, index) => (
+                    <Card key={index}>
+                      <h4>Task {index + 1}</h4>
+                      <FormField
+                        id={`task-title-${index}`}
+                        label="Task title (required)"
+                      >
+                        <input
+                          id={`task-title-${index}`}
+                          value={task.title}
+                          maxLength={160}
+                          onChange={(event) =>
+                            updateTask(index, { title: event.target.value })
+                          }
+                          required
+                        />
+                      </FormField>
+                      <FormField
+                        id={`task-instructions-${index}`}
+                        label="Instructions"
+                      >
+                        <textarea
+                          id={`task-instructions-${index}`}
+                          value={task.instructions}
+                          maxLength={2000}
+                          onChange={(event) =>
+                            updateTask(index, {
+                              instructions: event.target.value,
+                            })
+                          }
+                        />
+                      </FormField>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={task.is_required}
+                          onChange={(event) =>
+                            updateTask(index, {
+                              is_required: event.target.checked,
+                            })
+                          }
+                        />{" "}
+                        Required for readiness
+                      </label>
+                      <div className="button-row">
+                        <Button
+                          type="button"
+                          disabled={index === 0 || busy}
+                          onClick={() => moveTask(index, -1)}
+                        >
+                          Move up
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={index === tasks.length - 1 || busy}
+                          onClick={() => moveTask(index, 1)}
+                        >
+                          Move down
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={tasks.length === 1 || busy}
+                          onClick={() => removeTask(index)}
+                        >
+                          Remove task
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </fieldset>
+                <div className="button-row">
+                  <Button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setTasks((items) => [...items, emptyTask()])}
+                  >
+                    Add task
+                  </Button>
+                  <Button type="submit" disabled={busy}>
+                    {editingPlanId ? "Save plan changes" : "Create plan"}
+                  </Button>
+                  {editingPlanId ? (
+                    <Button
+                      type="button"
+                      disabled={busy}
+                      onClick={cancelPlanEditor}
+                    >
+                      Cancel edit
+                    </Button>
+                  ) : null}
+                </div>
+              </form>
+            ) : null}
+
+            <ul className="grid-2">
+              {plans.map((plan) => (
+                <li key={plan.id}>
+                  <Card>
+                    <h3>{plan.name}</h3>
+                    <p>{plan.description}</p>
+                    <StatusBadge tone={plan.is_active ? "success" : "neutral"}>
+                      {plan.is_active ? "active" : "inactive"}
+                    </StatusBadge>
+                    {plan.is_locked ? (
+                      <p>
+                        <strong>Locked after first assignment.</strong>
+                      </p>
+                    ) : (
+                      <p>Editable until first assignment.</p>
+                    )}
+                    <div className="button-row">
+                      <Button
+                        type="button"
+                        onClick={() => viewPlan(plan.id)}
+                        disabled={busy}
+                      >
+                        View tasks
+                      </Button>
+                      {!plan.is_locked ? (
+                        <Button
+                          type="button"
+                          onClick={() => editPlan(plan)}
+                          disabled={busy}
+                        >
+                          Edit plan
+                        </Button>
+                      ) : null}
+                      {!plan.is_locked ? (
+                        <Button
+                          type="button"
+                          onClick={() => togglePlan(plan)}
+                          disabled={busy}
+                        >
+                          {plan.is_active
+                            ? "Deactivate plan"
+                            : "Reactivate plan"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+            {expanded ? (
+              <Card>
+                <h3>
+                  {expanded.name} —{" "}
+                  {expanded.is_locked
+                    ? "locked task order"
+                    : "editable task order"}
+                </h3>
+                <ol>
+                  {(expanded.tasks ?? []).map((task) => (
+                    <li key={task.id}>
+                      <strong>{task.title}</strong>
+                      {task.instructions ? ` — ${task.instructions}` : ""}
+                    </li>
+                  ))}
+                </ol>
+              </Card>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       {detail ? (
