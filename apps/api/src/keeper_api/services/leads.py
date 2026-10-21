@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import ColumnElement
 
 from keeper_api.models.domain import (
     AgentProfile,
@@ -48,7 +49,7 @@ class LeadAssignmentInvalid(ValueError):
     pass
 
 
-def eligible_agent_condition():
+def eligible_agent_condition() -> ColumnElement[bool]:
     """An account that may own a lead: active, `agent` role, active relationship.
 
     Publication is deliberately excluded — same rule as the referral link.
