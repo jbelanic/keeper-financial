@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { portalAccessRequest } from "./portal-access";
 import { getSupabaseServerClient } from "./supabase-server";
 
-export async function requirePortalAccess(area: PortalArea): Promise<void> {
+export async function requirePortalAccess(area: PortalArea): Promise<string[]> {
   let authenticated = false;
   let needsMfa = false;
   try {
@@ -13,8 +13,9 @@ export async function requirePortalAccess(area: PortalArea): Promise<void> {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     authenticated = Boolean(!error && userData.user && token);
-    if (authenticated && token && (await portalAccessRequest(token, area))) {
-      return;
+    if (authenticated && token) {
+      const access = await portalAccessRequest(token, area);
+      if (access) return access.roles;
     }
     if (authenticated && area === "admin") {
       const assurance =

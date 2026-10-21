@@ -3,7 +3,10 @@ import type { ReactNode } from "react";
 import { requirePortalAccess } from "@/lib/require-portal-access";
 import { PortalShell } from "@/lib/shells";
 
-const links: Array<[string, string]> = [["My applications", "/agent"]];
+const links: Array<[string, string]> = [
+  ["My applications", "/agent"],
+  ["My application", "/candidate"],
+];
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false, noarchive: true },

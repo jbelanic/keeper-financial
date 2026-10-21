@@ -21,16 +21,19 @@ export default async function CandidateLayout({
 }: {
   children: ReactNode;
 }) {
-  await requirePortalAccess("candidate");
+  const roles = (await requirePortalAccess("candidate")) ?? [];
   const onboarding = await portalServerJson<CandidateOnboardingAvailability>(
     "/api/v1/candidate/onboarding/availability",
   );
-  const links = onboarding?.available
-    ? [
-        ...baseLinks,
-        ["Onboarding", "/candidate/onboarding"] as [string, string],
-      ]
-    : baseLinks;
+  const links: Array<[string, string]> = [...baseLinks];
+  if (onboarding?.available) {
+    links.push(["Onboarding", "/candidate/onboarding"]);
+  }
+  // An activated agent keeps this portal for their own application history, but
+  // must be able to reach the agent console (referral link, assigned work).
+  if (roles.includes("agent")) {
+    links.push(["Agent console", "/agent"]);
+  }
   return (
     <PortalShell area="Candidate" links={links}>
       {children}

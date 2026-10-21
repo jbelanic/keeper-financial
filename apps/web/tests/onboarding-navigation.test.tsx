@@ -34,6 +34,29 @@ describe("onboarding portal navigation", () => {
     );
   });
 
+  it("gives an activated agent a route to the agent console", async () => {
+    requirePortalAccess.mockResolvedValue(["candidate", "agent"]);
+    portalServerJson.mockResolvedValue({ available: false });
+    const { default: CandidateLayout } = await import(
+      "@/app/(candidate)/layout"
+    );
+    render(await CandidateLayout({ children: <p>Candidate content</p> }));
+    expect(screen.getByRole("link", { name: "Agent console" })).toHaveAttribute(
+      "href",
+      "/agent",
+    );
+  });
+
+  it("does not offer the agent console to a non-agent", async () => {
+    requirePortalAccess.mockResolvedValue(["candidate"]);
+    portalServerJson.mockResolvedValue({ available: false });
+    const { default: CandidateLayout } = await import(
+      "@/app/(candidate)/layout"
+    );
+    render(await CandidateLayout({ children: <p>Candidate content</p> }));
+    expect(screen.queryByRole("link", { name: "Agent console" })).toBeNull();
+  });
+
   it("does not imply onboarding authorization without an assignment", async () => {
     portalServerJson.mockResolvedValue({ available: false });
     const { default: CandidateLayout } = await import(

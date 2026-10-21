@@ -17,10 +17,12 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function SignInForm({
   posting,
   returnTo,
+  returnToExplicit = false,
   error,
 }: {
   posting?: string;
   returnTo: "/candidate" | "/admin" | "/agent";
+  returnToExplicit?: boolean;
   error?: string;
 }) {
   const message = error ? ERROR_MESSAGES[error] : undefined;
@@ -29,6 +31,13 @@ export function SignInForm({
       <ErrorSummary errors={message ? [message] : []} />
       {posting ? <input type="hidden" name="posting" value={posting} /> : null}
       <input type="hidden" name="returnTo" value={returnTo} />
+      {/* Distinguishes "you asked for this area" from the default landing, so a
+          signed-in agent is not pinned to the candidate portal. */}
+      <input
+        type="hidden"
+        name="returnToExplicit"
+        value={returnToExplicit ? "1" : ""}
+      />
       <FormField id="email" label="Email">
         <input
           id="email"
