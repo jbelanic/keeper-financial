@@ -258,6 +258,10 @@ describe("administrator onboarding workspace", () => {
       screen.getByText(/Mortgage Agent Opportunity — attempt 2/i),
     ).toBeInTheDocument();
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "View plan templates" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create new plan" }));
     fireEvent.change(screen.getByLabelText(/plan name/i), {
       target: { value: created.name },
     });
@@ -295,6 +299,10 @@ describe("administrator onboarding workspace", () => {
       />,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "View plan templates" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create new plan" }));
     expect(
       screen.getByText(/at least one task is required/i),
     ).toBeInTheDocument();
@@ -367,6 +375,9 @@ describe("administrator onboarding workspace", () => {
       />,
     );
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "View plan templates" }),
+    );
     const lockedCard = screen
       .getByRole("heading", { name: lockedPlan.name })
       .closest("li");
@@ -402,6 +413,58 @@ describe("administrator onboarding workspace", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /unused onboarding plan updated/i,
     );
+  });
+
+  it("puts candidate assignments first and hides plan authoring until asked", async () => {
+    const plan = {
+      id: "00000000-0000-4000-8000-000000000940",
+      name: "Ontario agent onboarding",
+      description: "Synthetic plan",
+      is_active: true,
+      is_locked: true,
+    };
+    const { OnboardingAdmin } = await import(
+      "@/app/(admin)/admin/onboarding/onboarding-admin"
+    );
+    render(
+      <OnboardingAdmin
+        initialPlans={[plan]}
+        initialAssignments={[assignment]}
+        requester={vi.fn()}
+      />,
+    );
+
+    const levelTwo = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.textContent ?? "");
+    expect(levelTwo.indexOf("Candidate onboarding assignments")).toBeLessThan(
+      levelTwo.indexOf("Onboarding plan templates"),
+    );
+    // The candidate in progress is visible without opening anything.
+    expect(
+      screen.getByRole("button", { name: "Manage active assignment" }),
+    ).toBeInTheDocument();
+    // Plan templates, the plan list, and the authoring form stay collapsed.
+    expect(screen.queryByRole("heading", { name: plan.name })).toBeNull();
+    expect(screen.queryByLabelText(/plan name/i)).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Create new plan" }),
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "View plan templates" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: plan.name }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create new plan" }),
+    ).toBeInTheDocument();
+    // The plan list does not pre-empt the authoring form.
+    expect(screen.queryByLabelText(/plan name/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create new plan" }));
+    expect(screen.getByLabelText(/plan name/i)).toBeInTheDocument();
   });
 
   it("labels active and historical assignments without offering historical mutation", async () => {
