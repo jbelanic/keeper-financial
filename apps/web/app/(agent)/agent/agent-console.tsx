@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, Card, DataTable, ErrorSummary, StatusBadge } from "@keeper/ui";
 import type {
   BorrowerAgentDraftProjection,
@@ -78,37 +78,9 @@ export function AgentAssignedConsole({
     item: BorrowerReviewQueueItem;
     detail: BorrowerAgentDraftProjection;
   } | null>(null);
-  const [applyLink, setApplyLink] = useState<string | null>(null);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
-
-  useEffect(() => {
-    let active = true;
-    requester("/api/v1/agent-referral-link")
-      .then(async (response) => {
-        if (!active || !response.ok) return;
-        const body = (await response.json()) as { apply_url?: string };
-        if (active && typeof body.apply_url === "string") {
-          setApplyLink(body.apply_url);
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [requester]);
-
-  async function copyApplyLink() {
-    if (!applyLink) return;
-    try {
-      await navigator.clipboard.writeText(applyLink);
-      setLinkCopied(true);
-    } catch {
-      setLinkCopied(false);
-    }
-  }
 
   async function loadReview(item: BorrowerReviewQueueItem) {
     if (busy) return;
@@ -198,26 +170,6 @@ export function AgentAssignedConsole({
         {notice}
       </p>
       <ErrorSummary errors={errors} />
-
-      <Card aria-labelledby="agent-link-heading">
-        <h2 id="agent-link-heading">Your application link</h2>
-        {applyLink ? (
-          <>
-            <p>
-              Share this link with clients. Applications they start from it are
-              assigned to you automatically.
-            </p>
-            <p>
-              <code id="agent-apply-link">{applyLink}</code>
-            </p>
-            <Button type="button" onClick={copyApplyLink}>
-              {linkCopied ? "Copied" : "Copy link"}
-            </Button>
-          </>
-        ) : (
-          <p className="muted">Your link is not available yet.</p>
-        )}
-      </Card>
 
       <section aria-labelledby="agent-queue-heading">
         <h2 id="agent-queue-heading">

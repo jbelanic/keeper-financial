@@ -27,6 +27,18 @@ so a code cannot be probed for validity and an applicant is never blocked.
 mints the code; nothing is emailed and no notification is sent when a code is
 created.
 
+Reaching it must not depend on anything else:
+
+- Signing in without an explicit destination lands an account that holds the
+  `agent` role on `/agent` (through `/auth/mfa?returnTo=/agent` unless the
+  session is already at AAL2), not on the candidate portal.
+- The candidate portal keeps an **Agent console** navigation entry for accounts
+  that hold the `agent` role, so the console stays reachable from there.
+- The link card loads its own `GET /api/v1/agent-referral-link` call, so a
+  failure of the assigned-applications queue does not hide it; it reports its
+  own unavailable state instead of rendering nothing.
+- An explicitly requested `?returnTo=<area>` is always honoured.
+
 Link shape:
 
 ```

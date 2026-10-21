@@ -4,6 +4,7 @@ import {
   isSafePostingSlug,
   startCandidateApplication,
 } from "@/lib/candidate-provisioning";
+import { portalAccessRequest } from "@/lib/portal-access";
 import { requestOrigin, requestUrl } from "@/lib/request-url";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
@@ -12,6 +13,23 @@ function safeReturnTo(
 ): "/candidate" | "/admin" | "/agent" {
   if (value === "/admin" || value === "/agent") return value;
   return "/candidate";
+}
+
+async function agentEntryUrl(
+  request: NextRequest,
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+): Promise<URL> {
+  // Skip the MFA hop when this session is already at AAL2; /auth/mfa is still the
+  // enrolment path for an agent with no verified factor yet.
+  try {
+    const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (!assurance.error && assurance.data?.currentLevel === "aal2") {
+      return requestUrl(request, "/agent");
+    }
+  } catch {
+    // Fall through to the MFA step.
+  }
+  return requestUrl(request, "/auth/mfa?returnTo=/agent");
 }
 
 function signInUrl(
@@ -77,6 +95,9 @@ export async function POST(request: NextRequest) {
     );
   }
   if (!posting) {
+    // An activated agent must land in the agent console, where the referral link
+    // lives. Their app roles are authoritative in the API, so ask it once.
+    const returnToExplicit = form.get("returnToExplicit") === "1";
     if (returnTo === "/admin") {
       return NextResponse.redirect(
         requestUrl(request, "/auth/mfa?returnTo=/admin"),
@@ -84,10 +105,16 @@ export async function POST(request: NextRequest) {
       );
     }
     if (returnTo === "/agent") {
-      return NextResponse.redirect(
-        requestUrl(request, "/auth/mfa?returnTo=/agent"),
-        303,
-      );
+      return NextResponse.redirect(await agentEntryUrl(request, supabase), 303);
+    }
+    if (!returnToExplicit) {
+      const access = await portalAccessRequest(token, "candidate");
+      if (access?.roles.includes("agent")) {
+        return NextResponse.redirect(
+          await agentEntryUrl(request, supabase),
+          303,
+        );
+      }
     }
     return NextResponse.redirect(requestUrl(request, returnTo), 303);
   }
