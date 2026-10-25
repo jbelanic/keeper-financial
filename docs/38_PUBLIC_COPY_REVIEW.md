@@ -29,6 +29,14 @@ test files) and 5 living documents (`docs/00`, `docs/06`, `docs/09`, `docs/15`, 
 Everything from §1 onward is the change list **as written before implementation**. The
 exceptions, deviations and additions below are where the delivered work differs from it.
 
+> **Dated note — 2026-10-25 (decision 55).** Part of this record is no longer current.
+> The home-page hero description, both hero CTA labels and destinations, the closing CTA
+> band copy, and the `/apply` page framing recorded here were replaced by the homepage
+> conversion update, which also makes `/apply` the mortgage readiness review surface.
+> Every other approved string in this review — including all required disclosures — is
+> still in force. See decision 55 in `docs/09` for the current copy. This document stays
+> as the record of the 2026-10-16 review.
+
 ### Not changed, with reasons
 
 | Item | Reason |
