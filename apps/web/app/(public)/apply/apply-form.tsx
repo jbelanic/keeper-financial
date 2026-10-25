@@ -165,6 +165,7 @@ export function ApplyForm({
         <input type="hidden" name="agent_reference" value={agentReference} />
       ) : null}
       <ErrorSummary errors={errors} />
+      {/* Owner + legal approved 2026-10-25 (decision 55(e)). Reword only on a new owner decision. */}
       {submitted ? (
         <p role="status" aria-live="polite" className="notice notice-success">
           Thank you. Your request has been received. We’ll follow up using your

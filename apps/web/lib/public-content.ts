@@ -405,6 +405,8 @@ export const readinessGoals = [
   { id: "not-sure-yet", label: "Not sure yet", objective: "other" },
 ] as const;
 
+// Owner + legal approved 2026-10-25 (decision 55(e)) along with the readiness
+// heading, lead and confirmation on `/apply`. Reword only on a new owner decision.
 // Deliberately general: a conversation is not an application, and no approval,
 // rate, or affordability outcome can be promised at this stage.
 export const readinessSteps = [

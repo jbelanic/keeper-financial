@@ -14,6 +14,7 @@ export function ApplyPaths({
   return (
     <>
       <div className="container">
+        {/* Owner + legal approved 2026-10-25 (decision 55(e)). Reword only on a new owner decision. */}
         <InteriorPageHeader
           eyebrow="Mortgage guidance · Ontario"
           title="Before you apply, understand your options."
