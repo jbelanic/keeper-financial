@@ -2931,6 +2931,12 @@ export interface components {
        * @enum {string}
        */
       preferred_contact_method: "email" | "telephone";
+      /**
+       * Source
+       * @default website_apply
+       * @enum {string}
+       */
+      source: "website_apply" | "website_readiness";
       /** Agent Reference */
       agent_reference?: string | null;
       /** Message */

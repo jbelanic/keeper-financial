@@ -25,7 +25,6 @@ from keeper_api.services.consent_registry import (
     MARKETING_CONSENT,
     PRIVACY_NOTICE_VERSION,
     SERVICE_CONTACT_CONSENT,
-    WEBSITE_CAPTURE_SOURCE,
 )
 
 # How an inquiry came to be owned by an agent. The raw submitted reference is
@@ -142,7 +141,7 @@ def create_lead(
             mortgage_objective=payload.mortgage_objective,
             preferred_contact_method=payload.preferred_contact_method,
             message=payload.message,
-            source=WEBSITE_CAPTURE_SOURCE,
+            source=payload.source,
             status="assigned" if resolved else "new",
             assigned_agent_user_id=resolved[0] if resolved else None,
             assigned_at=datetime.now(UTC) if resolved else None,
@@ -158,7 +157,7 @@ def create_lead(
                 purpose=SERVICE_CONTACT_CONSENT.purpose,
                 wording_version=SERVICE_CONTACT_CONSENT.wording_version,
                 privacy_notice_version=PRIVACY_NOTICE_VERSION,
-                capture_source=WEBSITE_CAPTURE_SOURCE,
+                capture_source=payload.source,
             )
         )
         audit = AuditService(db)
@@ -190,7 +189,7 @@ def create_lead(
                 purpose=MARKETING_CONSENT.purpose,
                 wording_version=MARKETING_CONSENT.wording_version,
                 privacy_notice_version=PRIVACY_NOTICE_VERSION,
-                capture_source=WEBSITE_CAPTURE_SOURCE,
+                capture_source=payload.source,
             )
             db.add(marketing_record)
             db.flush()
@@ -199,7 +198,7 @@ def create_lead(
                 "consent_record",
                 marketing_record.id,
                 request_id=request_id,
-                safe_metadata={"capture_source": WEBSITE_CAPTURE_SOURCE},
+                safe_metadata={"capture_source": payload.source},
             )
         db.commit()
         db.refresh(lead)

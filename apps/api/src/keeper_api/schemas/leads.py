@@ -15,6 +15,10 @@ _DISALLOWED = re.compile(
     re.IGNORECASE,
 )
 
+# The public surfaces allowed to label an inquiry. Kept in step with
+# `consent_registry.WEBSITE_CAPTURE_SOURCE` / `READINESS_CAPTURE_SOURCE`.
+LeadCaptureSource = Literal["website_apply", "website_readiness"]
+
 
 class LeadInquiryCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -23,6 +27,10 @@ class LeadInquiryCreate(BaseModel):
     telephone: str = Field(min_length=7, max_length=32, pattern=r"^[0-9+().\- x]+$")
     mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
     preferred_contact_method: Literal["email", "telephone"]
+    # The public surface that captured the inquiry. A fixed vocabulary, never
+    # free text: it is what tells an operator whether the visitor asked for a
+    # readiness conversation or used the earlier contact-first form.
+    source: LeadCaptureSource = "website_apply"
     # One opaque reference from the agent link (`?agent=`), resolved server-side to
     # an eligible agent account. Accepts the current referral code and the legacy
     # published-profile slug; never a client-supplied account identifier.

@@ -22,6 +22,7 @@ from keeper_api.models.domain import (
     UserRole,
 )
 from keeper_api.services.audit import AuditService
+from keeper_api.services.consent_registry import READINESS_CAPTURE_SOURCE
 from keeper_api.services.submission_guard import LeadSubmissionGuard, SubmissionRateLimited
 
 SERVICE_WORDING_VERSION = "service-contact-draft-engineering-v1"
@@ -123,6 +124,36 @@ def test_service_acknowledgement_is_required(client: TestClient) -> None:
     payload = valid_payload()
     payload["service_contact_acknowledged"] = False
     assert client.post("/api/v1/leads", json=payload).status_code == 422
+
+
+def test_readiness_request_records_its_capture_surface(client: TestClient, db: Session) -> None:
+    payload = valid_payload()
+    payload["source"] = READINESS_CAPTURE_SOURCE
+
+    response = client.post("/api/v1/leads", json=payload)
+
+    assert response.status_code == 201
+    assert db.query(LeadInquiry).one().source == READINESS_CAPTURE_SOURCE
+    assert {record.capture_source for record in db.query(ConsentRecord).all()} == {
+        READINESS_CAPTURE_SOURCE
+    }
+    created = db.query(AuditEvent).filter(AuditEvent.event_type == "lead.created").one()
+    assert created.safe_metadata == {
+        "status": "new",
+        "source": READINESS_CAPTURE_SOURCE,
+        "assigned": False,
+    }
+
+
+@pytest.mark.parametrize("source", ["", "partner_portal", "website_apply_v2"])
+def test_contact_form_rejects_unapproved_capture_sources(
+    client: TestClient, db: Session, source: str
+) -> None:
+    payload = valid_payload()
+    payload["source"] = source
+
+    assert client.post("/api/v1/leads", json=payload).status_code == 422
+    assert db.query(LeadInquiry).count() == 0
 
 
 def test_contact_form_rejects_disallowed_and_excessive_input(client: TestClient) -> None:

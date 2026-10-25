@@ -26,7 +26,11 @@ MARKETING_CONSENT: Final = ConsentDefinition(
     wording_version="marketing-draft-engineering-v1",
 )
 PRIVACY_NOTICE_VERSION: Final = "privacy-notice-draft-legal-review-v1"
+# Capture-surface labels recorded on a lead inquiry and on each consent record
+# created with it. `LeadInquiryCreate.source` accepts exactly these two values:
+# the readiness review on `/apply`, and the historical pre-readiness form.
 WEBSITE_CAPTURE_SOURCE: Final = "website_apply"
+READINESS_CAPTURE_SOURCE: Final = "website_readiness"
 
 CONSENT_REGISTRY = MappingProxyType(
     {
