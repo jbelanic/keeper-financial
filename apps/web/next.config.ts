@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["@keeper/ui"],
+    // Keep the security-upgrade policy explicit so `next dev`/`next build`
+    // surface advisory-driven upgrade prompts instead of silently drifting.
+    agentUpgrade: "security",
   },
   async redirects() {
     return [
