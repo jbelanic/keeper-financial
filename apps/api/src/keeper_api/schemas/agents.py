@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from keeper_api.models.statuses import AgentProfileStatus
+from keeper_api.services.agent_photos import keeper_photo_id
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _HTML_TAG = re.compile(r"<\s*/?\s*[a-zA-Z][^>]*>")
@@ -43,6 +44,42 @@ def _https_url(value: str) -> str:
     ):
         raise ValueError("URL must be HTTPS without credentials, query data, or a fragment")
     return clean
+
+
+def _keeper_photo_url(value: str) -> str:
+    """Accept the photo URL the upload route composes.
+
+    Outside production that origin is a loopback http address, so the profile
+    payload has to accept the shape or the operator cannot save the profile they
+    just attached a photo to. The value is re-composed against the configured base
+    before it is stored (`normalise_photo_url`), so an http origin is never
+    persisted and an external http host is still rejected here.
+    """
+    clean = value.strip()
+    parsed = urlsplit(clean)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname not in {"localhost", "127.0.0.1"}
+        or parsed.port is None
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or keeper_photo_id(clean) is None
+    ):
+        raise ValueError(
+            "URL must be HTTPS, or the loopback photo URL returned by the Keeper upload"
+        )
+    return clean
+
+
+def _photo_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    clean = value.strip()
+    if urlsplit(clean).scheme == "https":
+        return _https_url(clean)
+    return _keeper_photo_url(clean)
 
 
 def _public_items(values: list[str]) -> list[str]:
@@ -93,7 +130,7 @@ class AgentProfileCreate(BaseModel):
     @field_validator("photo_url")
     @classmethod
     def validate_photo_url(cls, value: str | None) -> str | None:
-        return _https_url(value) if value is not None else None
+        return _photo_url(value)
 
     @field_validator("public_email")
     @classmethod
@@ -148,7 +185,7 @@ class AgentProfileUpdate(BaseModel):
     @field_validator("photo_url")
     @classmethod
     def validate_photo_url(cls, value: str | None) -> str | None:
-        return _https_url(value) if value is not None else None
+        return _photo_url(value)
 
     @field_validator("public_email")
     @classmethod

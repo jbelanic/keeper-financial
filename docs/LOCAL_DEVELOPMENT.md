@@ -62,11 +62,13 @@ locally. In production Nginx serves `/api` from the site origin, which is why th
 production value is `https://keeperfinancial.ca` there; the validator rejects any
 `http` value when `APP_ENV=production`.
 
-The composed URL is stored on the profile, so a photo uploaded while the value
-was still the production default keeps that URL. After changing
-`PUBLIC_SITE_BASE_URL`, recreate the API container (`docker compose up -d
+The composed URL is stored on the profile. Changing `PUBLIC_SITE_BASE_URL`
+re-composes it the next time the profile is saved — the API recognises a Keeper
+photo URL whatever origin composed it and rewrites it against the configured base
+— so after editing the value, recreate the API container (`docker compose up -d
 --force-recreate api`, because `env_file` values apply at container creation) and
-re-upload the photo, or its row will keep pointing at the previous origin.
+save the profile again. Re-uploading also works and replaces the object. An
+externally hosted photo URL is never rewritten.
 
 ## Validation
 
