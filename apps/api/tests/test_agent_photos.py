@@ -12,7 +12,7 @@ from conftest import create_user
 from document_samples import valid_image, valid_pdf
 from keeper_api.core.config import Settings
 from keeper_api.models.domain import AuditEvent
-from keeper_api.services.agent_photos import photo_url
+from keeper_api.services.agent_photos import keeper_photo_id, normalise_photo_url, photo_url
 from keeper_api.services.storage import PUBLIC_IMAGE_PREFIX
 
 PHOTO_URL = re.compile(r"^https://keeperfinancial\.ca/api/v1/agent-photos/[0-9a-f]{32}\.jpg$")
@@ -328,3 +328,100 @@ def test_production_rejects_a_loopback_photo_origin() -> None:
         _settings(app_env="production", public_site_base_url="http://localhost:3000")
 
     assert "PUBLIC_SITE_BASE_URL" in str(raised.value)
+
+
+# --- profile save: the composed photo URL must survive the round trip --------
+# The upload composes the URL from PUBLIC_SITE_BASE_URL. Outside production that
+# origin is loopback, so the profile payload has to accept the shape, and the
+# stored value must be re-composed against the configured base rather than keep a
+# loopback (or another environment's) origin.
+
+
+def test_keeper_photo_id_reads_the_id_whatever_the_origin() -> None:
+    for url in (
+        f"https://keeperfinancial.ca/api/v1/agent-photos/{PHOTO_ID}",
+        f"http://localhost:3000/api/v1/agent-photos/{PHOTO_ID}",
+        f"http://127.0.0.1:8000/api/v1/agent-photos/{PHOTO_ID}",
+    ):
+        assert keeper_photo_id(url) == PHOTO_ID
+
+    for url in (
+        None,
+        "",
+        "https://cdn.example.com/agent.jpg",
+        f"https://keeperfinancial.ca/api/v1/agent-photos/../{PHOTO_ID}",
+        f"https://keeperfinancial.ca/api/v1/agent-photos/{PHOTO_ID}?v=1",
+    ):
+        assert keeper_photo_id(url) is None
+
+
+def test_normalise_photo_url_recomposes_only_keeper_photos() -> None:
+    local = _settings(public_site_base_url="http://127.0.0.1:8000")
+    external = "https://cdn.example.com/agent.jpg"
+
+    assert (
+        normalise_photo_url(local, f"https://keeperfinancial.ca/api/v1/agent-photos/{PHOTO_ID}")
+        == f"http://127.0.0.1:8000/api/v1/agent-photos/{PHOTO_ID}"
+    )
+    assert normalise_photo_url(local, external) == external
+    assert normalise_photo_url(local, None) is None
+
+
+def _profile_body(agent_id: object, slug: str, licence: str, photo_url_value: str) -> dict:
+    return {
+        "user_id": str(agent_id),
+        "slug": slug,
+        "licensed_name": "Photo Round Trip",
+        "approved_title": "Mortgage Agent",
+        "licence_number": licence,
+        "biography": "Synthetic biography.",
+        "photo_url": photo_url_value,
+        "photo_alt_text": "Photo Round Trip",
+    }
+
+
+def test_profile_save_accepts_and_normalises_the_upload_composed_url(
+    client: TestClient, db: Session
+) -> None:
+    _admin(db)
+    agent, _ = create_user(
+        db, subject="photo-round-trip", role_code="agent", candidate_status="active"
+    )
+    stored = _upload(client).json()["photo_url"]
+    # What a loopback dev API composes for the same object.
+    loopback = stored.replace("https://keeperfinancial.ca", "http://127.0.0.1:8000")
+
+    created = client.post(
+        "/api/v1/admin/agent-profiles",
+        json=_profile_body(agent.id, "photo-round-trip", "M00000003", loopback),
+        headers=ADMIN_HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+    assert created.json()["photo_url"] == stored
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://127.0.0.1:8000/not-a-photo.jpg",
+        "http://example.com/api/v1/agent-photos/0123456789abcdef0123456789abcdef.jpg",
+        "http://127.0.0.1:8000/api/v1/agent-photos/../../secret.jpg",
+        "http://127.0.0.1/api/v1/agent-photos/0123456789abcdef0123456789abcdef.jpg",
+    ],
+)
+def test_profile_save_rejects_http_urls_keeper_does_not_own(
+    client: TestClient, db: Session, url: str
+) -> None:
+    _admin(db)
+    agent, _ = create_user(
+        db, subject="photo-rejected", role_code="agent", candidate_status="active"
+    )
+
+    response = client.post(
+        "/api/v1/admin/agent-profiles",
+        json=_profile_body(agent.id, "photo-rejected", "M00000004", url),
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 422, response.text

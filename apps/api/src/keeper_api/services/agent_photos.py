@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 import uuid
 from dataclasses import replace
+from urllib.parse import urlsplit
 
 from keeper_api.core.config import Settings
 from keeper_api.services.candidate_files import (
@@ -79,6 +80,43 @@ def photo_id_from_url(settings: Settings, url: str | None) -> str | None:
 
 def photo_url(settings: Settings, photo_id: str) -> str:
     return f"{settings.public_site_base_url.rstrip('/')}{PHOTO_ROUTE_PREFIX}{photo_id}"
+
+
+def keeper_photo_id(url: str | None) -> str | None:
+    """Return the Keeper photo id inside `url`, whatever origin composed it.
+
+    `photo_id_from_url` stays scoped to the configured base because it decides
+    whether an object may be deleted. This helper is base-agnostic on purpose: a
+    photo URL an administrator already saved is re-composed against the current
+    origin, so the same row keeps working in local development and in production.
+    """
+    if not url:
+        return None
+    parsed = urlsplit(url.strip())
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+        or not parsed.path.startswith(PHOTO_ROUTE_PREFIX)
+    ):
+        return None
+    candidate = parsed.path[len(PHOTO_ROUTE_PREFIX) :]
+    return candidate if _PHOTO_ID.fullmatch(candidate) is not None else None
+
+
+def normalise_photo_url(settings: Settings, url: str | None) -> str | None:
+    """Re-compose a Keeper-managed photo URL against this environment's origin.
+
+    An external URL is returned unchanged; Keeper never rewrites a host it does
+    not serve.
+    """
+    photo_id = keeper_photo_id(url)
+    if photo_id is None:
+        return url
+    return photo_url(settings, photo_id)
 
 
 def store_agent_photo(

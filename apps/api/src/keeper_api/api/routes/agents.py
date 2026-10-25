@@ -48,6 +48,7 @@ from keeper_api.services.agent_photos import (
     MalwareScannerUnavailable,
     audit_target_id,
     delete_agent_photo,
+    normalise_photo_url,
     photo_id_for,
     photo_id_from_url,
     photo_url,
@@ -257,8 +258,10 @@ def create_admin_agent_profile(
     response: Response,
     principal: Principal = Depends(require_agent_profile_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AdminAgentProfile:
     response.headers.update(NO_STORE)
+    payload.photo_url = normalise_photo_url(settings, payload.photo_url)
     try:
         return _admin(
             create_profile(
@@ -322,6 +325,8 @@ def patch_admin_agent_profile(
     if profile is None:
         raise HTTPException(status_code=404, detail="agent profile not found", headers=NO_STORE)
     previous_photo_url = profile.photo_url
+    if "photo_url" in payload.model_fields_set:
+        payload.photo_url = normalise_photo_url(settings, payload.photo_url)
     try:
         updated = update_profile(
             db,
