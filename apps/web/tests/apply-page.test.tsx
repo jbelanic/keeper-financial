@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ApplyPaths } from "@/app/(public)/apply/apply-paths";
 import ApplyPage from "@/app/(public)/apply/page";
 import { safeAgentAttribution } from "@/lib/lead-attribution";
@@ -16,12 +16,12 @@ describe("apply paths and attribution", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Choose how you’d like to begin",
+        name: "Before you apply, understand your options.",
       }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: /Continue to the mortgage application/i,
+        name: /Start Your Application/i,
       }),
     ).not.toHaveAttribute("href", expect.stringContaining("agent="));
   });
@@ -38,22 +38,21 @@ describe("apply paths and attribution", () => {
     expect(safeAgentAttribution(value)).toBe(expected);
   });
 
-  it("renders balanced minimal-contact and Keeper-native application paths", () => {
+  it("renders the readiness request and the secure application as separate paths", () => {
     const config = getPublicSiteConfig({});
     render(<ApplyPaths agentReference="published-agent" config={config} />);
 
     expect(
-      screen.getByRole("heading", { name: "Ask a general question" }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("heading", {
-        name: "Continue to the mortgage application",
+        name: "Request your mortgage readiness conversation",
       }),
     ).toBeInTheDocument();
-    const mortgageLink = screen.getByRole("link", {
-      name: /Continue to the mortgage application/i,
-    });
-    expect(mortgageLink).toHaveAttribute(
+    expect(
+      screen.getByRole("heading", { name: "Ready to apply now?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Start Your Application/i }),
+    ).toHaveAttribute(
       "href",
       "https://apply.keeperfinancial.ca/?agent=published-agent",
     );
@@ -61,6 +60,31 @@ describe("apply paths and attribution", () => {
     expect(
       screen.getAllByText(/don.t (send|use)/i).length,
     ).toBeGreaterThanOrEqual(2);
+  });
+
+  it("fills the mortgage goal from a readiness card without leaving the page", () => {
+    const config = getPublicSiteConfig({});
+    render(<ApplyPaths config={config} />);
+
+    const goals = screen.getAllByRole("radio");
+    expect(goals).toHaveLength(6);
+    expect(screen.getByLabelText("Mortgage goal")).toHaveValue("");
+
+    fireEvent.click(screen.getByLabelText("Refinancing"));
+    expect(screen.getByLabelText("Mortgage goal")).toHaveValue("refinance");
+    expect(screen.getByLabelText("Refinancing")).toBeChecked();
+
+    fireEvent.click(screen.getByLabelText("First-time buyer"));
+    expect(screen.getByLabelText("Mortgage goal")).toHaveValue("purchase");
+    expect(screen.getByLabelText("Refinancing")).not.toBeChecked();
+
+    fireEvent.click(screen.getByLabelText("Not sure yet"));
+    expect(screen.getByLabelText("Mortgage goal")).toHaveValue("other");
+
+    // Choosing a goal fills a field; it never submits the request.
+    expect(
+      screen.getByRole("button", { name: /Send contact request/i }),
+    ).toBeEnabled();
   });
 
   it("shows book-a-call only for an accepted owner HTTPS URL", () => {

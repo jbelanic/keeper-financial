@@ -386,6 +386,45 @@ export const processSteps = [
   },
 ] as const;
 
+// Mortgage readiness review — the pre-application conversation offered on
+// `/apply`. Each goal maps to one `mortgage_objective` value the lead endpoint
+// accepts, so choosing a card can fill the request form without inventing a
+// second vocabulary: a first-time buyer is a purchase, and "not sure yet" is
+// the general `other` objective. The goal label is what the visitor reads; only
+// the objective value is submitted.
+export const readinessGoals = [
+  { id: "purchase", label: "Buying a home", objective: "purchase" },
+  { id: "first-time-buyer", label: "First-time buyer", objective: "purchase" },
+  { id: "renewal", label: "Mortgage renewal", objective: "renewal" },
+  { id: "refinancing", label: "Refinancing", objective: "refinance" },
+  {
+    id: "investment-property",
+    label: "Investment property",
+    objective: "investment",
+  },
+  { id: "not-sure-yet", label: "Not sure yet", objective: "other" },
+] as const;
+
+// Deliberately general: a conversation is not an application, and no approval,
+// rate, or affordability outcome can be promised at this stage.
+export const readinessSteps = [
+  {
+    title: "Tell us what you’re planning",
+    description:
+      "Share your mortgage goal and your preferred way to be contacted.",
+  },
+  {
+    title: "Discuss your situation",
+    description:
+      "Talk through your questions and the factors that may affect your mortgage options.",
+  },
+  {
+    title: "Understand your next steps",
+    description:
+      "Identify the information and next steps that may be relevant to your circumstances.",
+  },
+] as const;
+
 export const recruitmentContent = {
   hero: {
     eyebrow: "Mortgage agent careers in Ontario",

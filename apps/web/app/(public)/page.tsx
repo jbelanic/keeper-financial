@@ -13,7 +13,7 @@ import { createPageMetadata } from "@/lib/metadata";
 export const metadata: Metadata = createPageMetadata({
   title: "Your mortgage, handled properly",
   description:
-    "Compare options from multiple lenders, ask us anything, and apply online in a secure application with a licensed Ontario mortgage brokerage.",
+    "Understand your mortgage options before you apply, ask questions first, and continue to a secure online application with a licensed Ontario mortgage brokerage.",
   path: "/",
 });
 
@@ -31,17 +31,20 @@ export default function HomePage() {
       <PageHero
         eyebrow="Ontario mortgage brokerage"
         title="Your mortgage, handled properly."
-        description="Buying, renewing or refinancing? Compare options from multiple lenders, ask us anything, and apply online in a secure application."
+        description="Buying, renewing or refinancing? Understand your mortgage options, ask questions before you apply, or continue directly to our secure online application."
         image="/images/home-conversation.png"
         imageAlt="A couple having a relaxed conversation in their living room"
         imagePriority
       >
         <div className="button-row">
-          <Link className="button-link" href="/mortgages">
-            See your options
+          <Link className="button-link" href="/apply#readiness">
+            Book a Mortgage Readiness Review
           </Link>
-          <Link className="button-link button-secondary" href="/apply">
-            Start your application
+          <Link
+            className="button-link button-secondary"
+            href="/apply#application"
+          >
+            Start Your Application
           </Link>
         </div>
       </PageHero>
@@ -88,6 +91,15 @@ export default function HomePage() {
                 icon={serviceIcons[index]}
               />
             ))}
+          </div>
+          <div className="section-link readiness-nudge">
+            <p>
+              Not ready to apply yet? Start with a conversation about your
+              mortgage options.
+            </p>
+            <Link className="text-link" href="/apply#readiness">
+              Explore the Mortgage Readiness Review <Icon name="arrow" />
+            </Link>
           </div>
         </div>
       </section>
@@ -218,11 +230,11 @@ export default function HomePage() {
         <div className="container">
           <CtaBand
             title="Ready when you are"
-            description="Ask a question, or start your application."
-            primaryHref="/apply"
-            primaryLabel="Start your application"
-            secondaryHref="/contact"
-            secondaryLabel="Contact us"
+            description="Ask a question, book a mortgage readiness conversation, or start your application when you’re ready."
+            primaryHref="/apply#readiness"
+            primaryLabel="Book a Mortgage Readiness Review"
+            secondaryHref="/apply#application"
+            secondaryLabel="Start Your Application"
           />
         </div>
       </section>

@@ -14,7 +14,7 @@ function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText("Preferred contact method"), {
     target: { value: "email" },
   });
-  fireEvent.change(screen.getByLabelText("General mortgage objective"), {
+  fireEvent.change(screen.getByLabelText("Mortgage goal"), {
     target: { value: "renewal" },
   });
   fireEvent.click(
@@ -183,5 +183,53 @@ describe("minimal contact form", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/\+1 709 700 7339 or support@example.com/i);
     expect(screen.getByLabelText("Email")).toHaveValue("visitor@example.com");
+  });
+
+  it("labels every submission with the readiness capture surface", async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(201));
+    vi.stubGlobal("fetch", fetcher);
+    const { container } = render(<ApplyForm />);
+    fillRequiredFields();
+
+    fireEvent.submit(container.querySelector("form")!);
+
+    await screen.findByRole("status");
+    const body = JSON.parse(fetcher.mock.calls[0][1].body as string);
+    expect(body.source).toBe("website_readiness");
+    expect(body.mortgage_objective).toBe("renewal");
+  });
+
+  it("pre-fills the mortgage goal from a chosen readiness card", () => {
+    const { rerender } = render(<ApplyForm objective="investment" />);
+    expect(screen.getByLabelText("Mortgage goal")).toHaveValue("investment");
+
+    rerender(<ApplyForm objective="other" />);
+    expect(screen.getByLabelText("Mortgage goal")).toHaveValue("other");
+  });
+
+  it("offers the follow-up contact route only after a successful send", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(201)));
+    const { container } = render(
+      <ApplyForm
+        followUp={
+          <>
+            If you’d rather speak sooner, call{" "}
+            <a href="tel:+15550100999">+1 555 010 0999</a>.
+          </>
+        }
+      />,
+    );
+    expect(screen.queryByText(/speak sooner/i)).not.toBeInTheDocument();
+
+    fillRequiredFields();
+    fireEvent.submit(container.querySelector("form")!);
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent(
+      "Thank you. Your request has been received. We’ll follow up using your preferred contact method.",
+    );
+    expect(status).toHaveTextContent("If you’d rather speak sooner");
+    expect(status).toHaveTextContent("+1 555 010 0999");
+    expect(status).toHaveTextContent(/please don’t send documents by email/i);
   });
 });
