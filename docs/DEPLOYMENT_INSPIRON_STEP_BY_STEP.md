@@ -821,6 +821,9 @@ MORTGAGE_APPLICATION_PROVIDER=keeper_secure_application
 MORTGAGE_APPLICATION_URL=https://apply.keeperfinancial.ca/
 MORTGAGE_APPLICATION_ALLOWED_HOSTS=apply.keeperfinancial.ca
 
+# Agent photo URLs are composed from this origin (decision 56); production value.
+PUBLIC_SITE_BASE_URL=https://keeperfinancial.ca
+
 BORROWER_APPLICATION_ENABLED=true
 BORROWER_REAL_DATA_ENABLED=false
 BORROWER_APPLICATION_ORIGIN=https://apply.keeperfinancial.ca
