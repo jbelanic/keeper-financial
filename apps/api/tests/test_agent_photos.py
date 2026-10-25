@@ -4,6 +4,7 @@ import re
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from conftest import create_user
 from document_samples import valid_image, valid_pdf
 from keeper_api.core.config import Settings
 from keeper_api.models.domain import AuditEvent
+from keeper_api.services.agent_photos import photo_url
 from keeper_api.services.storage import PUBLIC_IMAGE_PREFIX
 
 PHOTO_URL = re.compile(r"^https://keeperfinancial\.ca/api/v1/agent-photos/[0-9a-f]{32}\.jpg$")
@@ -277,3 +279,52 @@ def test_external_photo_urls_are_left_alone(
     assert replaced.status_code == 200, replaced.text
     # An externally hosted URL is never deleted by Keeper; only its reference is dropped.
     assert replaced.json()["photo_url"] is None
+
+
+# --- PUBLIC_SITE_BASE_URL shapes (decision 56 amendment, 2026-10-25) ---------
+# The uploaded photo's stable URL is composed from this origin, so the value has to
+# describe the environment the photo is served from. Production stays HTTPS-only;
+# dev/test may point at the loopback origin that actually serves the route.
+
+PHOTO_ID = "0123456789abcdef0123456789abcdef.jpg"
+
+
+def _settings(**overrides: object) -> Settings:
+    # `_env_file=None` keeps the check independent of the host's real `.env`.
+    return Settings(_env_file=None, **overrides)  # type: ignore[call-arg]
+
+
+def test_photo_url_uses_the_configured_origin() -> None:
+    for base, prefix in (
+        ("https://keeperfinancial.ca", "https://keeperfinancial.ca"),
+        ("http://localhost:3000", "http://localhost:3000"),
+        ("http://127.0.0.1:8000", "http://127.0.0.1:8000"),
+    ):
+        settings = _settings(public_site_base_url=base)
+
+        assert photo_url(settings, PHOTO_ID) == f"{prefix}/api/v1/agent-photos/{PHOTO_ID}"
+
+
+@pytest.mark.parametrize(
+    "base",
+    [
+        "http://example.com",  # http outside loopback
+        "http://localhost",  # loopback without an explicit port
+        "http://localhost:3000/nested",  # path
+        "http://localhost:3000?x=1",  # query
+        "https://keeperfinancial.ca:8443",  # non-443 port
+        "https://keeperfinancial.ca/photo",  # path on the https shape
+    ],
+)
+def test_photo_origin_rejects_unsafe_shapes_outside_production(base: str) -> None:
+    with pytest.raises(ValidationError) as raised:
+        _settings(public_site_base_url=base)
+
+    assert "PUBLIC_SITE_BASE_URL" in str(raised.value)
+
+
+def test_production_rejects_a_loopback_photo_origin() -> None:
+    with pytest.raises(ValidationError) as raised:
+        _settings(app_env="production", public_site_base_url="http://localhost:3000")
+
+    assert "PUBLIC_SITE_BASE_URL" in str(raised.value)
