@@ -68,10 +68,12 @@
 | ---------- | ------------------------------------------- | --------------- | ------------------------------------------------------------------------------------ |
 | GET        | `/api/v1/agents`                            | Public          | Published-only safe summaries for eligible active agents.                            |
 | GET        | `/api/v1/agents/{slug}`                     | Public          | Published-only safe detail; non-public/ineligible records return `404`.              |
+| GET        | `/api/v1/agent-photos/{photo_id}`           | Public          | Approved public agent photo bytes from the private `public/agent-photos/` prefix only; anything else returns `404`. Immutable public cache header. |
 | GET, POST  | `/api/v1/admin/agent-profiles`              | Brokerage admin | List eligible profiles or create a bounded draft for an active agent relationship.   |
 | GET        | `/api/v1/admin/eligible-agents`             | Brokerage admin | List readable active agent relationships that do not already have a profile.          |
 | GET        | `/api/v1/admin/agent-profiles/slug-availability` | Brokerage admin | Check a validated slug against current and permanently reserved profile slugs.      |
 | GET, PATCH | `/api/v1/admin/agent-profiles/{profile_id}` | Brokerage admin | Retrieve/update a profile; editing published content returns it to pending approval. |
+| POST       | `/api/v1/admin/agent-photos`                | Brokerage admin | Store one approved public agent photo (JPEG/PNG, 5 MiB bound, validated and malware-scanned); returns the stable HTTPS `photo_url`. |
 | POST       | `/api/v1/agents/{profile_id}/status`        | Brokerage admin | Apply the approval/publication/suspension/archive lifecycle with audit evidence.     |
 
 Production disables OpenAPI. Local and controlled non-production expose `/openapi.json` and `/docs`.

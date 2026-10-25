@@ -159,6 +159,19 @@ states the public site uses none — and no scheduler was configured. No
 lifecycle, authorization, audit, retention, deployment, or real-data status
 changes.
 
+On 2026-10-25 the agent-profile editor replaced its pasted photo URL with a
+Keeper-served upload (decision 56). An administrator selects one JPEG or PNG (5
+MiB cap); the API validates and malware-scans it, writes the bytes to the
+existing private MinIO bucket under `public/agent-photos/`, and returns a stable
+HTTPS URL served only by the public read route
+`GET /api/v1/agent-photos/{photo_id}`. The bucket stays private and public
+object URLs remain prohibited — no anonymous access, bucket policy, CDN, second
+bucket, migration, model, lifecycle, role, retention, data-class, deployment, or
+real-data status changes. New settings are `PUBLIC_SITE_BASE_URL` and
+`AGENT_PHOTO_MAX_BYTES`; the public read route is a deliberately narrow,
+recorded exception to the "no public object route" threat-model control that
+covers approved agent marketing photos only.
+
 On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 
 On 2026-07-27 the owner approved (a) the assigned-agent full-data retrieval

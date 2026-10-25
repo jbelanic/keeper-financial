@@ -255,4 +255,128 @@ describe("admin agent profile manager", () => {
       screen.getByRole("button", { name: /archive synthetic agent/i }),
     ).toBeInTheDocument();
   });
+
+  it("uploads a photo through Keeper and submits the stored URL", async () => {
+    const storedPhotoUrl = `https://keeperfinancial.ca/api/v1/agent-photos/${"a".repeat(32)}.jpg`;
+    const requester = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({ photo_url: storedPhotoUrl }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({
+          ...draft,
+          photo_url: storedPhotoUrl,
+          photo_alt_text: "Synthetic Agent at a desk",
+        }),
+      });
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create new profile" }));
+    fireEvent.change(screen.getByLabelText(/eligible agent/i), {
+      target: { value: draft.user_id },
+    });
+    fireEvent.change(screen.getByLabelText(/^slug/i), {
+      target: { value: draft.slug },
+    });
+    fireEvent.change(screen.getByLabelText(/licensed name/i), {
+      target: { value: draft.licensed_name },
+    });
+    fireEvent.change(screen.getByLabelText(/approved title/i), {
+      target: { value: draft.approved_title },
+    });
+    fireEvent.change(screen.getByLabelText(/licence number/i), {
+      target: { value: draft.licence_number },
+    });
+    fireEvent.change(screen.getByLabelText(/biography/i), {
+      target: { value: draft.biography },
+    });
+    fireEvent.change(screen.getByLabelText(/languages/i), {
+      target: { value: "English" },
+    });
+
+    const photo = new File(
+      [new Uint8Array([0xff, 0xd8, 0xff])],
+      "headshot.jpg",
+      {
+        type: "image/jpeg",
+      },
+    );
+    fireEvent.change(screen.getByLabelText(/approved photo/i), {
+      target: { files: [photo] },
+    });
+
+    await waitFor(() => expect(requester).toHaveBeenCalledTimes(1));
+    expect(requester.mock.calls[0][0]).toBe("/api/v1/admin/agent-photos");
+    expect(requester.mock.calls[0][1].method).toBe("POST");
+    expect(requester.mock.calls[0][1].body).toBeInstanceOf(FormData);
+    expect((requester.mock.calls[0][1].body as FormData).get("file")).toBe(
+      photo,
+    );
+    await screen.findByText(/photo stored/i);
+
+    fireEvent.change(screen.getByLabelText(/photo alternative text/i), {
+      target: { value: "Synthetic Agent at a desk" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /create draft profile/i }),
+    );
+
+    await waitFor(() => expect(requester).toHaveBeenCalledTimes(2));
+    const payload = JSON.parse(String(requester.mock.calls[1][1].body));
+    expect(payload.photo_url).toBe(storedPhotoUrl);
+    expect(payload.photo_alt_text).toBe("Synthetic Agent at a desk");
+  });
+
+  it("reports a rejected photo and never submits an image URL", async () => {
+    const requester = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 415,
+      json: async () => ({ detail: "photo type is unsupported" }),
+    });
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit synthetic agent/i }),
+    );
+    const photo = new File([new Uint8Array([0x25, 0x50])], "headshot.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(screen.getByLabelText(/approved photo/i), {
+      target: { files: [photo] },
+    });
+
+    await screen.findByText(/the photo was not uploaded/i);
+    expect(screen.queryByRole("button", { name: /remove photo/i })).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /save profile changes/i }),
+    );
+    await waitFor(() => expect(requester).toHaveBeenCalledTimes(2));
+    const payload = JSON.parse(String(requester.mock.calls[1][1].body));
+    expect(payload.photo_url).toBeNull();
+    expect(payload.photo_alt_text).toBeNull();
+  });
 });

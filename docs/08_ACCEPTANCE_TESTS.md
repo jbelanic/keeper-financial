@@ -216,6 +216,9 @@ assignment generation.
 - Suspended profile is removed from public directory and direct public rendering.
 - Published page contains configured regulatory fields.
 - Agent-specific application path uses configured safe mapping.
+- An approved agent photo is uploaded by an administrator only (JPEG or PNG, 5 MiB bound), validated and malware-scanned before storage, and written under the private `public/agent-photos/` prefix; an unsupported type, a malformed image, an undeclared real type, and an unavailable scanner all fail closed and store nothing.
+- The public photo route serves only a generated photo identifier in that prefix, with an immutable public cache header; a private candidate object, a malformed identifier, and a traversal-shaped path are indistinguishable `404`s. Photo alternative text remains required whenever a photo is present.
+- Replacing or clearing a Keeper-managed photo deletes the previous object once no profile references it, while an externally hosted URL is never deleted by Keeper.
 
 ## Environment and operations
 

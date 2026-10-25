@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import uuid
 from contextlib import suppress
 from dataclasses import dataclass
@@ -19,6 +20,14 @@ class StorageError(ValueError):
     pass
 
 
+# Approved public agent photos (decision 56) share the private bucket and are
+# only ever served through the API read route. No ACL, bucket policy, anonymous
+# access, or direct object URL is involved.
+PUBLIC_IMAGE_PREFIX = "public/agent-photos"
+PUBLIC_IMAGE_TYPES: dict[str, str] = {"image/jpeg": ".jpg", "image/png": ".png"}
+_PUBLIC_IMAGE_KEY = re.compile(r"^public/agent-photos/[0-9a-f]{32}\.(?:jpg|png)$")
+
+
 @dataclass(frozen=True)
 class StoredObject:
     object_key: str
@@ -33,12 +42,37 @@ class PrivateStorage(Protocol):
 
     def delete(self, object_key: str) -> None: ...
 
+    def put_public_image(
+        self, content: bytes, *, content_type: str, maximum_bytes: int
+    ) -> StoredObject: ...
+
+    def read_public_image(self, object_key: str) -> tuple[bytes, str]: ...
+
+    def delete_public_image(self, object_key: str) -> None: ...
+
 
 def _read_limited(stream: BinaryIO, maximum: int) -> bytes:
     data = stream.read(maximum + 1)
     if len(data) > maximum:
         raise StorageError("document exceeds the configured size limit")
     return data
+
+
+def _approved_image_extension(content: bytes, content_type: str, maximum_bytes: int) -> str:
+    extension = PUBLIC_IMAGE_TYPES.get(content_type.lower())
+    if extension is None:
+        raise StorageError("public image content type is not allowed")
+    if not content:
+        raise StorageError("public image is empty")
+    if len(content) > maximum_bytes:
+        raise StorageError("public image exceeds the configured size limit")
+    return extension
+
+
+def _image_type_for_key(object_key: str) -> str:
+    if object_key.endswith(".jpg"):
+        return "image/jpeg"
+    return "image/png"
 
 
 class LocalPrivateStorage:
@@ -57,6 +91,10 @@ class LocalPrivateStorage:
             raise StorageError("document content type is not allowed")
         data = _read_limited(stream, self.settings.max_document_bytes)
         object_key = f"candidate/{uuid.uuid4().hex}"
+        self._write(object_key, data)
+        return StoredObject(object_key, hashlib.sha256(data).hexdigest(), len(data))
+
+    def _write(self, object_key: str, data: bytes) -> None:
         destination = (self.root / object_key).resolve()
         if self.root not in destination.parents:
             raise StorageError("invalid object key")
@@ -70,7 +108,36 @@ class LocalPrivateStorage:
             with suppress(OSError):
                 destination.unlink(missing_ok=True)
             raise StorageError("private storage write failed") from exc
-        return StoredObject(object_key, hashlib.sha256(data).hexdigest(), len(data))
+
+    def put_public_image(
+        self, content: bytes, *, content_type: str, maximum_bytes: int
+    ) -> StoredObject:
+        extension = _approved_image_extension(content, content_type, maximum_bytes)
+        object_key = f"{PUBLIC_IMAGE_PREFIX}/{uuid.uuid4().hex}{extension}"
+        self._write(object_key, content)
+        return StoredObject(object_key, hashlib.sha256(content).hexdigest(), len(content))
+
+    def read_public_image(self, object_key: str) -> tuple[bytes, str]:
+        if _PUBLIC_IMAGE_KEY.fullmatch(object_key) is None:
+            raise StorageError("public image was not found")
+        path = (self.root / object_key).resolve()
+        if self.root not in path.parents or not path.is_file():
+            raise StorageError("public image was not found")
+        try:
+            return path.read_bytes(), _image_type_for_key(object_key)
+        except OSError as exc:
+            raise StorageError("public image read failed") from exc
+
+    def delete_public_image(self, object_key: str) -> None:
+        if _PUBLIC_IMAGE_KEY.fullmatch(object_key) is None:
+            raise StorageError("invalid object key")
+        path = (self.root / object_key).resolve()
+        if self.root not in path.parents:
+            raise StorageError("invalid object key")
+        try:
+            path.unlink(missing_ok=True)
+        except OSError as exc:
+            raise StorageError("public image deletion failed") from exc
 
     def authorized_download(self, object_key: str) -> Path:
         path = (self.root / object_key).resolve()
@@ -147,6 +214,41 @@ class S3PrivateStorage:
             self.client.delete_object(Bucket=self.settings.s3_bucket, Key=object_key)
         except (BotoCoreError, ClientError) as exc:
             raise StorageError("private storage deletion failed") from exc
+
+    def put_public_image(
+        self, content: bytes, *, content_type: str, maximum_bytes: int
+    ) -> StoredObject:
+        extension = _approved_image_extension(content, content_type, maximum_bytes)
+        object_key = f"{PUBLIC_IMAGE_PREFIX}/{uuid.uuid4().hex}{extension}"
+        try:
+            self.client.put_object(
+                Bucket=self.settings.s3_bucket,
+                Key=object_key,
+                Body=content,
+                ContentType=content_type.lower(),
+                CacheControl="public, max-age=31536000, immutable",
+            )
+        except (BotoCoreError, ClientError) as exc:
+            raise StorageError("public image write failed") from exc
+        return StoredObject(object_key, hashlib.sha256(content).hexdigest(), len(content))
+
+    def read_public_image(self, object_key: str) -> tuple[bytes, str]:
+        if _PUBLIC_IMAGE_KEY.fullmatch(object_key) is None:
+            raise StorageError("public image was not found")
+        try:
+            result = self.client.get_object(Bucket=self.settings.s3_bucket, Key=object_key)
+            content = result["Body"].read()
+        except (BotoCoreError, ClientError) as exc:
+            raise StorageError("public image was not found") from exc
+        return content, _image_type_for_key(object_key)
+
+    def delete_public_image(self, object_key: str) -> None:
+        if _PUBLIC_IMAGE_KEY.fullmatch(object_key) is None:
+            raise StorageError("invalid object key")
+        try:
+            self.client.delete_object(Bucket=self.settings.s3_bucket, Key=object_key)
+        except (BotoCoreError, ClientError) as exc:
+            raise StorageError("public image deletion failed") from exc
 
 
 def build_storage(settings: Settings) -> PrivateStorage:

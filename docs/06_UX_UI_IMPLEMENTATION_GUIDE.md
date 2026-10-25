@@ -232,6 +232,16 @@ Standard fields:
 - application/contact attribution;
 - brokerage identity.
 
+The approved photo is uploaded from the administration console, not pasted as a
+URL (decision 56). The editor offers one file input (JPEG or PNG, up to 5 MiB);
+Keeper validates, malware-scans, stores the file under the private
+`public/agent-photos/` namespace and fills the profile's `photo_url` with the
+stable HTTPS read URL, which is shown as a preview with an explicit *Remove
+photo* text control. Alternative text stays a required field whenever a photo is
+present, so a stored photo is never published without a description. Photo
+storage and profile saving are separate operations: upload first, then save the
+profile through the existing approval lifecycle.
+
 ## Component baseline
 
 Create:

@@ -509,6 +509,52 @@ export interface paths {
     patch: operations["patch_admin_agent_profile_api_v1_admin_agent_profiles__profile_id__patch"];
     trace?: never;
   };
+  "/api/v1/admin/agent-photos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Upload Admin Agent Photo
+     * @description Store one approved public agent photo and return its stable HTTPS URL.
+     *
+     *     The object is written to the private bucket under the approved prefix and is
+     *     reachable only through `GET /api/v1/agent-photos/{photo_id}`.
+     */
+    post: operations["upload_admin_agent_photo_api_v1_admin_agent_photos_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/agent-photos/{photo_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Public Agent Photo
+     * @description Serve one approved public agent photo; this is the only public read path.
+     *
+     *     Only `public/agent-photos/` objects with a generated identifier are servable.
+     *     An unknown or malformed identifier is indistinguishable from a missing one.
+     */
+    get: operations["get_public_agent_photo_api_v1_agent_photos__photo_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/agents/{profile_id}/status": {
     parameters: {
       query?: never;
@@ -1670,6 +1716,17 @@ export interface components {
        */
       created_at: string;
     };
+    /**
+     * AgentPhotoUpload
+     * @description Result of storing one approved public agent photo.
+     *
+     *     `photo_url` is the stable HTTPS URL the profile stores; it points at the
+     *     Keeper read route for the private object, never at MinIO directly.
+     */
+    AgentPhotoUpload: {
+      /** Photo Url */
+      photo_url: string;
+    };
     /** AgentProfileCreate */
     AgentProfileCreate: {
       /**
@@ -1846,6 +1903,11 @@ export interface components {
     ApplicationListResponse: {
       /** Applications */
       applications: components["schemas"]["CandidateApplicationResponse"][];
+    };
+    /** Body_upload_admin_agent_photo_api_v1_admin_agent_photos_post */
+    Body_upload_admin_agent_photo_api_v1_admin_agent_photos_post: {
+      /** File */
+      file: string;
     };
     /** Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post */
     Body_upload_candidate_document_api_v1_candidate_applications__application_id__documents_post: {
@@ -5251,6 +5313,114 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  upload_admin_agent_photo_api_v1_admin_agent_photos_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "x-dev-auth-sub"?: string | null;
+        "x-dev-auth-aal"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_upload_admin_agent_photo_api_v1_admin_agent_photos_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AgentPhotoUpload"];
+        };
+      };
+      /** @description Authentication required */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Admin or MFA denied */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Photo exceeds the configured size limit */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Photo type is unsupported */
+      415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Photo is empty, malformed, or contains malware */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Malware scanner or object storage is unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  get_public_agent_photo_api_v1_agent_photos__photo_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        photo_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Approved public agent photo bytes */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": unknown;
+          "image/png": unknown;
+        };
+      };
+      /** @description Photo not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
       };
     };
   };

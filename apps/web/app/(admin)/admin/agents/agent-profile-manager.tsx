@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import {
   Button,
@@ -75,6 +76,12 @@ export function AgentProfileManager({
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [slug, setSlug] = useState("");
   const [slugAvailability, setSlugAvailability] = useState("");
+  // Keeper stores the photo and serves it from our own public read route, so the
+  // administrator never needs an external HTTPS host (decision 56).
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoAlt, setPhotoAlt] = useState("");
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoNotice, setPhotoNotice] = useState("");
   // The list owns the page; the create/edit form is opened explicitly.
   const [formOpen, setFormOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -92,11 +99,19 @@ export function AgentProfileManager({
     });
   }
 
+  function resetPhotoState(profile: AdminAgentProfile | null) {
+    setPhotoUrl(profile?.photo_url ?? "");
+    setPhotoAlt(profile?.photo_alt_text ?? "");
+    setPhotoBusy(false);
+    setPhotoNotice("");
+  }
+
   function openCreateForm() {
     setEditing(null);
     setSelectedAgentId("");
     setSlug("");
     setSlugAvailability("");
+    resetPhotoState(null);
     setFormOpen(true);
     revealEditor();
   }
@@ -106,6 +121,7 @@ export function AgentProfileManager({
     setSelectedAgentId(profile.user_id);
     setSlug(profile.slug);
     setSlugAvailability("");
+    resetPhotoState(profile);
     setFormOpen(true);
     revealEditor();
   }
@@ -115,7 +131,45 @@ export function AgentProfileManager({
     setSelectedAgentId("");
     setSlug("");
     setSlugAvailability("");
+    resetPhotoState(null);
     setFormOpen(false);
+  }
+
+  async function uploadPhoto(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || photoBusy) return;
+    setPhotoBusy(true);
+    setErrors([]);
+    setPhotoNotice("Uploading photo…");
+    const body = new FormData();
+    body.append("file", file);
+    try {
+      const response = await requester("/api/v1/admin/agent-photos", {
+        method: "POST",
+        body,
+      });
+      if (!response.ok) throw new Error("photo rejected");
+      const result = (await response.json()) as { photo_url: string };
+      setPhotoUrl(result.photo_url);
+      setPhotoNotice(
+        "Photo stored. Enter alternative text that describes the photo.",
+      );
+      event.target.value = "";
+    } catch {
+      setPhotoNotice("");
+      setErrors([
+        "The photo was not uploaded. Use a JPEG or PNG file no larger than 5 MiB.",
+      ]);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  function removePhoto() {
+    if (photoBusy) return;
+    setPhotoUrl("");
+    setPhotoAlt("");
+    setPhotoNotice("Photo removed. Save the profile to apply the change.");
   }
 
   function closeDialog() {
@@ -587,23 +641,54 @@ export function AgentProfileManager({
                 defaultValue={editing?.specialties.join(", ") ?? ""}
               />
             </FormField>
-            <FormField id="agent-photo-url" label="Approved photo HTTPS URL">
+            <FormField
+              id="agent-photo-file"
+              label="Approved photo"
+              hint="JPEG or PNG, up to 5 MiB. Keeper stores the file and serves it from keeperfinancial.ca."
+            >
               <input
-                id="agent-photo-url"
-                name="photo_url"
-                type="url"
-                maxLength={2048}
-                defaultValue={editing?.photo_url ?? ""}
+                id="agent-photo-file"
+                name="photo_file"
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={uploadPhoto}
+                disabled={photoBusy || busy}
               />
+              <span aria-live="polite">{photoNotice}</span>
             </FormField>
-            <FormField id="agent-photo-alt" label="Photo alternative text">
+            <input type="hidden" name="photo_url" value={photoUrl} />
+            <FormField
+              id="agent-photo-alt"
+              label="Photo alternative text"
+              hint="Required with a photo; describe the person and the setting."
+            >
               <input
                 id="agent-photo-alt"
                 name="photo_alt_text"
                 maxLength={300}
-                defaultValue={editing?.photo_alt_text ?? ""}
+                value={photoAlt}
+                onChange={(event) => setPhotoAlt(event.target.value)}
               />
             </FormField>
+            {photoUrl ? (
+              <div className="agent-photo-preview">
+                <Image
+                  src={photoUrl}
+                  alt={photoAlt || "Current agent photo preview"}
+                  width={160}
+                  height={160}
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  className="text-link"
+                  onClick={removePhoto}
+                  disabled={photoBusy || busy}
+                >
+                  Remove photo
+                </button>
+              </div>
+            ) : null}
           </div>
           <FormField
             id="agent-biography"
