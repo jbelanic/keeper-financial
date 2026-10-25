@@ -45,6 +45,29 @@ The Supabase CLI database on port `54322` is internal to Auth and remains separa
 
 The one-shot `minio-init` service waits for healthy MinIO and idempotently creates the private `MINIO_BUCKET` through the API image's own boto3/S3 stack (`apps/api/scripts/init_minio_bucket.py`), with no anonymous policy, so objects stay private by default. It deliberately does not use the `mc` image: `mc` is glibc-based and cannot execute on the below-baseline target host (decision 47), and bucket provisioning must never live inside Alembic migrations. MinIO API CORS is configured directly on the server with `MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:3000`; no bucket CORS XML or `mc cors set` step is used. ClamAV persists signatures in `keeper_clamav` at `/var/lib/clamav`; a new volume may require several minutes for initial definitions. Its healthcheck sends a real clamd `PING` and requires `PONG`. The API waits for healthy PostgreSQL, MinIO, and ClamAV plus successful bucket initialization. The default stack intentionally does not start `documenso-tls` or bind loopback `443`, so it can run beside an existing WordPress server that owns public `80/443`; use `compose.documenso.yaml` only for an approved Documenso ceremony. No service runs Alembic automatically: migration remains a deliberate operator command after infrastructure health and before normal application startup.
 
+### Agent photos in local development
+
+`PUBLIC_SITE_BASE_URL` decides the origin baked into an uploaded agent photo's URL
+(`GET /api/v1/agent-photos/{photo_id}`). Locally it must be the origin the browser
+uses to reach the API — the same value as `NEXT_PUBLIC_API_BASE_URL`:
+
+```dotenv
+PUBLIC_SITE_BASE_URL=http://127.0.0.1:8000
+```
+
+Do **not** point it at `http://localhost:3000`. On the public host the Next proxy
+does not forward `/api` (only `apply.localhost:3000` rewrites
+`/api/v1/borrower-applications`), so a photo URL under the web origin 404s
+locally. In production Nginx serves `/api` from the site origin, which is why the
+production value is `https://keeperfinancial.ca` there; the validator rejects any
+`http` value when `APP_ENV=production`.
+
+The composed URL is stored on the profile, so a photo uploaded while the value
+was still the production default keeps that URL. After changing
+`PUBLIC_SITE_BASE_URL`, recreate the API container (`docker compose up -d
+--force-recreate api`, because `env_file` values apply at container creation) and
+re-upload the photo, or its row will keep pointing at the previous origin.
+
 ## Validation
 
 ```bash

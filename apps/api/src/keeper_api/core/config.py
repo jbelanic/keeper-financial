@@ -81,9 +81,10 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
     signed_url_ttl_seconds: int = Field(default=60, ge=30, le=300)
 
-    # Origin used only to compose the stable HTTPS URL of a Keeper-served public
-    # agent photo (decision 56). It is never an authorization, redirect, cookie,
-    # or CORS value, and it does not make MinIO or any object URL public.
+    # Origin used only to compose the stable URL of a Keeper-served public agent
+    # photo (decision 56). It is never an authorization, redirect, cookie, or CORS
+    # value, and it does not make MinIO or any object URL public. Production must be
+    # the exact HTTPS origin; dev/test may use a loopback http origin with a port.
     public_site_base_url: str = "https://keeperfinancial.ca"
     agent_photo_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1, le=5 * 1024 * 1024)
 
@@ -174,19 +175,37 @@ class Settings(BaseSettings):
             raise ValueError("malware scanning must fail closed in every environment")
 
         public_site = urlparse(self.public_site_base_url)
-        if (
-            public_site.scheme != "https"
-            or not public_site.hostname
-            or public_site.username
-            or public_site.password
-            or public_site.query
-            or public_site.fragment
-            or public_site.path not in {"", "/"}
-            or public_site.port not in {None, 443}
-        ):
+        public_site_is_https_origin = (
+            public_site.scheme == "https"
+            and bool(public_site.hostname)
+            and not public_site.username
+            and not public_site.password
+            and not public_site.query
+            and not public_site.fragment
+            and public_site.path in {"", "/"}
+            and public_site.port in {None, 443}
+        )
+        # Dev/test composes the same stable photo URL against a loopback origin so an
+        # uploaded agent photo resolves where it is actually served. Production stays
+        # HTTPS-only and is additionally pinned to the live hostname below, so this
+        # branch can never describe a deployed environment.
+        public_site_is_local_loopback = (
+            self.app_env != "production"
+            and public_site.scheme == "http"
+            and public_site.hostname in {"localhost", "127.0.0.1"}
+            and not public_site.username
+            and not public_site.password
+            and not public_site.query
+            and not public_site.fragment
+            and public_site.path in {"", "/"}
+            and public_site.port is not None
+        )
+        if not (public_site_is_https_origin or public_site_is_local_loopback):
             raise ValueError(
                 "PUBLIC_SITE_BASE_URL must be an exact HTTPS origin with no path, "
-                "credentials, port, query, or fragment"
+                "credentials, port, query, or fragment; outside production a loopback "
+                "http origin with an explicit port (for example http://localhost:3000) "
+                "is also accepted"
             )
 
         if self.app_env == "production":
