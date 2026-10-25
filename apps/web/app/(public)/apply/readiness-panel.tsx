@@ -73,6 +73,7 @@ export function ReadinessPanel({
 
       <section className="section section-muted">
         <div className="container process-layout">
+          {/* Owner + legal approved 2026-10-25 (decision 55(e)). Reword only on a new owner decision. */}
           <SectionHeading
             eyebrow="What to expect"
             title="A conversation, then your decision."

@@ -71,6 +71,12 @@ Additional rules:
 - Never publish authoring instructions, review status, release-planning notes,
   sprint language, or "approved site content" statements. Those belong in
   repository documents, not on a public page.
+- The mortgage-readiness copy on `/apply` (lead, "What to expect", the request
+  confirmation) and the home-page readiness nudge are owner + legal approved as
+  of 2026-10-25 (decision 55(e)). Treat them as governed content: change the
+  wording only on a new owner decision, and keep the approval markers in
+  `apply-paths.tsx`, `readiness-panel.tsx`, `apply-form.tsx` and
+  `lib/public-content.ts` in step with the text.
 - No new quantified or comparative claim without the `docs/04` public-claims
   review: no rates, lender counts, awards, rankings, testimonials, earnings or
   growth figures, or invented timelines.
