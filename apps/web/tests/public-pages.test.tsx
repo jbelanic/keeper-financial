@@ -9,7 +9,7 @@ import HomePage from "@/app/(public)/page";
 import PrivacyPage from "@/app/(public)/privacy-policy/page";
 
 const pages: Array<[string, () => React.ReactNode]> = [
-  ["Start with your mortgage goal", HomePage],
+  ["Your mortgage, handled properly", HomePage],
   ["Information for the mortgage decision in front of you", MortgagesPage],
   ["From a general question to a complete application", HowItWorksPage],
   ["About", AboutPage],
@@ -28,6 +28,33 @@ describe("anonymous public pages", () => {
       cleanup();
     },
   );
+
+  it("offers the readiness review and the secure application from the homepage", () => {
+    render(<HomePage />);
+
+    const readiness = screen.getAllByRole("link", {
+      name: "Book a Mortgage Readiness Review",
+    });
+    expect(readiness).toHaveLength(2);
+    for (const link of readiness) {
+      expect(link).toHaveAttribute("href", "/apply#readiness");
+    }
+
+    const application = screen.getAllByRole("link", {
+      name: "Start Your Application",
+    });
+    expect(application).toHaveLength(2);
+    for (const link of application) {
+      expect(link).toHaveAttribute("href", "/apply#application");
+    }
+
+    expect(
+      screen.getByRole("link", {
+        name: /Explore the Mortgage Readiness Review/i,
+      }),
+    ).toHaveAttribute("href", "/apply#readiness");
+    cleanup();
+  });
 
   it("aligns the homepage recruitment teaser without bypassing careers", () => {
     const { container } = render(<HomePage />);

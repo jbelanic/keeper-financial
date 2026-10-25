@@ -140,6 +140,23 @@ lifecycle, authorization, audit, retention, deployment, or real-data status
 changes; the affected surfaces and exclusions are recorded in decision 54 and
 `docs/06` §Admin portal.
 
+On 2026-10-25 the owner approved a homepage conversion update that also makes
+`/apply` the mortgage readiness review surface (decision 55) — no new
+`/mortgage-readiness/` route was created. The home page hero keeps its approved
+headline, offers `Book a Mortgage Readiness Review` and `Start Your
+Application` as its two paths (both to `/apply`, at the `#readiness` and
+`#application` anchors), and the goal section and closing band link the same
+way. `/apply` now opens with the readiness framing, a six-goal selector that
+fills the request form's mortgage goal, and a "What to expect" section, while
+the secure-application card is unchanged in destination. The only data change is
+one optional `source` label on `LeadInquiryCreate` (`website_apply` |
+`website_readiness`), stored on the existing column and on the consent records,
+with no migration. Analytics (Part C of the brief) was deliberately not
+implemented — no analytics of any kind is installed and the Privacy Notice
+states the public site uses none — and no scheduler was configured. No
+lifecycle, authorization, audit, retention, deployment, or real-data status
+changes.
+
 On 2026-07-24 the owner authorized normal branch, commit, push, pull-request, and merge operations for the approved borrower work. That authority does not authorize deployment, shared-database production mutation, real-borrower data, live secrets, external-service changes, force-push/history rewriting, destructive data operations, or legal/privacy/regulatory approval.
 
 On 2026-07-27 the owner approved (a) the assigned-agent full-data retrieval

@@ -4,9 +4,9 @@ import { createPageMetadata } from "@/lib/metadata";
 import { ApplyPaths } from "./apply-paths";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Get started",
+  title: "Mortgage readiness review",
   description:
-    "Choose a minimal contact-first request or continue through Keeper Financial’s validated secure mortgage-application route.",
+    "Talk through your mortgage options before you apply — what may affect them, what to expect, and how to continue to Keeper Financial’s secure application.",
   path: "/apply",
 });
 

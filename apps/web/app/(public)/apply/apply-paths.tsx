@@ -1,7 +1,6 @@
-import { Card } from "@keeper/ui";
-import { InteriorPageHeader, Icon, CtaBand } from "@/lib/public-components";
+import { CtaBand, InteriorPageHeader } from "@/lib/public-components";
 import { getPublicSiteConfig, siteConfig } from "@/lib/site-config";
-import { ApplyForm } from "./apply-form";
+import { ReadinessPanel } from "./readiness-panel";
 
 type PublicSiteConfig = ReturnType<typeof getPublicSiteConfig>;
 
@@ -12,81 +11,27 @@ export function ApplyPaths({
   agentReference?: string;
   config?: PublicSiteConfig;
 }) {
-  const attribution = agentReference
-    ? `?${new URLSearchParams({ agent: agentReference }).toString()}`
-    : "";
   return (
     <>
       <div className="container">
         <InteriorPageHeader
-          title="Choose how you’d like to begin"
-          description="Ask us a question with just your contact details, or start your private application when you’re ready to share more."
+          eyebrow="Mortgage guidance · Ontario"
+          title="Before you apply, understand your options."
+          description="A mortgage decision starts with understanding your situation. Talk with Keeper Financial about your goals, the factors that may affect your options, and the next steps worth considering."
         />
         <p className="notice apply-warning">
           Please don’t send financial, identity or health details in the contact
           form — the secure application is the place for those.
         </p>
       </div>
-      <section className="section section-no-top">
-        <div className="container apply-grid">
-          <Card className="apply-card">
-            <div className="card-icon">
-              <Icon name="conversation" />
-            </div>
-            <p className="eyebrow">Option one</p>
-            <h2>Ask a general question</h2>
-            <p>
-              Share your name, contact details and a short note about what you
-              need.
-            </p>
-            <p className="contact-shortcuts">
-              Prefer to call?{" "}
-              <a href={config.phoneHref}>{config.phoneDisplay}</a>
-              {config.bookingUrl ? (
-                <>
-                  {" "}
-                  or <a href={config.bookingUrl}>Book a call</a>
-                </>
-              ) : null}
-            </p>
-            <ApplyForm
-              agentReference={agentReference}
-              unavailableContact={`${config.phoneDisplay} or ${config.email}`}
-            />
-          </Card>
-          <Card className="apply-card secure-application-card">
-            <div className="card-icon">
-              <Icon name="shield" />
-            </div>
-            <p className="eyebrow">Option two</p>
-            <h2>Continue to the mortgage application</h2>
-            <p>
-              Start your private application for the financial, identity and
-              property details we’ll need. It saves as you go in this browser
-              only.
-            </p>
-            <a
-              className="button-link"
-              href={`${config.mortgageApplicationUrl}${attribution}`}
-            >
-              Continue to the mortgage application
-            </a>
-            <p className="fine-print">
-              Saved as you go. Your draft resumes only in this browser while its
-              secure cookie remains available, so please don’t use a shared or
-              public device. If the application is unavailable, call{" "}
-              {config.phoneDisplay} or email {config.email}.
-            </p>
-          </Card>
-        </div>
-      </section>
+      <ReadinessPanel agentReference={agentReference} config={config} />
       <section className="section section-tight">
         <div className="container">
           <CtaBand
-            title="Not ready to continue yet?"
-            description="Return to the contact options if you only have a general question."
+            title="Prefer to talk it through first?"
+            description="Call us, or use our contact page instead of the request form."
             primaryHref="/contact"
-            primaryLabel="Return to contact options"
+            primaryLabel="Contact us"
             secondaryHref="/how-it-works"
             secondaryLabel="See how the process works"
           />

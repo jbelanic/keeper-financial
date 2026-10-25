@@ -1605,6 +1605,60 @@ p {
   margin-bottom: 2rem;
   max-width: none;
 }
+/* Mortgage readiness review: the six goal cards that pre-fill the request
+   form's mortgage objective. Native radios keep keyboard and screen-reader
+   behaviour for free; the card is only the visual affordance. */
+.goal-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.goal-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.goal-option {
+  align-items: center;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: grid;
+  font-weight: 650;
+  gap: 0.7rem;
+  grid-template-columns: auto 1fr;
+  min-height: 3rem;
+  padding: 0.85rem 1rem;
+}
+.goal-option:hover {
+  border-color: var(--color-accent);
+}
+.goal-option:has(input:checked) {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+.goal-option:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+.goal-option input {
+  accent-color: var(--color-accent);
+  height: 1.15rem;
+  margin: 0;
+  width: 1.15rem;
+}
+.readiness-nudge {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+}
+.readiness-nudge p {
+  margin: 0;
+}
+.readiness-nudge .text-link {
+  margin-top: 0;
+}
 .admin-toolbar {
   align-items: center;
   margin-block: 1rem 1.5rem;
@@ -1886,6 +1940,7 @@ p {
   }
   .trust-strip,
   .service-grid,
+  .goal-grid,
   .numbered-cards,
   .value-grid.four-up,
   .recruitment-benefits,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Button, ConsentCheckbox, ErrorSummary, FormField } from "@keeper/ui";
 
 const VALIDATED_FIELDS = {
@@ -21,8 +22,8 @@ const VALIDATED_FIELDS = {
     invalid: "Select a valid preferred contact method.",
   },
   mortgage_objective: {
-    required: "General mortgage objective is required.",
-    invalid: "Select a valid general mortgage objective.",
+    required: "Mortgage goal is required.",
+    invalid: "Select a valid mortgage goal.",
   },
   service_contact_acknowledged: {
     required: "Service-contact acknowledgement is required.",
@@ -57,9 +58,18 @@ function validateFields(form: HTMLFormElement): FieldErrors {
 export function ApplyForm({
   unavailableContact = "our phone number or email address",
   agentReference,
+  objective,
+  source = "website_readiness",
+  followUp,
 }: {
   unavailableContact?: string;
   agentReference?: string;
+  /** Pre-fills the mortgage goal when a readiness card is chosen. */
+  objective?: string;
+  /** Capture surface recorded on the inquiry and its consent records. */
+  source?: "website_apply" | "website_readiness";
+  /** Extra sentence offering a phone or email route after a successful send. */
+  followUp?: ReactNode;
 }) {
   const [errors, setErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -96,6 +106,7 @@ export function ApplyForm({
       telephone: data.get("telephone"),
       mortgage_objective: data.get("mortgage_objective"),
       preferred_contact_method: data.get("preferred_contact_method"),
+      source,
       ...(agentReference ? { agent_reference: agentReference } : {}),
       message: data.get("message") || null,
       service_contact_acknowledged:
@@ -156,9 +167,10 @@ export function ApplyForm({
       <ErrorSummary errors={errors} />
       {submitted ? (
         <p role="status" aria-live="polite" className="notice notice-success">
-          Thanks — your request has been received. For your protection, please
-          don’t send documents by email; we’ll point you to the secure
-          application if we need them.
+          Thank you. Your request has been received. We’ll follow up using your
+          preferred contact method.{followUp ? <> {followUp}</> : null} For your
+          protection, please don’t send documents by email; we’ll point you to
+          the secure application if we need them.
         </p>
       ) : null}
       <div className="grid-2">
@@ -217,14 +229,19 @@ export function ApplyForm({
         </FormField>
         <FormField
           id="mortgage_objective"
-          label="General mortgage objective"
+          label="Mortgage goal"
+          hint="Choosing a goal above fills this in."
           error={fieldErrors.mortgage_objective}
         >
           <select
             id="mortgage_objective"
             name="mortgage_objective"
             required
-            defaultValue=""
+            // The readiness cards own this value: remounting the field when it
+            // changes is React's documented way to reset a form control from an
+            // external source, without mirroring it into extra component state.
+            key={objective ?? "none"}
+            defaultValue={objective ?? ""}
           >
             <option value="" disabled>
               Select one

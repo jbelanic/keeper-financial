@@ -93,20 +93,42 @@ Recommended:
 
 ## `/apply` page
 
-The page must present both options without making either look secondary.
+The page must present both options without making either look secondary. Since
+2026-10-25 (decision 55) it is also the **mortgage readiness review** surface:
+there is no separate `/mortgage-readiness/` route.
+
+- H1 `Before you apply, understand your options.` with the eyebrow `Mortgage
+  guidance · Ontario`, and a lead that frames the page as a conversation about
+  the visitor's situation.
+- A six-card readiness goal selector (buying a home, first-time buyer, mortgage
+  renewal, refinancing, investment property, not sure yet) renders first, as one
+  native radio group inside a wrapper `fieldset`/`legend`. Choosing a card fills
+  the request form's mortgage goal and **never** submits, navigates, or stores
+  anything. The selector only shortcuts the five server-accepted objectives:
+  first-time buyer maps to `purchase` and not sure yet to `other`
+  (`apps/web/lib/public-content.ts`, `readinessGoals`).
+- A "What to expect" three-step section precedes the form (tell us what you're
+  planning · discuss your situation · understand your next steps). It states no
+  approval, rate, affordability, or outcome promise.
 
 ### Speak with someone first
 
 - Short explanation.
-- Minimal form.
+- Minimal form, titled `Request your mortgage readiness conversation`.
 - Call action.
-- Consultation-booking action.
-- Expected response language.
+- Consultation-booking action — only when an owner-approved `https` URL is
+  configured (`NEXT_PUBLIC_BOOKING_URL`); otherwise the page offers the phone and
+  email route and never a placeholder widget.
+- Expected response language, including the success state: "Thank you. Your
+  request has been received. We'll follow up using your preferred contact
+  method." plus the phone/email route where configured.
 - Privacy acknowledgement.
 
 ### Start a secure application
 
-- Enter the exact Keeper-owned `apply.keeperfinancial.ca` workflow; do not redirect to an external provider.
+- The card is titled `Ready to apply now?` and its action is `Start Your
+  Application`; it enters the exact Keeper-owned `apply.keeperfinancial.ca`
+  workflow; do not redirect to an external provider.
 - State expected time only where verified.
 - Explain that the accountless draft resumes only in the same browser while its secure capability remains valid; do not imply emailed or cross-device resume. **Current approved wording (2026-10-16):** "Saved as you go. Your draft resumes only in this browser while its secure cookie remains available, so please don't use a shared or public device."
 - Do not state that final submission or document upload is unavailable. Both are implemented (Phase D.2); real-data submission is fail-closed at runtime by the `BORROWER_REAL_DATA_ENABLED` gate and the consent `real_data_approved` marker, and that runtime gate is not public-page copy.

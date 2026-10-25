@@ -149,10 +149,12 @@ export function CtaBand({
 }
 
 export function InteriorPageHeader({
+  eyebrow,
   title,
   description,
   parent,
 }: {
+  eyebrow?: string;
   title: string;
   description: string;
   parent?: { label: string; href: string };
@@ -166,6 +168,7 @@ export function InteriorPageHeader({
           { label: title },
         ]}
       />
+      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
       <h1>{title}</h1>
       <p className="page-lead">{description}</p>
     </header>

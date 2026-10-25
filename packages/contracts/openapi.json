@@ -11321,6 +11321,15 @@
             ],
             "title": "Preferred Contact Method"
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "website_apply",
+              "website_readiness"
+            ],
+            "title": "Source",
+            "default": "website_apply"
+          },
           "agent_reference": {
             "anyOf": [
               {
