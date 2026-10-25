@@ -93,6 +93,8 @@ The live object store is the `minio` service in `compose.yaml`. PostgreSQL store
 
 The live malware-scanning boundary is the `clamav` Compose service. The API sends bounded in-memory bytes to `clamd` over the internal `clamav:3310` TCP endpoint using framed `INSTREAM`; port 3310 is published on loopback only for operator verification. Candidate bytes are not written to MinIO until type/structure validation and a clean scan both succeed.
 
+Approved public agent photos (decision 56) are the one deliberate exception to private-only delivery, and it is narrow: an administrator uploads one JPEG/PNG (5 MiB bound, validated and malware-scanned) which is stored in the **same private bucket** under the `public/agent-photos/` prefix. Nothing about the bucket changes — no anonymous policy, no ACL, no public object URL, no Cloudflare R2, and `PUBLIC_OBJECT_URLS_ENABLED` stays prohibited. The only read path is the Keeper API route `GET /api/v1/agent-photos/{photo_id}`, which serves exactly that prefix with an immutable public cache header and returns `404` for anything else. The profile stores the resulting stable HTTPS URL (`PUBLIC_SITE_BASE_URL` + the route) as `photo_url`, which is what the public agent pages render.
+
 Required:
 
 - Private bucket.

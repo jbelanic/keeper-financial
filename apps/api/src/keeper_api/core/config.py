@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
     signed_url_ttl_seconds: int = Field(default=60, ge=30, le=300)
 
+    # Origin used only to compose the stable HTTPS URL of a Keeper-served public
+    # agent photo (decision 56). It is never an authorization, redirect, cookie,
+    # or CORS value, and it does not make MinIO or any object URL public.
+    public_site_base_url: str = "https://keeperfinancial.ca"
+    agent_photo_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1, le=5 * 1024 * 1024)
+
     mortgage_application_provider: str = "disabled"
     mortgage_application_url: str | None = None
     mortgage_application_allowed_hosts: str = ""
@@ -166,6 +172,22 @@ class Settings(BaseSettings):
             raise ValueError("public object URLs are prohibited in every environment")
         if not self.malware_scanner_fail_closed:
             raise ValueError("malware scanning must fail closed in every environment")
+
+        public_site = urlparse(self.public_site_base_url)
+        if (
+            public_site.scheme != "https"
+            or not public_site.hostname
+            or public_site.username
+            or public_site.password
+            or public_site.query
+            or public_site.fragment
+            or public_site.path not in {"", "/"}
+            or public_site.port not in {None, 443}
+        ):
+            raise ValueError(
+                "PUBLIC_SITE_BASE_URL must be an exact HTTPS origin with no path, "
+                "credentials, port, query, or fragment"
+            )
 
         if self.app_env == "production":
             errors: list[str] = []
@@ -284,6 +306,10 @@ class Settings(BaseSettings):
                     or public_endpoint.port != 9000
                 ):
                     errors.append("live signed-object endpoint must use local-host MinIO")
+            if public_site.hostname != "keeperfinancial.ca":
+                errors.append(
+                    "PUBLIC_SITE_BASE_URL must be https://keeperfinancial.ca in the live tier"
+                )
             if errors:
                 raise ValueError("unsafe live Docker configuration: " + "; ".join(errors))
 

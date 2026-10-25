@@ -389,3 +389,83 @@ def test_local_storage_permission_failure_is_a_safe_storage_error(
     monkeypatch.setattr(Path, "mkdir", deny_mkdir)
     with pytest.raises(StorageError, match="private storage write failed"):
         storage.put(io.BytesIO(b"%PDF-1.7 synthetic"), content_type="application/pdf")
+
+
+def test_s3_public_image_adapter_stays_inside_the_approved_private_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    put_calls: list[dict[str, object]] = []
+    get_calls: list[str] = []
+    delete_calls: list[str] = []
+
+    class StubClient:
+        def put_object(self, **kwargs: object) -> None:
+            put_calls.append(kwargs)
+
+        def get_object(self, **kwargs: object) -> dict[str, object]:
+            get_calls.append(str(kwargs["Key"]))
+
+            class Body:
+                def read(self) -> bytes:
+                    return b"\xff\xd8\xffsynthetic-jpeg"
+
+            return {"Body": Body()}
+
+        def delete_object(self, **kwargs: object) -> None:
+            delete_calls.append(str(kwargs["Key"]))
+
+    monkeypatch.setattr("keeper_api.services.storage.boto3.client", lambda *_a, **_k: StubClient())
+    storage = S3PrivateStorage(
+        configured_settings(
+            storage_backend="s3",
+            s3_endpoint_url="http://minio:9000",
+            s3_public_endpoint_url="http://localhost:9000",
+            s3_access_key_id="synthetic-local-access-id",
+            s3_secret_access_key="synthetic-local-secret",
+            s3_bucket="keeper-private",
+        )
+    )
+
+    stored = storage.put_public_image(
+        b"\xff\xd8\xffsynthetic-jpeg", content_type="image/jpeg", maximum_bytes=1024
+    )
+
+    assert stored.object_key.startswith("public/agent-photos/")
+    assert stored.object_key.endswith(".jpg")
+    assert put_calls == [
+        {
+            "Bucket": "keeper-private",
+            "Key": stored.object_key,
+            "Body": b"\xff\xd8\xffsynthetic-jpeg",
+            "ContentType": "image/jpeg",
+            "CacheControl": "public, max-age=31536000, immutable",
+        }
+    ]
+
+    content, content_type = storage.read_public_image(stored.object_key)
+    assert content == b"\xff\xd8\xffsynthetic-jpeg"
+    assert content_type == "image/jpeg"
+    assert get_calls == [stored.object_key]
+
+    storage.delete_public_image(stored.object_key)
+    assert delete_calls == [stored.object_key]
+
+    # Anything outside the generated public-image namespace is refused locally,
+    # without touching the object store.
+    for rejected in (
+        "candidate/0123456789abcdef",
+        "public/agent-photos/0123456789abcdef0123456789abcdef",
+        "public/agent-photos/../../candidate/secret.jpg",
+        "public/agent-photos/0123456789abcdef0123456789abcdef.gif",
+    ):
+        with pytest.raises(StorageError):
+            storage.read_public_image(rejected)
+        with pytest.raises(StorageError):
+            storage.delete_public_image(rejected)
+    assert get_calls == [stored.object_key]
+    assert delete_calls == [stored.object_key]
+
+    with pytest.raises(StorageError, match="content type is not allowed"):
+        storage.put_public_image(b"GIF89a", content_type="image/gif", maximum_bytes=1024)
+    with pytest.raises(StorageError, match="size limit"):
+        storage.put_public_image(b"\xff\xd8\xff", content_type="image/jpeg", maximum_bytes=2)

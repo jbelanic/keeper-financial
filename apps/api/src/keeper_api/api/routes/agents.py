@@ -4,8 +4,20 @@ import re
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from keeper_api.core.config import Settings, get_settings
 from keeper_api.db.session import get_db
@@ -14,6 +26,7 @@ from keeper_api.models.statuses import CandidateStatus
 from keeper_api.schemas.agents import (
     AdminAgentProfile,
     AdminAgentProfileList,
+    AgentPhotoUpload,
     AgentProfileCreate,
     AgentProfileUpdate,
     AgentReferralLinkResponse,
@@ -30,6 +43,17 @@ from keeper_api.schemas.leads import (
     ConsentState,
 )
 from keeper_api.schemas.lifecycle import AgentStatusResponse, AgentTransitionRequest
+from keeper_api.services.agent_photos import (
+    AgentPhotoRejected,
+    MalwareScannerUnavailable,
+    audit_target_id,
+    delete_agent_photo,
+    photo_id_for,
+    photo_id_from_url,
+    photo_url,
+    read_agent_photo,
+    store_agent_photo,
+)
 from keeper_api.services.agents import (
     AgentProfileConflict,
     AgentProfileLifecycleService,
@@ -45,6 +69,7 @@ from keeper_api.services.agents import (
     slug_is_available,
     update_profile,
 )
+from keeper_api.services.audit import AuditService
 from keeper_api.services.auth import (
     Principal,
     get_current_principal,
@@ -58,9 +83,11 @@ from keeper_api.services.leads import (
     get_agent_lead,
     list_agent_leads,
 )
+from keeper_api.services.storage import StorageError
 
 router = APIRouter(tags=["agents"])
 NO_STORE = {"Cache-Control": "no-store"}
+PHOTO_READ_CHUNK_BYTES = 64 * 1024
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 DENIED_AGENT_PRINCIPAL_STATUSES = {
     CandidateStatus.DECLINED,
@@ -81,6 +108,23 @@ def require_agent_profile_admin(
 
 def _admin(profile: AgentProfile) -> AdminAgentProfile:
     return AdminAgentProfile.model_validate(profile, from_attributes=True)
+
+
+def _release_replaced_photo(
+    db: Session, settings: Settings, previous_url: str | None, current_url: str | None
+) -> None:
+    """Delete the previous Keeper-managed photo object once no profile uses it."""
+    previous_photo_id = photo_id_from_url(settings, previous_url)
+    if previous_photo_id is None:
+        return
+    if previous_photo_id == photo_id_from_url(settings, current_url):
+        return
+    still_referenced = db.scalar(
+        select(AgentProfile.id).where(AgentProfile.photo_url == previous_url)
+    )
+    if still_referenced is not None:
+        return
+    delete_agent_photo(settings, previous_photo_id)
 
 
 @router.get(
@@ -271,23 +315,154 @@ def patch_admin_agent_profile(
     response: Response,
     principal: Principal = Depends(require_agent_profile_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> AdminAgentProfile:
     response.headers.update(NO_STORE)
     profile = get_admin_profile(db, profile_id, lock=True)
     if profile is None:
         raise HTTPException(status_code=404, detail="agent profile not found", headers=NO_STORE)
+    previous_photo_url = profile.photo_url
     try:
-        return _admin(
-            update_profile(
-                db,
-                profile,
-                payload,
-                actor_user_id=principal.user_id,
-                request_id=request.state.request_id,
-            )
+        updated = update_profile(
+            db,
+            profile,
+            payload,
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
         )
     except AgentProfileConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc), headers=NO_STORE) from exc
+    _release_replaced_photo(db, settings, previous_photo_url, updated.photo_url)
+    return _admin(updated)
+
+
+async def _read_photo_bounded(file: UploadFile, maximum: int) -> bytes:
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(min(PHOTO_READ_CHUNK_BYTES, maximum + 1 - total))
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > maximum:
+            raise HTTPException(status_code=413, detail="photo is too large", headers=NO_STORE)
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+@router.post(
+    "/admin/agent-photos",
+    response_model=AgentPhotoUpload,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin or MFA denied"},
+        413: {"description": "Photo exceeds the configured size limit"},
+        415: {"description": "Photo type is unsupported"},
+        422: {"description": "Photo is empty, malformed, or contains malware"},
+        503: {"description": "Malware scanner or object storage is unavailable"},
+    },
+)
+async def upload_admin_agent_photo(
+    request: Request,
+    response: Response,
+    file: UploadFile = File(),
+    principal: Principal = Depends(require_agent_profile_admin),
+    settings: Settings = Depends(get_settings),
+    db: Session = Depends(get_db),
+) -> AgentPhotoUpload:
+    """Store one approved public agent photo and return its stable HTTPS URL.
+
+    The object is written to the private bucket under the approved prefix and is
+    reachable only through `GET /api/v1/agent-photos/{photo_id}`.
+    """
+    response.headers.update(NO_STORE)
+    try:
+        content = await _read_photo_bounded(file, settings.agent_photo_max_bytes)
+        try:
+            stored = await run_in_threadpool(
+                request.app.state.document_scan_gate.run,
+                lambda: store_agent_photo(
+                    settings,
+                    content=content,
+                    filename=file.filename,
+                    content_type=file.content_type,
+                ),
+            )
+        except AgentPhotoRejected as exc:
+            if exc.code == "file_too_large":
+                raise HTTPException(
+                    status_code=413, detail="photo is too large", headers=NO_STORE
+                ) from exc
+            unsupported = exc.code in {
+                "declared_mime_mismatch",
+                "detected_mime_mismatch",
+                "invalid_filename",
+                "unsupported_extension",
+            }
+            raise HTTPException(
+                status_code=415 if unsupported else 422,
+                detail="photo type is unsupported" if unsupported else "photo was rejected",
+                headers=NO_STORE,
+            ) from exc
+        except MalwareScannerUnavailable as exc:
+            raise HTTPException(
+                status_code=503, detail="photo scanning is unavailable", headers=NO_STORE
+            ) from exc
+        except StorageError as exc:
+            raise HTTPException(
+                status_code=503, detail="photo storage is unavailable", headers=NO_STORE
+            ) from exc
+        photo_id = photo_id_for(stored.object_key)
+        AuditService(db).record(
+            "agent_photo.stored",
+            "agent_photo",
+            audit_target_id(photo_id),
+            actor_user_id=principal.user_id,
+            request_id=request.state.request_id,
+            safe_metadata={
+                "content_type": "image/jpeg" if photo_id.endswith(".jpg") else "image/png",
+                "size_bytes": stored.size_bytes,
+            },
+        )
+        db.commit()
+        return AgentPhotoUpload(photo_url=photo_url(settings, photo_id))
+    finally:
+        await file.close()
+
+
+@router.get(
+    "/agent-photos/{photo_id}",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Approved public agent photo bytes",
+            "content": {"image/jpeg": {}, "image/png": {}},
+        },
+        404: {"description": "Photo not found"},
+    },
+)
+def get_public_agent_photo(
+    photo_id: str,
+    settings: Settings = Depends(get_settings),
+) -> Response:
+    """Serve one approved public agent photo; this is the only public read path.
+
+    Only `public/agent-photos/` objects with a generated identifier are servable.
+    An unknown or malformed identifier is indistinguishable from a missing one.
+    """
+    try:
+        content, content_type = read_agent_photo(settings, photo_id)
+    except (AgentPhotoRejected, StorageError) as exc:
+        raise HTTPException(status_code=404, detail="agent photo was not found") from exc
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post(

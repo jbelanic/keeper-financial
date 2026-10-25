@@ -230,6 +230,18 @@ class EligibleAgent(BaseModel):
     email: str
 
 
+class AgentPhotoUpload(BaseModel):
+    """Result of storing one approved public agent photo.
+
+    `photo_url` is the stable HTTPS URL the profile stores; it points at the
+    Keeper read route for the private object, never at MinIO directly.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    photo_url: str
+
+
 class SlugAvailability(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

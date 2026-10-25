@@ -131,6 +131,11 @@ app.add_middleware(
     SensitiveUploadMiddleware,
     route_limits=(
         UploadRouteLimit.exact("/api/v1/upload-document", maximum_file_bytes=FIVE_MIB),
+        UploadRouteLimit.exact(
+            "/api/v1/admin/agent-photos",
+            maximum_file_bytes=FIVE_MIB,
+            private=True,
+        ),
         UploadRouteLimit.pattern(
             r"^/api/v1/candidate/applications/[^/]+/documents$",
             maximum_file_bytes=settings.max_document_bytes,

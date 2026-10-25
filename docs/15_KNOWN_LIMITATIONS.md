@@ -122,6 +122,7 @@ plain-language standard in `docs/06` §Public copy standard.
 - Audit events are append-oriented through application APIs, but dedicated database privileges, retention, immutable export/tamper evidence, and operational review remain production work.
 - UI tests cover semantic controls, text status, focus/error/live-region behavior, duplicate actions, and responsive CSS guardrails. Genuine Firefox now covers the required 320–1920 CSS-pixel reflow set at normal zoom and three closed-tab candidate sign-ins; manual keyboard, screen-reader, contrast, reduced-motion, touch-target, zoom variation, and cross-browser review are still required. No WCAG certification is claimed.
 - Owner approval/licensing remains required for the Phase 1A logo/font/photography and final public legal/regulatory presentation.
+- Agent photos (decision 56) are served by the API read route, not a CDN or the Next.js image optimizer, and are stored exactly as uploaded: there is no resizing, cropping, or format conversion, so administrators should upload an already-cropped JPEG/PNG. An upload that is never attached to a saved profile leaves an unreferenced object in the private bucket, and no orphan-sweep job exists yet. The public route has no rate limiting beyond the ingress defaults — acceptable for one static image per published profile, to be revisited if photo traffic or abuse appears.
 
 Current local-Docker operation and validation evidence is recorded in `docs/LOCAL_DEVELOPMENT.md`; historical phase evidence remains in the phase implementation reports.
 

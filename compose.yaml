@@ -98,6 +98,7 @@ services:
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
       S3_BUCKET: ${MINIO_BUCKET:-keeper-private}
       S3_REGION: us-east-1
+      PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://keeperfinancial.ca}
       MALWARE_SCANNER_BACKEND: clamav
       MALWARE_SCANNER_FAIL_CLOSED: "true"
       CLAMAV_HOST: clamav

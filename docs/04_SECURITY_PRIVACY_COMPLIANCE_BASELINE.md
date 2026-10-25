@@ -157,6 +157,7 @@ Use identifiers, event names, status, request ID, actor ID, and safe error categ
 - Approved MIME types.
 - Extension/MIME mismatch handling.
 - Strict type/structure validation and fail-closed ClamAV scanning before private MinIO persistence.
+- Approved public agent photos use the same validation and scan gate, are written to the private bucket under `public/agent-photos/`, and are served only by the Keeper read route (no anonymous bucket access, no public object URL, no direct MinIO URL).
 - ClamAV health, signature freshness, failure alerting, and patch operations before pilot approval.
 - Download response headers.
 - Short-lived access.
