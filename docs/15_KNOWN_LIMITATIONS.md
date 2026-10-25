@@ -52,9 +52,11 @@ plain-language standard in `docs/06` §Public copy standard.
   runtime gate — `BORROWER_REAL_DATA_ENABLED` plus the consent
   `real_data_approved` marker, per decision 40 — which keeps real-data
   submission fail-closed and is deliberately not published as public copy.
-- Still open, unchanged by this decision: the displayed registration text
-  (`FSCO # 13696`) requires owner/legal verification now that FSRA has replaced
-  FSCO, and the Phase 1F specialist reviews remain outstanding.
+- The displayed registration text (`FSCO # 13696`) is **approved as displayed**:
+  the owner and legal review confirmed on 2026-10-25 that it, and the confirmed
+  contact details, stay exactly as they are (decision 55(f)), closing the
+  verification item raised on 2026-10-16. Still open and unchanged by this
+  decision: the Phase 1F specialist reviews.
 
 ## Recruitment and privacy boundary
 

@@ -122,8 +122,10 @@ handled through Filogix", contrary to decisions 3 and 38 and `docs/28`. The
 notice now discloses the mortgage-application data class, the credit-use
 consent, application-level encryption, authorized-access limits, and the
 decision-37 retention periods; its effective date is 2026-10-16. The displayed
-registration text (`FSCO # 13696`) still requires owner/legal verification now
-that FSRA has replaced FSCO. This is a public-content change only: it does not
+registration text (`FSCO # 13696`) and the confirmed contact details were
+approved to remain exactly as displayed by the owner and legal review on
+2026-10-25 (decision 55(f)), closing the verification item this decision raised.
+This is a public-content change only: it does not
 alter deployment, real-data, retention, migration, or operational-readiness
 status. The full before/after change list and the implementation record are in
 `docs/38_PUBLIC_COPY_REVIEW.md`.
