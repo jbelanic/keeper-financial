@@ -57,6 +57,38 @@ function publicSlug(value: string): string {
     .slice(0, 100);
 }
 
+const PROFILE_SAVE_FALLBACK =
+  "The profile was not saved. Check the active agent relationship, bounded public fields, links, and your administration access.";
+
+/**
+ * FastAPI reports a rejected save as a 422 with either `detail: "<message>"` or
+ * `detail: [{ msg, loc }, ...]`. Showing that message is the difference between
+ * "something went wrong" and "URL must be HTTPS", so surface the first bounded
+ * human-readable one and fall back to the generic sentence when the body is
+ * unexpected.
+ */
+async function profileSaveError(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+    const detail = (body as { detail?: unknown } | null)?.detail;
+    const message = Array.isArray(detail)
+      ? detail.find(
+          (item): item is { msg: string } =>
+            typeof (item as { msg?: unknown })?.msg === "string",
+        )?.msg
+      : typeof detail === "string"
+        ? detail
+        : undefined;
+    const trimmed = message?.trim();
+    if (trimmed) {
+      return `The profile was not saved. ${trimmed.slice(0, 300)}`;
+    }
+  } catch {
+    // Fall through to the generic sentence.
+  }
+  return PROFILE_SAVE_FALLBACK;
+}
+
 export function AgentProfileManager({
   initialProfiles,
   initialEligibleAgents,
@@ -152,7 +184,7 @@ export function AgentProfileManager({
       const result = (await response.json()) as { photo_url: string };
       setPhotoUrl(result.photo_url);
       setPhotoNotice(
-        "Photo stored. Enter alternative text that describes the photo.",
+        "Photo stored. Add alternative text, then save the profile to apply the change.",
       );
       event.target.value = "";
     } catch {
@@ -230,7 +262,7 @@ export function AgentProfileManager({
           headers: { "Content-Type": "application/json" },
         },
       );
-      if (!response.ok) throw new Error("profile rejected");
+      if (!response.ok) throw new Error(await profileSaveError(response));
       const profile = (await response.json()) as AdminAgentProfile;
       setProfiles((items) => {
         const exists = items.some((item) => item.id === profile.id);
@@ -245,9 +277,11 @@ export function AgentProfileManager({
           ? "Profile changes saved for approval."
           : "Draft profile created.",
       );
-    } catch {
+    } catch (error) {
       setErrors([
-        "The profile was not saved. Check the active agent relationship, bounded public fields, HTTPS links, and your administration access.",
+        error instanceof Error && error.message
+          ? error.message
+          : PROFILE_SAVE_FALLBACK,
       ]);
       setNotice("");
     } finally {
@@ -644,7 +678,7 @@ export function AgentProfileManager({
             <FormField
               id="agent-photo-file"
               label="Approved photo"
-              hint="JPEG or PNG, up to 5 MiB. Keeper stores the file and serves it from keeperfinancial.ca."
+              hint="JPEG or PNG, up to 5 MiB. Keeper stores the file privately and serves it through this site."
             >
               <input
                 id="agent-photo-file"

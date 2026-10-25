@@ -379,4 +379,41 @@ describe("admin agent profile manager", () => {
     expect(payload.photo_url).toBeNull();
     expect(payload.photo_alt_text).toBeNull();
   });
+
+  it("surfaces the API's validation message instead of a catch-all", async () => {
+    const requester = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({
+        detail: [
+          {
+            loc: ["body", "photo_url"],
+            msg: "URL must be HTTPS, or the loopback photo URL returned by the Keeper upload",
+          },
+        ],
+      }),
+    });
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit synthetic agent/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /save profile changes/i }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The profile was not saved.");
+    // The operator sees why, not just "something went wrong".
+    expect(alert).toHaveTextContent("URL must be HTTPS");
+  });
 });
