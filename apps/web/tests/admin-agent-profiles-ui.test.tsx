@@ -415,5 +415,122 @@ describe("admin agent profile manager", () => {
     expect(alert).toHaveTextContent("The profile was not saved.");
     // The operator sees why, not just "something went wrong".
     expect(alert).toHaveTextContent("URL must be HTTPS");
+    // ...and which field the rejection belongs to.
+    expect(alert).toHaveTextContent("Photo: URL must be HTTPS");
+  });
+
+  it("saves several approved social links, including a bare pasted URL", async () => {
+    const saved = {
+      ...draft,
+      social_links: [
+        {
+          label: "linkedin.com",
+          url: "https://www.linkedin.com/in/synthetic-agent",
+        },
+        { label: "Instagram", url: "https://instagram.com/synthetic.agent" },
+      ],
+    } satisfies AdminAgentProfile;
+    const requester = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => saved,
+    });
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit synthetic agent/i }),
+    );
+    fireEvent.change(screen.getByLabelText(/approved social links/i), {
+      target: {
+        value:
+          "https://www.linkedin.com/in/synthetic-agent\nInstagram | https://instagram.com/synthetic.agent",
+      },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /save profile changes/i }),
+    );
+
+    await waitFor(() => expect(requester).toHaveBeenCalledOnce());
+    const payload = JSON.parse(String(requester.mock.calls[0][1].body));
+    expect(payload.social_links).toEqual([
+      {
+        label: "linkedin.com",
+        url: "https://www.linkedin.com/in/synthetic-agent",
+      },
+      { label: "Instagram", url: "https://instagram.com/synthetic.agent" },
+    ]);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /profile changes saved/i,
+    );
+  });
+
+  it("names the social-link line that is wrong and never calls the API", async () => {
+    const requester = vi.fn();
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit synthetic agent/i }),
+    );
+    fireEvent.change(screen.getByLabelText(/approved social links/i), {
+      target: {
+        value:
+          "LinkedIn | https://www.linkedin.com/in/synthetic-agent\nInstagram |",
+      },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /save profile changes/i }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    // The rejected line is named, not just "String should have at least 1 character".
+    expect(alert).toHaveTextContent("Social links, line 2");
+    expect(requester).not.toHaveBeenCalled();
+  });
+
+  it("rejects a social link that is not an https link, naming the line", async () => {
+    const requester = vi.fn();
+    const { AgentProfileManager } = await import(
+      "@/app/(admin)/admin/agents/agent-profile-manager"
+    );
+    render(
+      <AgentProfileManager
+        initialProfiles={[draft]}
+        initialEligibleAgents={eligibleAgents}
+        requester={requester}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /edit synthetic agent/i }),
+    );
+    fireEvent.change(screen.getByLabelText(/approved social links/i), {
+      target: { value: "linkedin.com/in/synthetic-agent" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /save profile changes/i }),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Social links, line 1");
+    expect(alert).toHaveTextContent("https://");
+    expect(requester).not.toHaveBeenCalled();
   });
 });

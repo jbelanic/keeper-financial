@@ -32,15 +32,68 @@ function commaList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
-function socialLinks(value: FormDataEntryValue | null) {
-  return String(value ?? "")
+/** The API caps a profile at ten approved social links. */
+const MAX_SOCIAL_LINKS = 10;
+
+type SocialLink = { label: string; url: string };
+
+/**
+ * The approved-social-link field is one link per line. `Label | https://…` sets
+ * the public link text; a bare `https://…` line is also accepted and labelled
+ * with its domain, so pasting a profile URL is enough. A line without a URL
+ * used to reach the API as `""` and come back as "String should have at least
+ * 1 character", which named neither the field nor the line, so the entry is
+ * parsed and explained here before anything is sent.
+ */
+function parseSocialLinks(value: FormDataEntryValue | null): {
+  links: SocialLink[];
+  errors: string[];
+} {
+  const links: SocialLink[] = [];
+  const errors: string[] = [];
+
+  String(value ?? "")
     .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [label, ...url] = line.split("|");
-      return { label: label.trim(), url: url.join("|").trim() };
+    .forEach((raw, index) => {
+      const line = raw.trim();
+      if (!line) return;
+      const position = index + 1;
+      const separator = line.indexOf("|");
+      const label = separator === -1 ? "" : line.slice(0, separator).trim();
+      const url = (separator === -1 ? line : line.slice(separator + 1)).trim();
+
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        errors.push(
+          `Social links, line ${position}: "${line}" is not a link. Enter https://… or Label | https://….`,
+        );
+        return;
+      }
+      if (parsed.protocol !== "https:") {
+        errors.push(
+          `Social links, line ${position}: links must start with https://.`,
+        );
+        return;
+      }
+      const publicLabel =
+        label || parsed.hostname.toLowerCase().replace(/^www\./, "");
+      if (publicLabel.length > 80) {
+        errors.push(
+          `Social links, line ${position}: the link text is longer than 80 characters.`,
+        );
+        return;
+      }
+      links.push({ label: publicLabel, url });
     });
+
+  if (links.length > MAX_SOCIAL_LINKS) {
+    errors.push(
+      `Social links: keep at most ${MAX_SOCIAL_LINKS} links (found ${links.length}).`,
+    );
+  }
+  return { links, errors };
 }
 
 function optionalValue(value: FormDataEntryValue | null): string | null {
@@ -60,28 +113,81 @@ function publicSlug(value: string): string {
 const PROFILE_SAVE_FALLBACK =
   "The profile was not saved. Check the active agent relationship, bounded public fields, links, and your administration access.";
 
+const FIELD_LABELS: Record<string, string> = {
+  slug: "Slug",
+  licensed_name: "Licensed name",
+  approved_title: "Approved title",
+  licence_number: "Licence number",
+  biography: "Biography",
+  languages: "Languages",
+  service_areas: "Service areas",
+  specialties: "Specialties",
+  photo_url: "Photo",
+  photo_alt_text: "Photo alternative text",
+  public_email: "Public email",
+  public_phone: "Public phone",
+  social_links: "Social links",
+};
+
+const ENTRY_LABELS: Record<string, string> = {
+  label: "link text",
+  url: "link URL",
+};
+
+/**
+ * FastAPI pins each rejection to a location such as
+ * `["body", "social_links", 1, "url"]`. Naming that location is what the
+ * operator needs, because the raw message on its own ("String should have at
+ * least 1 character") never says which field or which social-link line failed.
+ */
+function fieldContext(loc: unknown): string {
+  if (!Array.isArray(loc)) return "";
+  const parts = loc as Array<string | number>;
+  const field = parts.find(
+    (part): part is string =>
+      typeof part === "string" &&
+      part !== "body" &&
+      part !== "query" &&
+      part !== "path" &&
+      part !== "header",
+  );
+  const name = field ? FIELD_LABELS[field] : undefined;
+  if (!name) return "";
+  const details: string[] = [];
+  const entry = parts.find((part): part is number => typeof part === "number");
+  if (entry !== undefined) details.push(`line ${entry + 1}`);
+  const entryField = parts.find(
+    (part): part is string => ENTRY_LABELS[part] !== undefined,
+  );
+  if (entryField) details.push(ENTRY_LABELS[entryField]);
+  return details.length ? `${name}, ${details.join(", ")}` : name;
+}
+
 /**
  * FastAPI reports a rejected save as a 422 with either `detail: "<message>"` or
- * `detail: [{ msg, loc }, ...]`. Showing that message is the difference between
- * "something went wrong" and "URL must be HTTPS", so surface the first bounded
- * human-readable one and fall back to the generic sentence when the body is
- * unexpected.
+ * `detail: [{ msg, loc }, ...]`. Showing that message, prefixed with the field
+ * it belongs to, is the difference between "something went wrong" and
+ * "Social links, line 2, link URL: URL must be HTTPS", so surface the first
+ * bounded human-readable one and fall back to the generic sentence when the
+ * body is unexpected.
  */
 async function profileSaveError(response: Response): Promise<string> {
   try {
     const body: unknown = await response.json();
     const detail = (body as { detail?: unknown } | null)?.detail;
-    const message = Array.isArray(detail)
+    const item = Array.isArray(detail)
       ? detail.find(
-          (item): item is { msg: string } =>
-            typeof (item as { msg?: unknown })?.msg === "string",
-        )?.msg
-      : typeof detail === "string"
-        ? detail
-        : undefined;
+          (candidate): candidate is { msg: string; loc?: unknown } =>
+            typeof (candidate as { msg?: unknown })?.msg === "string",
+        )
+      : undefined;
+    const message =
+      item?.msg ?? (typeof detail === "string" ? detail : undefined);
     const trimmed = message?.trim();
     if (trimmed) {
-      return `The profile was not saved. ${trimmed.slice(0, 300)}`;
+      const text = trimmed.slice(0, 300);
+      const context = fieldContext(item?.loc);
+      return `The profile was not saved. ${context ? `${context}: ${text}` : text}`;
     }
   } catch {
     // Fall through to the generic sentence.
@@ -226,11 +332,20 @@ export function AgentProfileManager({
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const { links: approvedLinks, errors: linkErrors } = parseSocialLinks(
+      form.get("social_links"),
+    );
+    if (linkErrors.length) {
+      // Name the line before the request: the API cannot say which line it was.
+      setErrors(linkErrors);
+      setNotice("");
+      return;
+    }
     setBusy(true);
     setErrors([]);
     setNotice(editing ? "Saving profile changes…" : "Creating draft profile…");
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
     const payload = {
       ...(!editing
         ? { user_id: String(form.get("user_id") ?? "").trim() }
@@ -249,7 +364,7 @@ export function AgentProfileManager({
       photo_alt_text: optionalValue(form.get("photo_alt_text")),
       public_email: optionalValue(form.get("public_email")),
       public_phone: optionalValue(form.get("public_phone")),
-      social_links: socialLinks(form.get("social_links")),
+      social_links: approvedLinks,
     };
     try {
       const response = await requester(
@@ -740,11 +855,12 @@ export function AgentProfileManager({
           <FormField
             id="agent-social-links"
             label="Approved social links"
-            hint="One per line as Label | https://approved.example/path."
+            hint="One link per line: paste an https:// link, or enter Label | https://… to choose the public link text. Up to 10 links."
           >
             <textarea
               id="agent-social-links"
               name="social_links"
+              rows={4}
               defaultValue={
                 editing?.social_links
                   .map((link) => `${link.label} | ${link.url}`)
