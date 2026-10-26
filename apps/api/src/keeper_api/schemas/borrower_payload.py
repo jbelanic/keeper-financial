@@ -445,7 +445,16 @@ class BorrowerInfoDraft(BaseModel):
 class BorrowerApplicationDraftInput(BaseModel):
     """Permissive draft payload for incremental section saves. Every top-level
     field is optional so a partial PATCH validates; unknown keys are still
-    rejected (extra='forbid') to fail closed."""
+    rejected (extra='forbid') to fail closed.
+
+    Completeness rules deliberately do NOT run here. A section save carries only
+    its own fields (the Employment and income section PATCHes
+    ``co_borrower: {employment: [...]}`` after the Borrowers section stored the
+    identity and ``relationship_to_primary``), so requiring a co-borrower's
+    relationship on every patch rejected a complete, already-saved draft.
+    The requirement is enforced on the complete payload at submission
+    (``BorrowerApplicationPayloadInput`` / ``validate_borrower_payload``).
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -459,12 +468,6 @@ class BorrowerApplicationDraftInput(BaseModel):
     liabilities: list[LiabilityEntry] | None = Field(None, max_length=50)
     liabilities_complete: bool | None = None
     additional_notes: str | None = Field(None, max_length=MAX_NOTES_LENGTH)
-
-    @model_validator(mode="after")
-    def validate_co_borrower(self) -> BorrowerApplicationDraftInput:
-        if self.co_borrower is not None and self.co_borrower.relationship_to_primary is None:
-            raise ValueError("co_borrower must have relationship_to_primary")
-        return self
 
 
 def validate_borrower_payload(payload_data: dict[str, Any]) -> BorrowerApplicationPayloadInput:
