@@ -242,6 +242,15 @@ present, so a stored photo is never published without a description. Photo
 storage and profile saving are separate operations: upload first, then save the
 profile through the existing approval lifecycle.
 
+Approved social links are entered in the profile editor as one link per line. A
+bare `https://` URL is accepted and labelled with its domain (`linkedin.com`);
+prefixing the line as `Label | https://…` sets the public link text instead.
+Only `https` links are accepted, at most ten per profile, and the editor names
+the offending line before the save is sent. The public profile renders each
+stored link as an anchor using its label, so the label is operator-controlled
+public copy. A save rejected by the API names the field it belongs to — and,
+for a link list, the line number — instead of showing the raw schema message.
+
 ## Component baseline
 
 Create:
