@@ -27,6 +27,7 @@ from keeper_api.models.borrower import (
 from keeper_api.schemas.borrower_internal import mask_sin
 from keeper_api.schemas.borrower_payload import (
     _luhn_check,
+    validate_borrower_draft,
     validate_borrower_payload,
 )
 from keeper_api.services.borrower_applications import (
@@ -293,6 +294,35 @@ class TestTypedPayloadValidation:
         }
         with pytest.raises(Exception, match="relationship_to_primary"):
             validate_borrower_payload(payload)
+
+    def test_draft_co_borrower_employment_section_needs_no_relationship(self) -> None:
+        """Draft section saves are partial; completeness belongs to submission.
+
+        The Employment and income section PATCHes only `co_borrower.employment`
+        after the Borrowers section stored the relationship, so a draft-level
+        relationship requirement rejected a complete, already-saved draft.
+        """
+        draft = validate_borrower_draft(
+            {
+                "co_borrower": {
+                    "employment": [
+                        {
+                            "employment_type": "employed",
+                            "employer_name": "Acme Corp",
+                            "job_title": "Manager",
+                            "occupation_category": "management",
+                            "industry": "technology",
+                            "duration_years": 3,
+                            "duration_months": 0,
+                            "annual_gross_income": Decimal("90000.00"),
+                        }
+                    ]
+                }
+            }
+        )
+        assert draft.co_borrower is not None
+        assert draft.co_borrower.relationship_to_primary is None
+        assert draft.co_borrower.employment is not None
 
     def test_future_date_of_birth_rejected(self) -> None:
         payload = _valid_payload()

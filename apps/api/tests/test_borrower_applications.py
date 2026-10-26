@@ -917,6 +917,76 @@ class TestBorrowerDraftRouteIntegration:
         assert second.json()["revision"] == 2
         assert second.json()["has_sin"] is True
 
+    def test_co_borrower_employment_section_save_keeps_saved_relationship(
+        self, route_client: TestClient
+    ) -> None:
+        """Section 3 must be saveable once Section 2 recorded the relationship.
+
+        The Borrowers section saves ``relationship_to_primary``; the Employment
+        and income section then PATCHes ``co_borrower: {employment: [...]}``
+        alone. Requiring the relationship on every co-borrower patch trapped the
+        applicant on section 3 with "co_borrower must have relationship_to_primary"
+        even though the relationship was already stored.
+        """
+        application_id, _ = self._start(route_client)
+        headers = {
+            "Host": "localhost:8000",
+            "Origin": "http://localhost:8000",
+            "x-keeper-borrower-csrf": "1",
+        }
+
+        borrowers = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+            json={
+                "expected_revision": 0,
+                "payload": {
+                    "co_borrower": {
+                        "first_name": "Alex",
+                        "last_name": "Smith",
+                        "relationship_to_primary": "Spouse",
+                    }
+                },
+            },
+        )
+        assert borrowers.status_code == 200, borrowers.text
+
+        employment = route_client.patch(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+            json={
+                "expected_revision": borrowers.json()["revision"],
+                "payload": {
+                    "co_borrower": {
+                        "employment": [
+                            {
+                                "employment_type": "employed",
+                                "employer_name": "Acme Corp",
+                                "job_title": "Manager",
+                                "occupation_category": "management",
+                                "industry": "technology",
+                                "duration_years": 3,
+                                "duration_months": 0,
+                                "annual_gross_income": "90000.00",
+                            }
+                        ]
+                    }
+                },
+            },
+        )
+        assert employment.status_code == 200, employment.text
+
+        draft = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}",
+            headers=headers,
+        )
+        assert draft.status_code == 200, draft.text
+        co_borrower = draft.json()["payload"]["co_borrower"]
+        # The earlier section survives the later section's partial save.
+        assert co_borrower["relationship_to_primary"] == "Spouse"
+        assert co_borrower["first_name"] == "Alex"
+        assert co_borrower["employment"][0]["employer_name"] == "Acme Corp"
+
     def test_partial_patch_rejects_unknown_key(self, route_client: TestClient) -> None:
         application_id, _ = self._start(route_client)
         resp = route_client.patch(
