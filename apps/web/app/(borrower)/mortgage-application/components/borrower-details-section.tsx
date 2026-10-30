@@ -1,4 +1,5 @@
 import { Button, FormField } from "@keeper/ui";
+import { PHONE_EXAMPLE } from "@/lib/phone";
 import type { BorrowerState } from "./types";
 
 const provinces = [
@@ -77,11 +78,17 @@ function BorrowerFields({
             onChange={(event) => set("email", event.currentTarget.value)}
           />
         </FormField>
-        <FormField id={`${prefix}-phone`} label="Phone (required)">
+        <FormField
+          id={`${prefix}-phone`}
+          label="Phone (required)"
+          hint={`10 digits is enough — for example ${PHONE_EXAMPLE}.`}
+        >
           <input
             id={`${prefix}-phone`}
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
+            placeholder={PHONE_EXAMPLE}
             value={value.phone}
             onChange={(event) => set("phone", event.currentTarget.value)}
           />

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Card, DataTable, ErrorSummary, StatusBadge } from "@keeper/ui";
 import type { EligibleAgent } from "@/lib/agent-api";
 import { adminBrowserRequest } from "@/lib/admin-browser-api";
+import { formatPhoneDisplay } from "@/lib/phone";
 import type {
   BorrowerDocumentListResponse,
   BorrowerInternalProjection,
@@ -346,7 +347,9 @@ export function BorrowerReviewConsole({
                 <dt>Email</dt>
                 <dd>{selected.detail.primary_borrower.email}</dd>
                 <dt>Phone</dt>
-                <dd>{selected.detail.primary_borrower.phone}</dd>
+                <dd>
+                  {formatPhoneDisplay(selected.detail.primary_borrower.phone)}
+                </dd>
                 <dt>SIN</dt>
                 <dd>
                   {selected.detail.primary_borrower.sin?.display ?? "Masked"}

@@ -131,6 +131,13 @@ describe("admin agent profile manager", () => {
     expect(
       screen.getByRole("heading", { name: /edit agent profile/i }),
     ).toBeInTheDocument();
+    // The operator edits the published phone number in its display form.
+    expect(screen.getByLabelText(/approved public phone/i)).toHaveValue(
+      "(555) 010-0200",
+    );
+    expect(
+      screen.getByText(/shown on the public profile as \(519\) 123-4567/i),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel editing" }));
     expect(

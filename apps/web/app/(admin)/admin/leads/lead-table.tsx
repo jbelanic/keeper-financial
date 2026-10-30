@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import type { components } from "@keeper/contracts";
 import { Button, StatusBadge } from "@keeper/ui";
 import { LEAD_STATUSES, type LeadStatus } from "@/lib/lead-statuses";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { WithdrawalControl } from "./withdrawal-control";
 
 type LeadAction = (formData: FormData) => Promise<void>;
@@ -82,7 +83,7 @@ export function LeadTable({
                   <td className="break-anywhere">
                     <span>{lead.email}</span>
                     <br />
-                    <span>{lead.telephone}</span>
+                    <span>{formatPhoneDisplay(lead.telephone)}</span>
                   </td>
                   <td>{lead.mortgage_objective}</td>
                   <td>

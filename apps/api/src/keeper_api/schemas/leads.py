@@ -8,6 +8,8 @@ from typing import Literal
 from email_validator import EmailNotValidError, validate_email
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from keeper_api.core.phone import INTERNATIONAL_ERROR, normalize_phone
+
 _DISALLOWED = re.compile(
     r"\b(?:social\s+insurance|SIN\s*(?:number|#)|credit\s*card|bank\s*(?:account|statement)|"
     r"tax\s*return|credit\s*report|passport|password|CVV|medical|health|diagnosis|"
@@ -24,7 +26,7 @@ class LeadInquiryCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=2, max_length=120)
     email: str = Field(max_length=320, json_schema_extra={"format": "email"})
-    telephone: str = Field(min_length=7, max_length=32, pattern=r"^[0-9+().\- x]+$")
+    telephone: str = Field(max_length=32)
     mortgage_objective: Literal["purchase", "refinance", "renewal", "investment", "other"]
     preferred_contact_method: Literal["email", "telephone"]
     # The public surface that captured the inquiry. A fixed vocabulary, never
@@ -64,6 +66,15 @@ class LeadInquiryCreate(BaseModel):
             ).normalized
         except EmailNotValidError as exc:
             raise ValueError("enter a valid email address") from exc
+
+    @field_validator("telephone")
+    @classmethod
+    def normalize_telephone(cls, value: str) -> str:
+        """Store one canonical phone value however the visitor typed it."""
+        normalized = normalize_phone(value, allow_international=True)
+        if normalized is None:
+            raise ValueError(INTERNATIONAL_ERROR)
+        return normalized
 
     @model_validator(mode="after")
     def require_service_acknowledgement(self) -> LeadInquiryCreate:

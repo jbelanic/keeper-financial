@@ -10,6 +10,7 @@ import type {
   BorrowerReviewQueueResponse,
 } from "@/lib/borrower-review-api";
 import { agentBrowserRequest } from "@/lib/agent-browser-api";
+import { formatPhoneDisplay } from "@/lib/phone";
 
 type Requester = (path: string, init?: RequestInit) => Promise<Response>;
 
@@ -42,7 +43,7 @@ function BorrowerInfo({
         <dt>Email</dt>
         <dd>{info.email}</dd>
         <dt>Phone</dt>
-        <dd>{info.phone}</dd>
+        <dd>{formatPhoneDisplay(info.phone)}</dd>
         <dt>Date of birth</dt>
         <dd>{String(info.date_of_birth)}</dd>
         <dt>SIN</dt>

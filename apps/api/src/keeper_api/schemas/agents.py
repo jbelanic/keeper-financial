@@ -7,13 +7,13 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from keeper_api.core.phone import NANP_ERROR, normalize_nanp_phone
 from keeper_api.models.statuses import AgentProfileStatus
 from keeper_api.services.agent_photos import keeper_photo_id
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _HTML_TAG = re.compile(r"<\s*/?\s*[a-zA-Z][^>]*>")
 _EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-_PHONE = re.compile(r"^[+()\d .-]{7,32}$")
 
 
 def _plain_text(value: str) -> str:
@@ -142,9 +142,17 @@ class AgentProfileCreate(BaseModel):
     @field_validator("public_phone")
     @classmethod
     def validate_public_phone(cls, value: str | None) -> str | None:
-        if value is not None and not _PHONE.fullmatch(value):
-            raise ValueError("public phone is invalid")
-        return value
+        """Store a published phone number as E.164 however it was typed.
+
+        The public page renders it back as ``(519) 123-4567``; storing one
+        canonical value keeps the contact link and the printed number in step.
+        """
+        if value is None:
+            return None
+        normalized = normalize_nanp_phone(value)
+        if normalized is None:
+            raise ValueError(NANP_ERROR)
+        return normalized
 
     @model_validator(mode="after")
     def validate_photo_pair(self) -> AgentProfileCreate:
@@ -197,9 +205,12 @@ class AgentProfileUpdate(BaseModel):
     @field_validator("public_phone")
     @classmethod
     def validate_public_phone(cls, value: str | None) -> str | None:
-        if value is not None and not _PHONE.fullmatch(value):
-            raise ValueError("public phone is invalid")
-        return value
+        if value is None:
+            return None
+        normalized = normalize_nanp_phone(value)
+        if normalized is None:
+            raise ValueError(NANP_ERROR)
+        return normalized
 
 
 class PublicAgentProfileSummary(BaseModel):

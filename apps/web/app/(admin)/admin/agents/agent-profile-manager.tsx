@@ -11,6 +11,7 @@ import {
 } from "@keeper/ui";
 import type { AdminAgentProfile, EligibleAgent } from "@/lib/agent-api";
 import { adminBrowserRequest } from "@/lib/admin-browser-api";
+import { formatPhoneDisplay, PHONE_EXAMPLE } from "@/lib/phone";
 
 type Requester = (path: string, init?: RequestInit) => Promise<Response>;
 type TransitionTarget =
@@ -748,13 +749,20 @@ export function AgentProfileManager({
                 defaultValue={editing?.public_email ?? ""}
               />
             </FormField>
-            <FormField id="agent-public-phone" label="Approved public phone">
+            <FormField
+              id="agent-public-phone"
+              label="Approved public phone"
+              hint="Shown on the public profile as (519) 123-4567. Enter the 10 digits; the country code (+1) is added automatically."
+            >
               <input
                 id="agent-public-phone"
                 name="public_phone"
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder={PHONE_EXAMPLE}
                 maxLength={32}
-                defaultValue={editing?.public_phone ?? ""}
+                defaultValue={formatPhoneDisplay(editing?.public_phone)}
               />
             </FormField>
             <FormField

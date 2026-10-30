@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ApplyForm } from "@/app/(public)/apply/apply-form";
+import {
+  PHONE_INPUT_ERROR_INTERNATIONAL,
+  PHONE_INPUT_PATTERN,
+} from "@/lib/phone";
 
 function fillRequiredFields() {
   fireEvent.change(screen.getByLabelText("Name"), {
@@ -91,12 +95,34 @@ describe("minimal contact form", () => {
     ).toBeInTheDocument();
   });
 
-  it("uses a browser-valid telephone pattern under the Unicode Sets flag", () => {
+  it("accepts a normally typed North American number in the telephone pattern", () => {
     render(<ApplyForm />);
     const pattern = screen.getByLabelText("Telephone").getAttribute("pattern");
 
-    expect(pattern).toBe("[0-9+\\.\\(\\) x\\-]+");
+    expect(pattern).toBe(PHONE_INPUT_PATTERN);
     expect(() => new RegExp(pattern!, "v")).not.toThrow();
+    const matcher = new RegExp(`^(?:${pattern})$`, "v");
+    expect(matcher.test("5195550123")).toBe(true);
+    expect(matcher.test("(519) 123-4567")).toBe(true);
+    expect(matcher.test("519-123-4567")).toBe(true);
+    expect(matcher.test("call me")).toBe(false);
+  });
+
+  it("rejects a telephone that is not a usable number with one clear sentence", async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(201));
+    vi.stubGlobal("fetch", fetcher);
+    const { container } = render(<ApplyForm />);
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText("Telephone"), {
+      target: { value: "519-123" },
+    });
+
+    fireEvent.submit(container.querySelector("form")!);
+
+    expect(
+      await screen.findAllByText(PHONE_INPUT_ERROR_INTERNATIONAL),
+    ).toHaveLength(2);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it("submits safe attribution as hidden controlled data and resets only on success", async () => {

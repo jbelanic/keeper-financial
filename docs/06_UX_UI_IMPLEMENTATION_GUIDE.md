@@ -275,6 +275,22 @@ Create:
 - Consent checkbox.
 - Breadcrumbs.
 
+## Phone entry and display standard
+
+- Enter a phone number as a normal North American 10-digit number. The `+`
+  prefix and the country code are optional input, never a required format:
+  `5195550123`, `519-555-0123`, `(519) 555-0123`, and `+1 519 555 0123` are all
+  accepted and stored as one canonical E.164 value (`+15195550123`).
+- Display a stored number as `(519) 123-4567` in every public and internal
+  surface, and derive `tel:` links from the same value. A value that is not a
+  North American number is shown unchanged rather than hidden or re-formatted.
+- The candidate application and the public contact form additionally accept an
+  explicitly international number (`+` plus 8 to 15 digits). The agent profile
+  public phone is North American only, because it is published contact detail.
+- A rejected phone number produces one sentence naming the expected shape and
+  an example — for example "Enter a 10-digit phone number, for example
+  (519) 123-4567." — rather than a schema path or a normalisation rule.
+
 ## Responsive requirements
 
 - Public pages must work from small mobile through desktop.

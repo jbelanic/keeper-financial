@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card, ErrorSummary, StatusBadge } from "@keeper/ui";
 import { agentBrowserRequest } from "@/lib/agent-browser-api";
+import { formatPhoneDisplay, phoneTelHref } from "@/lib/phone";
 import type {
   AgentLeadDetail,
   AgentLeadList,
@@ -40,8 +41,8 @@ function LeadDetails({ lead }: { lead: AgentLeadDetail }) {
         <div>
           <dt>Telephone</dt>
           <dd>
-            <a href={`tel:${lead.telephone.replace(/[^0-9+]/g, "")}`}>
-              {lead.telephone}
+            <a href={phoneTelHref(lead.telephone)}>
+              {formatPhoneDisplay(lead.telephone)}
             </a>
           </dd>
         </div>

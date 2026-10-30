@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@keeper/ui";
 import { getPublishedAgent } from "@/lib/agent-api";
 import { createPageMetadata } from "@/lib/metadata";
+import { formatPhoneDisplay, phoneTelHref } from "@/lib/phone";
 import { siteConfig } from "@/lib/site-config";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -114,8 +115,8 @@ export default async function AgentProfilePage({ params }: Props) {
             ) : null}
             {agent.public_phone ? (
               <p>
-                <a href={`tel:${agent.public_phone.replace(/[^+\d]/g, "")}`}>
-                  {agent.public_phone}
+                <a href={phoneTelHref(agent.public_phone)}>
+                  {formatPhoneDisplay(agent.public_phone)}
                 </a>
               </p>
             ) : null}

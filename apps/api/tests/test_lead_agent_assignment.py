@@ -169,7 +169,7 @@ def test_agent_reads_only_inquiries_assigned_to_them(client: TestClient, db: Ses
     body = detail.json()
     assert body["name"] == "Assigned Applicant"
     assert body["email"] == "visitor@example.com"
-    assert body["telephone"] == "+1 (416) 555-0100"
+    assert body["telephone"] == "+14165550100"
     assert body["message"] == "Call me about a first purchase."
     assert body["preferred_contact_method"] == "telephone"
     assert body["service_consent"]["state"] == "granted"

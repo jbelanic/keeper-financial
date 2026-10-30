@@ -11453,8 +11453,6 @@
           "telephone": {
             "type": "string",
             "maxLength": 32,
-            "minLength": 7,
-            "pattern": "^[0-9+().\\- x]+$",
             "title": "Telephone"
           },
           "mortgage_objective": {

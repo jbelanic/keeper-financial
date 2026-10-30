@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, ConsentCheckbox, ErrorSummary, FormField } from "@keeper/ui";
+import {
+  isAcceptablePhoneInput,
+  PHONE_EXAMPLE,
+  PHONE_INPUT_ERROR_INTERNATIONAL,
+  PHONE_INPUT_PATTERN,
+} from "@/lib/phone";
 
 const VALIDATED_FIELDS = {
   name: {
@@ -51,6 +57,15 @@ function validateFields(form: HTMLFormElement): FieldErrors {
     fieldErrors[field] = control.validity.valueMissing
       ? VALIDATED_FIELDS[field].required
       : VALIDATED_FIELDS[field].invalid;
+  }
+  const telephone = form.elements.namedItem("telephone");
+  if (
+    telephone instanceof HTMLInputElement &&
+    telephone.value.trim() &&
+    !isAcceptablePhoneInput(telephone.value)
+  ) {
+    // One clear sentence beats the browser's generic pattern complaint.
+    fieldErrors.telephone = PHONE_INPUT_ERROR_INTERNATIONAL;
   }
   return fieldErrors;
 }
@@ -197,17 +212,20 @@ export function ApplyForm({
         <FormField
           id="telephone"
           label="Telephone"
+          hint={`10 digits is enough — for example ${PHONE_EXAMPLE}.`}
           error={fieldErrors.telephone}
         >
           <input
             id="telephone"
             name="telephone"
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
+            placeholder={PHONE_EXAMPLE}
             required
             minLength={7}
             maxLength={32}
-            pattern="[0-9+\.\(\) x\-]+"
+            pattern={PHONE_INPUT_PATTERN}
           />
         </FormField>
         <FormField

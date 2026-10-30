@@ -11,6 +11,13 @@ import type {
   CandidateApplication,
   CandidatePrivacyDisclosure,
 } from "@/lib/recruitment-api";
+import {
+  formatPhoneDisplay,
+  isAcceptablePhoneInput,
+  PHONE_EXAMPLE,
+  PHONE_INPUT_ERROR_INTERNATIONAL,
+  PHONE_INPUT_PATTERN,
+} from "@/lib/phone";
 
 type Employment = CandidateApplication["employment"][number];
 type Education = CandidateApplication["education"][number];
@@ -56,20 +63,11 @@ function clientValidationIssues(
     }
   }
   const phone = value(form, "phone");
-  if (phone) {
-    const digits = phone.replace(/\D/g, "");
-    if (
-      !phone.startsWith("+") ||
-      !/^\+?[0-9 ().-]+$/.test(phone) ||
-      digits.length < 8 ||
-      digits.length > 15
-    ) {
-      issues.push({
-        fieldId: "phone",
-        message:
-          "Phone number must start with + and contain 8 to 15 digits, including the country code.",
-      });
-    }
+  if (phone && !isAcceptablePhoneInput(phone)) {
+    issues.push({
+      fieldId: "phone",
+      message: PHONE_INPUT_ERROR_INTERNATIONAL,
+    });
   }
   const country = value(form, "country_code");
   if (country && !/^[A-Za-z]{2}$/.test(country)) {
@@ -677,16 +675,19 @@ export function CandidateApplicationForm({
               <FormField
                 id="phone"
                 label="Phone number (required)"
-                hint="Start with + and include the country code; 8 to 15 digits after normalization. Example: +1 416 555 0100."
+                hint="10 digits is enough — for example (519) 123-4567. Add the + country code only for a number outside Canada or the US."
                 error={fieldError("phone")}
               >
                 <input
                   id="phone"
                   name="phone"
                   type="tel"
-                  defaultValue={application.phone ?? ""}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  defaultValue={formatPhoneDisplay(application.phone)}
+                  placeholder={PHONE_EXAMPLE}
                   maxLength={32}
-                  pattern="\+[0-9 ().-]{8,31}"
+                  pattern={PHONE_INPUT_PATTERN}
                   required
                 />
               </FormField>
