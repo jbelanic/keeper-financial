@@ -291,6 +291,27 @@ Create:
   an example — for example "Enter a 10-digit phone number, for example
   (519) 123-4567." — rather than a schema path or a normalisation rule.
 
+## Form validation and error messaging
+
+- Amount and whole-number fields read the way people type them: `650000`,
+  `650,000`, `$650,000`, `2 000`, `650000.50`. The parsed number is what gets
+  stored.
+- An entry that cannot be read is refused with the field named and an example
+  ("Requested mortgage amount must be an amount, for example 650000 or
+  650,000."). A section is never saved with a value silently dropped, because a
+  dropped amount only surfaced at submission as a generic "incomplete" notice.
+- A rejected save is reported one sentence per field, with the input marked
+  invalid and linked through `aria-describedby` ("Postal code: Enter a Canadian
+  postal code, for example N6H 4T6."). Internal schema paths (`primary_borrower →
+  current_address → postal_code`) and validation-library wording ("Value error",
+  "String should have at least 6 characters") never reach the interface.
+- Document uploads report the actual refusal — damaged PDF, unsupported type,
+  per-file or total size limit, document count limit, virus scan, scanning or
+  storage unavailable — and keep the saved document list on screen. A generic
+  "the response was uncertain" notice is not acceptable.
+- Submission names the incomplete sections and opens the first one instead of a
+  single "the saved application is incomplete" line.
+
 ## Responsive requirements
 
 - Public pages must work from small mobile through desktop.

@@ -8,7 +8,9 @@ import {
 export function OtherPropertiesSection({
   properties,
   onChange,
+  fieldErrors,
 }: {
+  fieldErrors?: Record<string, string>;
   properties: OtherPropertyState[];
   onChange: (value: OtherPropertyState[]) => void;
 }) {
@@ -36,6 +38,7 @@ export function OtherPropertiesSection({
             <FormField
               id={`other-address-${property.id}`}
               label="Property address"
+              error={fieldErrors?.[`other-address-${property.id}`]}
             >
               <input
                 id={`other-address-${property.id}`}
@@ -54,6 +57,7 @@ export function OtherPropertiesSection({
                 id={`other-${field}-${property.id}`}
                 label={label}
                 key={field}
+                error={fieldErrors?.[`other-${field}-${property.id}`]}
               >
                 <input
                   id={`other-${field}-${property.id}`}
@@ -108,6 +112,9 @@ export function OtherPropertiesSection({
                     id={`other-mortgage-${field}-${mortgage.id}`}
                     label={label}
                     key={field}
+                    error={
+                      fieldErrors?.[`other-mortgage-${field}-${mortgage.id}`]
+                    }
                   >
                     <input
                       id={`other-mortgage-${field}-${mortgage.id}`}
