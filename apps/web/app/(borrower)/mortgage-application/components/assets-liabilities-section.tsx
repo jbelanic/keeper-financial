@@ -1,4 +1,6 @@
 import { Button, FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
+import { paymentFrequencies, paymentFrequencyLabel } from "./options";
 import {
   emptyAsset,
   emptyLiability,
@@ -86,6 +88,20 @@ export function AssetsLiabilitiesSection({
                       assets.map((item) =>
                         item.id === entry.id
                           ? { ...item, value: event.currentTarget.value }
+                          : item,
+                      ),
+                    )
+                  }
+                  onBlur={(event) =>
+                    onAssetsChange(
+                      assets.map((item) =>
+                        item.id === entry.id
+                          ? {
+                              ...item,
+                              value: formatAmountInput(
+                                event.currentTarget.value,
+                              ),
+                            }
                           : item,
                       ),
                     )
@@ -211,6 +227,20 @@ export function AssetsLiabilitiesSection({
                         ),
                       )
                     }
+                    onBlur={(event) =>
+                      onLiabilitiesChange(
+                        liabilities.map((item) =>
+                          item.id === entry.id
+                            ? {
+                                ...item,
+                                [field]: formatAmountInput(
+                                  event.currentTarget.value,
+                                ),
+                              }
+                            : item,
+                        ),
+                      )
+                    }
                   />
                 </FormField>
               ))}
@@ -219,9 +249,8 @@ export function AssetsLiabilitiesSection({
                 label="Payment frequency (optional)"
                 error={fieldErrors?.[`liability-frequency-${entry.id}`]}
               >
-                <input
+                <select
                   id={`liability-frequency-${entry.id}`}
-                  maxLength={20}
                   value={entry.payment_frequency}
                   onChange={(event) =>
                     onLiabilitiesChange(
@@ -235,7 +264,22 @@ export function AssetsLiabilitiesSection({
                       ),
                     )
                   }
-                />
+                >
+                  <option value="">Select</option>
+                  {paymentFrequencies.map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                  {entry.payment_frequency &&
+                  !paymentFrequencies.some(
+                    ([code]) => code === entry.payment_frequency,
+                  ) ? (
+                    <option value={entry.payment_frequency}>
+                      {paymentFrequencyLabel(entry.payment_frequency)}
+                    </option>
+                  ) : null}
+                </select>
               </FormField>
               <FormField
                 id={`liability-description-${entry.id}`}

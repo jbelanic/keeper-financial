@@ -72,7 +72,7 @@ describe("accountless borrower application form", () => {
     expect(
       await screen.findByRole("heading", { name: "Borrowers" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Section saved securely.")).toBeInTheDocument();
+    expect(screen.getByText(/Section saved securely/)).toBeInTheDocument();
   });
 
   it("preserves the current step and visible values on a server failure", async () => {

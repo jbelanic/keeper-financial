@@ -9,7 +9,7 @@ import {
   humaniseIssueMessage,
   issueFieldLabel,
   issueSummary,
-} from "@/lib/borrower-issue-messages";
+} from "@/lib/validation-issues";
 import { uploadFailureMessage } from "@/lib/upload-messages";
 import { BorrowerApplicationError } from "@/lib/borrower-application-api";
 

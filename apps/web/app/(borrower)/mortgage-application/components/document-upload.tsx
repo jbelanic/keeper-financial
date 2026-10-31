@@ -34,6 +34,7 @@ export function DocumentUpload({
   const [category, setCategory] = useState("income_employment");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState("Loading current documents…");
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -177,16 +178,39 @@ export function DocumentUpload({
           />
         </div>
       ) : null}
-      <div className="form-field">
+      <div
+        className={`form-field drop-zone${dragging ? " is-dragging" : ""}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          const dropped = event.dataTransfer?.files?.[0];
+          if (dropped) setFile(dropped);
+        }}
+      >
         <label htmlFor="borrower-document-file">
           Select a PDF, DOC, DOCX, JPEG, or PNG
         </label>
+        <span id="borrower-document-file-hint">
+          Drag a file onto this box, or choose one.
+        </span>
         <input
           id="borrower-document-file"
           type="file"
           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          aria-describedby="borrower-document-file-hint"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
+        {file ? (
+          <p className="drop-zone-file">
+            Selected: {file.name} ({Math.max(1, Math.round(file.size / 1024))}{" "}
+            KB)
+          </p>
+        ) : null}
       </div>
       <button
         type="button"
@@ -201,11 +225,9 @@ export function DocumentUpload({
           {failure}
         </p>
       ) : null}
-      <p>
-        {items.length
-          ? `${items.length} document${items.length === 1 ? "" : "s"} on this application:`
-          : "No documents uploaded yet."}
-      </p>
+      {items.length ? (
+        <p>{`${items.length} document${items.length === 1 ? "" : "s"} on this application:`}</p>
+      ) : null}
       <ul>
         {items.map((item) => (
           <li key={item.document_id}>

@@ -54,6 +54,17 @@ export function numberValue(
   return parsed.state === "valid" ? parsed.value : undefined;
 }
 
+/**
+ * Tidy a valid amount for display when the field loses focus: `650000` becomes
+ * `650,000` and `$2 000` becomes `2,000`. An entry that could not be parsed is
+ * left exactly as typed so the rejection message still refers to it.
+ */
+export function formatAmountInput(raw: string): string {
+  const parsed = parseNumberInput(raw, "money");
+  if (parsed.state !== "valid") return raw;
+  return parsed.value.toLocaleString("en-CA", { maximumFractionDigits: 2 });
+}
+
 /** One sentence explaining why an entry was rejected. */
 export function numberIssueMessage(
   label: string,

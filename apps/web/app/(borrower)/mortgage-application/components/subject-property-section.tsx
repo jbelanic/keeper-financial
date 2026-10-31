@@ -1,5 +1,15 @@
 import { FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
+import { POSTAL_CODE_HINT } from "@/lib/validation";
+import { provinces } from "./options";
 import type { SubjectPropertyState } from "./types";
+
+/** Fields in the cost row that hold money rather than a whole count. */
+const MONEY_SUBJECT_FIELDS = [
+  "monthly_property_tax",
+  "monthly_heating_cost",
+  "monthly_condo_fee",
+];
 
 export function SubjectPropertySection({
   value,
@@ -58,17 +68,23 @@ export function SubjectPropertySection({
             label="Province or territory (required)"
             error={fieldErrors?.["subject-province"]}
           >
-            <input
+            <select
               id="subject-province"
-              maxLength={2}
+              autoComplete="address-level1"
               required
               value={value.province}
               onChange={(event) => set("province", event.currentTarget.value)}
-            />
+            >
+              <option value="">Select</option>
+              {provinces.map((province) => (
+                <option key={province}>{province}</option>
+              ))}
+            </select>
           </FormField>
           <FormField
             id="subject-postal"
             label="Postal code (required)"
+            hint={POSTAL_CODE_HINT}
             error={fieldErrors?.["subject-postal"]}
           >
             <input
@@ -174,6 +190,14 @@ export function SubjectPropertySection({
                   set(
                     field as keyof SubjectPropertyState,
                     event.currentTarget.value,
+                  )
+                }
+                onBlur={(event) =>
+                  set(
+                    field as keyof SubjectPropertyState,
+                    MONEY_SUBJECT_FIELDS.includes(field)
+                      ? formatAmountInput(event.currentTarget.value)
+                      : event.currentTarget.value,
                   )
                 }
               />

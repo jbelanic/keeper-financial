@@ -8,6 +8,7 @@
  * here and the internal path is only used to place the message beside the field.
  */
 
+/** One rejected field, as the API reports it in a 422 `detail` array. */
 export type BorrowerIssue = {
   path: Array<string | number>;
   message: string;
@@ -85,6 +86,14 @@ const FIELD_LABELS: Record<string, string> = {
   additional_notes: "Additional notes",
   source: "Source",
   amount: "Amount",
+  // Public contact form
+  name: "Name",
+  telephone: "Telephone",
+  message: "Message",
+  service_contact_acknowledged: "Service-contact acknowledgement",
+  marketing_consent: "Marketing consent",
+  website: "Website",
+  agent_reference: "Agent reference",
 };
 
 /** The human label for the deepest named field in an issue path. */
@@ -144,6 +153,11 @@ const KNOWN_MESSAGES: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
   ],
   [/Input should be greater than 0/, () => "Enter a number greater than zero."],
   [/Input should be greater than or equal to 0/, () => "Enter zero or more."],
+  [
+    /remove sensitive financial, identity, or authentication information/i,
+    () =>
+      "Remove sensitive financial, identity, or health details — the secure application is the place for those.",
+  ],
   [/Field required/, () => "This is required."],
 ];
 
@@ -169,4 +183,30 @@ export function humaniseIssueMessage(message: string): string {
 /** The summary line for an issue: "Postal code: Enter a Canadian postal code…" */
 export function issueSummary(issue: BorrowerIssue): string {
   return `${issueFieldLabel(issue.path)}: ${humaniseIssueMessage(issue.message)}`;
+}
+
+/**
+ * Read a FastAPI/pydantic `detail` array into issues.
+ *
+ * Used by surfaces that talk to the API directly (the public contact form) so
+ * they can mark the field instead of showing one generic sentence. Anything that
+ * is not a `{loc, msg}` entry is ignored rather than rendered.
+ */
+export function parseIssueDetail(detail: unknown): BorrowerIssue[] {
+  if (!Array.isArray(detail)) return [];
+  return detail.flatMap((item): BorrowerIssue[] => {
+    if (!item || typeof item !== "object") return [];
+    const issue = item as { loc?: unknown; msg?: unknown };
+    if (typeof issue.msg !== "string") return [];
+    const message = issue.msg
+      .replace(/[\u0000-\u001f\u007f]/g, " ")
+      .slice(0, 200);
+    const path = Array.isArray(issue.loc)
+      ? issue.loc.filter(
+          (part): part is string | number =>
+            typeof part === "string" || typeof part === "number",
+        )
+      : [];
+    return message ? [{ path, message }] : [];
+  });
 }

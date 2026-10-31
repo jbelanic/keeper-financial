@@ -1,4 +1,5 @@
 import { Button, FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
 import { emptyEmployment, type EmploymentState } from "./types";
 
 function EmploymentList({
@@ -158,6 +159,13 @@ function EmploymentList({
                     index,
                     "annual_gross_income",
                     event.currentTarget.value,
+                  )
+                }
+                onBlur={(event) =>
+                  update(
+                    index,
+                    "annual_gross_income",
+                    formatAmountInput(event.currentTarget.value),
                   )
                 }
               />

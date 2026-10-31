@@ -1,4 +1,6 @@
 import { Button, FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
+import { paymentFrequencies, paymentFrequencyLabel } from "./options";
 import {
   emptyMortgage,
   emptyOtherProperty,
@@ -37,7 +39,7 @@ export function OtherPropertiesSection({
           <div className="borrower-form-grid">
             <FormField
               id={`other-address-${property.id}`}
-              label="Property address"
+              label="Property address (optional)"
               error={fieldErrors?.[`other-address-${property.id}`]}
             >
               <input
@@ -49,9 +51,9 @@ export function OtherPropertiesSection({
               />
             </FormField>
             {[
-              ["purchase_date", "Purchase date"],
-              ["purchase_price", "Purchase price"],
-              ["estimated_value", "Estimated value"],
+              ["purchase_date", "Purchase date (optional)"],
+              ["purchase_price", "Purchase price (optional)"],
+              ["estimated_value", "Estimated value (optional)"],
             ].map(([field, label]) => (
               <FormField
                 id={`other-${field}-${property.id}`}
@@ -76,6 +78,15 @@ export function OtherPropertiesSection({
                       property.id,
                       field as keyof OtherPropertyState,
                       event.currentTarget.value,
+                    )
+                  }
+                  onBlur={(event) =>
+                    update(
+                      property.id,
+                      field as keyof OtherPropertyState,
+                      field === "purchase_date"
+                        ? event.currentTarget.value
+                        : formatAmountInput(event.currentTarget.value),
                     )
                   }
                 />
@@ -105,7 +116,6 @@ export function OtherPropertiesSection({
                 {[
                   ["balance", "Balance (required)"],
                   ["payment_amount", "Payment amount (required)"],
-                  ["payment_frequency", "Payment frequency (required)"],
                   ["maturity_date", "Maturity date (optional)"],
                 ].map(([field, label]) => (
                   <FormField
@@ -119,6 +129,9 @@ export function OtherPropertiesSection({
                     <input
                       id={`other-mortgage-${field}-${mortgage.id}`}
                       type={field === "maturity_date" ? "date" : "text"}
+                      inputMode={
+                        field === "maturity_date" ? undefined : "decimal"
+                      }
                       value={
                         mortgage[
                           field as
@@ -147,9 +160,83 @@ export function OtherPropertiesSection({
                           ),
                         )
                       }
+                      onBlur={(event) =>
+                        onChange(
+                          properties.map((item) =>
+                            item.id === property.id
+                              ? {
+                                  ...item,
+                                  mortgages: item.mortgages.map((candidate) =>
+                                    candidate.id === mortgage.id
+                                      ? {
+                                          ...candidate,
+                                          [field]:
+                                            field === "maturity_date"
+                                              ? event.currentTarget.value
+                                              : formatAmountInput(
+                                                  event.currentTarget.value,
+                                                ),
+                                        }
+                                      : candidate,
+                                  ),
+                                }
+                              : item,
+                          ),
+                        )
+                      }
                     />
                   </FormField>
                 ))}
+                <FormField
+                  id={`other-mortgage-payment_frequency-${mortgage.id}`}
+                  label="Payment frequency (required)"
+                  error={
+                    fieldErrors?.[
+                      `other-mortgage-payment_frequency-${mortgage.id}`
+                    ]
+                  }
+                >
+                  <select
+                    id={`other-mortgage-payment_frequency-${mortgage.id}`}
+                    required
+                    value={mortgage.payment_frequency}
+                    onChange={(event) =>
+                      onChange(
+                        properties.map((item) =>
+                          item.id === property.id
+                            ? {
+                                ...item,
+                                mortgages: item.mortgages.map((candidate) =>
+                                  candidate.id === mortgage.id
+                                    ? {
+                                        ...candidate,
+                                        payment_frequency:
+                                          event.currentTarget.value,
+                                      }
+                                    : candidate,
+                                ),
+                              }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="">Select</option>
+                    {paymentFrequencies.map(([code, label]) => (
+                      <option key={code} value={code}>
+                        {label}
+                      </option>
+                    ))}
+                    {mortgage.payment_frequency &&
+                    !paymentFrequencies.some(
+                      ([code]) => code === mortgage.payment_frequency,
+                    ) ? (
+                      <option value={mortgage.payment_frequency}>
+                        {paymentFrequencyLabel(mortgage.payment_frequency)}
+                      </option>
+                    ) : null}
+                  </select>
+                </FormField>
               </div>
               <Button
                 type="button"

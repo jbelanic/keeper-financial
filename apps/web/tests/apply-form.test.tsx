@@ -197,6 +197,43 @@ describe("minimal contact form", () => {
     },
   );
 
+  it("marks the field the API refused instead of one generic sentence", async () => {
+    const body = {
+      detail: [
+        {
+          type: "value_error",
+          loc: ["body", "telephone"],
+          msg: "Value error, must be a valid North American phone number",
+        },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 422,
+        headers: new Headers(),
+        json: async () => body,
+      } as unknown as Response),
+    );
+    const { container } = render(<ApplyForm />);
+    fillRequiredFields();
+
+    fireEvent.submit(container.querySelector("form")!);
+
+    expect(
+      await screen.findByText(
+        "Telephone: Enter a 10-digit phone number, for example (519) 123-4567.",
+      ),
+    ).toBeInTheDocument();
+    const telephone = screen.getByLabelText("Telephone");
+    expect(telephone).toHaveAttribute("aria-invalid", "true");
+    expect(telephone.getAttribute("aria-describedby")).toContain(
+      "telephone-error",
+    );
+    expect(screen.getByLabelText("Telephone")).toHaveValue("+1 416 555 0100");
+  });
+
   it("preserves values and gives contact guidance on network failure", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("network")));
     const { container } = render(

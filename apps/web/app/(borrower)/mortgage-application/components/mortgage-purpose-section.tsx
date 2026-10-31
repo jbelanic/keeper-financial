@@ -1,4 +1,5 @@
 import { FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
 import { Button } from "@keeper/ui";
 import { emptyDownPayment, type MortgageRequestState } from "./types";
 
@@ -53,6 +54,12 @@ export function MortgagePurposeSection({
             onChange={(event) =>
               set("requested_amount", event.currentTarget.value)
             }
+            onBlur={(event) =>
+              set(
+                "requested_amount",
+                formatAmountInput(event.currentTarget.value),
+              )
+            }
           />
         </FormField>
         <FormField
@@ -67,6 +74,12 @@ export function MortgagePurposeSection({
             value={value.estimated_property_value}
             onChange={(event) =>
               set("estimated_property_value", event.currentTarget.value)
+            }
+            onBlur={(event) =>
+              set(
+                "estimated_property_value",
+                formatAmountInput(event.currentTarget.value),
+              )
             }
           />
         </FormField>

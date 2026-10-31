@@ -9,6 +9,11 @@ import {
   PHONE_INPUT_ERROR_INTERNATIONAL,
   PHONE_INPUT_PATTERN,
 } from "@/lib/phone";
+import {
+  humaniseIssueMessage,
+  issueFieldLabel,
+  parseIssueDetail,
+} from "@/lib/validation-issues";
 
 const VALIDATED_FIELDS = {
   name: {
@@ -38,7 +43,45 @@ const VALIDATED_FIELDS = {
 } as const;
 
 type ValidatedField = keyof typeof VALIDATED_FIELDS;
-type FieldErrors = Partial<Record<ValidatedField, string>>;
+/** The free-text message can be rejected too (sensitive content). */
+type FieldErrors = Partial<Record<ValidatedField | "message", string>>;
+
+/** Field key -> the DOM id used by the form control. */
+const FIELD_IDS: Record<string, string> = {
+  name: "name",
+  email: "email",
+  telephone: "telephone",
+  message: "message",
+  mortgage_objective: "mortgage_objective",
+  preferred_contact_method: "preferred_contact_method",
+  service_contact_acknowledged: "service_contact_acknowledged",
+};
+
+/**
+ * Turn a 422 body into per-field messages.
+ *
+ * The API already says which field was refused and why; showing one generic
+ * sentence left the visitor guessing which of six answers was wrong.
+ */
+function serverFieldErrors(detail: unknown): {
+  fields: FieldErrors;
+  summary: string[];
+} {
+  const fields: FieldErrors = {};
+  const summary: string[] = [];
+  for (const issue of parseIssueDetail(detail)) {
+    const leaf = [...issue.path]
+      .reverse()
+      .find((part): part is string => typeof part === "string");
+    const message = humaniseIssueMessage(issue.message);
+    summary.push(`${issueFieldLabel(issue.path)}: ${message}`);
+    const key = leaf && FIELD_IDS[leaf];
+    if (key && !fields[key as keyof FieldErrors]) {
+      fields[key as keyof FieldErrors] = message;
+    }
+  }
+  return { fields, summary };
+}
 
 function validateFields(form: HTMLFormElement): FieldErrors {
   const fieldErrors: FieldErrors = {};
@@ -140,9 +183,19 @@ export function ApplyForm({
       );
       if (!response.ok) {
         if (response.status === 422) {
-          setErrors([
-            "Check the required fields and remove any sensitive details.",
-          ]);
+          const body =
+            typeof response.json === "function"
+              ? ((await response.json().catch(() => null)) as {
+                  detail?: unknown;
+                } | null)
+              : null;
+          const mapped = serverFieldErrors(body?.detail);
+          setFieldErrors(mapped.fields);
+          setErrors(
+            mapped.summary.length
+              ? mapped.summary
+              : ["Check the required fields and remove any sensitive details."],
+          );
         } else if (response.status === 429) {
           const retryAfter = response.headers.get("Retry-After");
           setErrors([
@@ -277,6 +330,7 @@ export function ApplyForm({
         id="message"
         label="Brief message (optional)"
         hint="Please don’t include your SIN or banking details here."
+        error={fieldErrors.message}
       >
         <textarea id="message" name="message" maxLength={1000} />
       </FormField>

@@ -1,22 +1,8 @@
 import { Button, FormField } from "@keeper/ui";
 import { PHONE_EXAMPLE } from "@/lib/phone";
+import { EMAIL_HINT, POSTAL_CODE_HINT, SIN_HINT } from "@/lib/validation";
+import { provinces } from "./options";
 import type { BorrowerState } from "./types";
-
-const provinces = [
-  "AB",
-  "BC",
-  "MB",
-  "NB",
-  "NL",
-  "NS",
-  "NT",
-  "NU",
-  "ON",
-  "PE",
-  "QC",
-  "SK",
-  "YT",
-];
 
 function BorrowerFields({
   prefix,
@@ -76,6 +62,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-email`}
           label="Email (required)"
+          hint={EMAIL_HINT}
           error={fieldErrors?.[`${prefix}-email`]}
         >
           <input
@@ -140,7 +127,7 @@ function BorrowerFields({
           hint={
             sinProvided
               ? "SIN provided ••• ••• •••. Enter all nine digits only to replace it; the saved value cannot be retrieved."
-              : "Enter nine digits. It is encrypted and will not be shown again."
+              : SIN_HINT
           }
           error={fieldErrors?.[`${prefix}-sin`]}
         >
@@ -262,6 +249,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-postal`}
           label="Postal code (required)"
+          hint={POSTAL_CODE_HINT}
           error={fieldErrors?.[`${prefix}-postal`]}
         >
           <input

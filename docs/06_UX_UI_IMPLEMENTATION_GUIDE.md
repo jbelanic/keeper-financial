@@ -311,6 +311,25 @@ Create:
   "the response was uncertain" notice is not acceptable.
 - Submission names the incomplete sections and opens the first one instead of a
   single "the saved application is incomplete" line.
+- Format rules are checked in the browser before a save: email shape, Canadian
+  postal code, North American phone, and the SIN checksum. The SIN hint states
+  that the number is checksummed, so the rule is disclosed rather than hidden —
+  a mistyped digit is caught immediately instead of after a round trip.
+- Fixed vocabularies are selects, never free text: province or territory (both
+  the borrower address and the subject property), plus liability and
+  other-property-mortgage payment frequency. A saved draft value outside the
+  list is preserved and shown as its own option rather than silently replaced.
+- Every field states required or optional, and the optional other-property
+  fields are labelled as such.
+- The public contact form marks the field the API refused (with the sentence it
+  returned) instead of only showing one generic summary line.
+- Save feedback says when: "Section saved securely — just now", then minutes and
+  hours, refreshed without a reload.
+- Amounts tidy themselves on blur (`650000` → `650,000`, `$2 000` → `2,000`) and
+  money inputs ask for a decimal keyboard on touch devices. An unparseable entry
+  is left exactly as typed so the rejection message still matches it.
+- Supporting documents accept drag-and-drop as well as the file picker, and the
+  chosen file is named with its size before it is uploaded.
 
 ## Responsive requirements
 

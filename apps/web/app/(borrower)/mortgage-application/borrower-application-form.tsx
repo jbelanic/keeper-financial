@@ -41,8 +41,15 @@ import {
   humaniseIssueMessage,
   issueSummary,
   type BorrowerIssue,
-} from "@/lib/borrower-issue-messages";
+} from "@/lib/validation-issues";
 import { numberChecks, numberValue } from "@/lib/number-input";
+import { formatRelativeTime } from "@/lib/relative-time";
+import { isAcceptablePhoneInput } from "@/lib/phone";
+import {
+  isValidEmail,
+  isValidPostalCode,
+  passesSinChecksum,
+} from "@/lib/validation";
 
 const steps = [
   "Mortgage request",
@@ -153,9 +160,29 @@ function validateBorrower(
   });
   if (!sinAlreadyProvided && !/^\d{9}$/.test(value.sin)) {
     errors.push(`${label}: enter all nine SIN digits.`);
+  } else if (value.sin && !passesSinChecksum(value.sin)) {
+    errors.push(
+      `${label}: that SIN does not pass the checksum — check the nine digits.`,
+    );
   }
   if (value.sin && !/^\d{9}$/.test(value.sin)) {
     errors.push(`${label}: replacement SIN must contain nine digits.`);
+  }
+  if (value.email.trim() && !isValidEmail(value.email)) {
+    errors.push(
+      `${label}: enter a valid email address, for example name@example.com.`,
+    );
+  }
+  if (value.phone.trim() && !isAcceptablePhoneInput(value.phone)) {
+    errors.push(
+      `${label}: enter a 10-digit phone number, for example (519) 123-4567.`,
+    );
+  }
+  if (
+    value.current_address.postal_code.trim() &&
+    !isValidPostalCode(value.current_address.postal_code)
+  ) {
+    errors.push(`${label}: enter a Canadian postal code, for example N6H 4T6.`);
   }
   errors.push(
     ...numberChecks([
@@ -618,6 +645,8 @@ export function BorrowerApplicationForm({
   const [errors, setErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [errorTitle, setErrorTitle] = useState("This section was not saved");
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const errorRef = useRef<HTMLElement>(null);
 
   const [mortgage, setMortgage] = useState<MortgageRequestState>({
@@ -742,6 +771,12 @@ export function BorrowerApplicationForm({
     if (errors.length) errorRef.current?.focus();
   }, [errors]);
 
+  // Keep "saved N minutes ago" honest without re-rendering on every keystroke.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   function issueState(): IssueLookupState {
     return {
       downPaymentSources: mortgage.down_payment_sources,
@@ -821,6 +856,7 @@ export function BorrowerApplicationForm({
       );
       setDraft(saved);
       setSaveState("saved");
+      setSavedAt(Date.now());
       setStep((current) => Math.min(current + 1, steps.length - 1));
       window.requestAnimationFrame(() => {
         document.querySelector<HTMLElement>("#borrower-step-heading")?.focus();
@@ -1294,7 +1330,9 @@ export function BorrowerApplicationForm({
           {saveState === "saving"
             ? "Saving this section securely…"
             : saveState === "saved"
-              ? "Section saved securely."
+              ? savedAt
+                ? `Section saved securely — ${formatRelativeTime(savedAt, now)}.`
+                : "Section saved securely."
               : saveState === "error"
                 ? "Nothing was advanced or cleared."
                 : ""}
