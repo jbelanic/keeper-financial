@@ -1,10 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import {
-  BorrowerApplicationForm,
-  validateSubjectProperty,
-} from "@/app/(borrower)/mortgage-application/borrower-application-form";
+import { BorrowerApplicationForm } from "@/app/(borrower)/mortgage-application/borrower-application-form";
+import { validateSubjectProperty } from "@/app/(borrower)/mortgage-application/section-validation";
 import { BorrowerDetailsSection } from "@/app/(borrower)/mortgage-application/components/borrower-details-section";
 import { ConsentSection } from "@/app/(borrower)/mortgage-application/components/consent-section";
 import { DocumentUpload } from "@/app/(borrower)/mortgage-application/components/document-upload";
@@ -397,7 +395,7 @@ describe("accountless borrower application form", () => {
     ]);
   });
 
-  it("identifies every missing required subject-property field", () => {
+  it("points at the exact control for every missing subject-property field", () => {
     expect(
       validateSubjectProperty({
         identified: true,
@@ -417,7 +415,19 @@ describe("accountless borrower application form", () => {
         lot_details: "",
         garage_details: "",
       }),
-    ).toEqual(["Property style is required.", "Occupancy is required."]);
+    ).toEqual([
+      {
+        field: "subject-style",
+        label: "Property style",
+        message:
+          "Choose the property style, for example detached or semi-detached.",
+      },
+      {
+        field: "subject-occupancy",
+        label: "Occupancy",
+        message: "Choose how the property will be occupied.",
+      },
+    ]);
   });
 
   it("has no answer persistence, analytics, console, or sensitive submission persistence", () => {

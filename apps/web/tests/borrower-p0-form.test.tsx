@@ -127,12 +127,19 @@ describe("amount entry in the borrower application", () => {
 
     expect(
       await screen.findByText(
-        "Requested mortgage amount must be an amount, for example 650000 or 650,000.",
+        "Enter an amount, for example 650000 or 650,000.",
       ),
     ).toBeInTheDocument();
     expect(patch).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Requested mortgage amount")).toHaveValue(
-      "about 650k",
+    const amount = screen.getByLabelText("Requested mortgage amount");
+    expect(amount).toHaveValue("about 650k");
+    // The message is attached to the field it belongs to, not just summarised.
+    expect(amount).toHaveAttribute("aria-invalid", "true");
+    expect(amount.getAttribute("aria-describedby")).toContain(
+      "requested-amount-error",
+    );
+    expect(amount.closest(".form-field")?.textContent).toContain(
+      "Enter an amount, for example 650000 or 650,000.",
     );
   });
 });
@@ -301,8 +308,11 @@ describe("submission completeness", () => {
         name: "Finish these sections before submitting",
       }),
     ).toBeInTheDocument();
+    // Names the section, the borrower, the field and what to type.
     expect(
-      screen.getByText(/Borrowers: Primary borrower: phone is required\./),
+      screen.getByText(
+        /Borrowers — Primary borrower — phone: Enter a 10-digit phone number, for example \(519\) 123-4567\./,
+      ),
     ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
   });

@@ -71,6 +71,15 @@ function fillBorrower(overrides: {
   fireEvent.change(screen.getByLabelText("Postal code (required)"), {
     target: { value: overrides.postal ?? "N6H 4T6" },
   });
+  fireEvent.change(screen.getByLabelText("Number of dependants (required)"), {
+    target: { value: "0" },
+  });
+  fireEvent.change(screen.getByLabelText("Years at address (required)"), {
+    target: { value: "3" },
+  });
+  fireEvent.change(screen.getByLabelText("Additional months (required)"), {
+    target: { value: "2" },
+  });
 }
 
 async function openBorrowerStep(patch = vi.fn().mockResolvedValue(saved)) {
@@ -116,13 +125,14 @@ describe("borrower details catch format mistakes before saving", () => {
     fillBorrower({ sin: "123456789" });
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
 
+    // Inline under the field and repeated in the summary, so match either.
     expect(
-      await screen.findByText(/does not pass the checksum/i),
-    ).toBeInTheDocument();
+      (await screen.findAllByText(/fails its own check digit/i)).length,
+    ).toBeGreaterThan(0);
     expect(patch).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/Social Insurance Number/)).toHaveValue(
-      "123456789",
-    );
+    const sin = screen.getByLabelText(/Social Insurance Number/);
+    expect(sin).toHaveValue("123456789");
+    expect(sin).toHaveAttribute("aria-invalid", "true");
   });
 
   it("names the postal code and email problems instead of sending them", async () => {
@@ -131,11 +141,13 @@ describe("borrower details catch format mistakes before saving", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save and continue" }));
 
     expect(
-      await screen.findByText(/enter a valid email address/i),
-    ).toBeInTheDocument();
+      (await screen.findAllByText(/that email address is not complete/i))
+        .length,
+    ).toBeGreaterThan(0);
     expect(
-      screen.getByText(/enter a Canadian postal code, for example N6H 4T6/i),
-    ).toBeInTheDocument();
+      screen.getAllByText(/enter a Canadian postal code, for example N6H 4T6/i)
+        .length,
+    ).toBeGreaterThan(0);
     expect(patch).not.toHaveBeenCalled();
   });
 
