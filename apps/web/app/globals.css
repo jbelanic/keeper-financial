@@ -536,6 +536,9 @@ ul.grid-3 {
 }
 .form-field {
   display: grid;
+  /* Without this a control stretches to fill the row when a neighbouring field
+     in the same grid is taller, which produced double-height selects. */
+  align-content: start;
   gap: 0.4rem;
   margin-bottom: 1rem;
 }
@@ -556,6 +559,16 @@ textarea {
   min-height: 2.75rem;
   padding: 0.65rem;
   width: 100%;
+}
+/* A field the applicant has to fix: shape and colour, not colour alone. */
+[aria-invalid="true"] {
+  border: 2px solid var(--color-danger);
+  background: var(--color-danger-soft);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+[aria-invalid="true"]:focus-visible {
+  outline-color: var(--color-danger);
 }
 textarea {
   min-height: 8rem;
@@ -599,7 +612,9 @@ textarea {
 }
 .field-error {
   color: var(--color-danger);
+  display: block;
   font-weight: 700;
+  margin-top: 0.1rem;
 }
 .status-badge {
   border: 1px solid currentColor;
