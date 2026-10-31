@@ -37,7 +37,11 @@ from keeper_api.services.candidate_files import (
     DocumentRejected,
     validate_document_bytes,
 )
-from keeper_api.services.malware_scanner import MalwareScannerUnavailable, build_malware_scanner
+from keeper_api.services.malware_scanner import (
+    MalwareScannerPayloadTooLarge,
+    MalwareScannerUnavailable,
+    build_malware_scanner,
+)
 
 BORROWER_DOCUMENT_MAXIMUM_BYTES = 25 * 1024 * 1024
 BORROWER_DOCUMENT_CATEGORIES = {
@@ -292,6 +296,8 @@ def upload_document(
     try:
         scanner = build_malware_scanner(settings)
         decision = scanner.scan(validated.content)
+    except MalwareScannerPayloadTooLarge as exc:
+        raise BorrowerDocumentRejected("file_too_large", status_code=413) from exc
     except MalwareScannerUnavailable as exc:
         raise BorrowerDocumentStorageError("scanner_unavailable") from exc
     if decision.status != "clean":

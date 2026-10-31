@@ -69,7 +69,10 @@ services:
     restart: "no"
 
   clamav:
-    image: clamav/clamav:stable
+    # Pinned so a surprise major release cannot change startup time, memory use
+    # or protocol behaviour under a running deployment; definitions still
+    # refresh from freshclam on the keeper_clamav volume.
+    image: clamav/clamav:1.5.3
     ports:
       - "127.0.0.1:3310:3310"
     expose:

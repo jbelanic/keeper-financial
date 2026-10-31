@@ -27,6 +27,7 @@ from keeper_api.services.candidate_files import (
     validate_document_bytes,
 )
 from keeper_api.services.malware_scanner import (
+    MalwareScannerPayloadTooLarge,
     MalwareScannerUnavailable,
     build_malware_scanner,
 )
@@ -166,6 +167,7 @@ __all__ = [
     "AGENT_PHOTO_POLICY",
     "PHOTO_ROUTE_PREFIX",
     "AgentPhotoRejected",
+    "MalwareScannerPayloadTooLarge",
     "MalwareScannerUnavailable",
     "audit_target_id",
     "delete_agent_photo",

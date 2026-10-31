@@ -52,7 +52,11 @@ from keeper_api.services.borrower_crypto import (
     load_borrower_crypto_state,
 )
 from keeper_api.services.borrower_documents import BorrowerDocumentStorageError
-from keeper_api.services.malware_scanner import MalwareScannerUnavailable, ScanDecision
+from keeper_api.services.malware_scanner import (
+    MalwareScannerPayloadTooLarge,
+    MalwareScannerUnavailable,
+    ScanDecision,
+)
 
 
 @pytest.fixture
@@ -1955,6 +1959,44 @@ class TestBorrowerPhaseDRouteIntegration:
             assert failure_event.safe_metadata == {
                 "result": "failure",
                 "reason": expected_detail,
+            }
+        assert not any(
+            path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")
+        )
+
+    def test_upload_scanner_size_refusal_is_413_not_a_scanner_outage(
+        self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from document_samples import valid_pdf
+
+        application_id = self._start(route_client)
+        monkeypatch.setattr(
+            "keeper_api.services.borrower_documents.build_malware_scanner",
+            lambda _settings: (_ for _ in ()).throw(MalwareScannerPayloadTooLarge()),
+        )
+
+        response = route_client.post(
+            f"/api/v1/borrower-applications/{application_id}/documents",
+            headers=self._headers(),
+            data={"category": "property"},
+            files={"file": ("notice.pdf", valid_pdf(), "application/pdf")},
+        )
+
+        assert response.status_code == 413, response.text
+        assert response.json()["detail"] == "file_too_large"
+        with route_client._keeper_session_factory() as session:
+            assert session.query(BorrowerDocument).count() == 0
+            failure_event = (
+                session.query(AuditEvent)
+                .filter(
+                    AuditEvent.event_type == "borrower_document_upload_result",
+                    AuditEvent.target_id == uuid.UUID(application_id),
+                )
+                .one()
+            )
+            assert failure_event.safe_metadata == {
+                "result": "failure",
+                "reason": "file_too_large",
             }
         assert not any(
             path.is_file() for path in route_client._keeper_settings.local_storage_path.rglob("*")

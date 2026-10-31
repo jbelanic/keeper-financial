@@ -325,6 +325,39 @@ def test_validation_failure_never_reaches_scanner_or_persistence(
     assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
 
 
+def test_candidate_upload_scanner_size_refusal_is_413(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from keeper_api.services.malware_scanner import MalwareScannerPayloadTooLarge
+
+    application_id = start_application(client, db)["id"]
+
+    def refusing_scanner(_settings: object) -> object:
+        raise MalwareScannerPayloadTooLarge()
+
+    monkeypatch.setattr(
+        candidate_document_routes,
+        "build_malware_scanner",
+        refusing_scanner,
+    )
+
+    # Default content here is a structurally valid PDF, so the upload reaches the
+    # scanner instead of being refused by document validation first.
+    response = upload(client, application_id)
+
+    assert response.status_code == 413, response.text
+    assert response.json() == {"detail": "file_too_large"}
+    assert db.query(CandidateDocument).count() == 0
+    assert not [path for path in (tmp_path / "objects").rglob("*") if path.is_file()]
+    decisions = {
+        event.safe_metadata.get("decision")
+        for event in db.query(AuditEvent)
+        .filter(AuditEvent.event_type == "candidate_document.scan_decision")
+        .all()
+    }
+    assert decisions == {"file_too_large"}
+
+
 def test_candidate_can_remove_only_draft_documents_and_category_is_bounded_to_five(
     client: TestClient, db: Session
 ) -> None:

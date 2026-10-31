@@ -39,8 +39,13 @@ else
   fail "api /health/db unreachable"
 fi
 
-# 3. ClamAV availability via clamd PING on the loopback scanner port.
-if exec 3<>/dev/tcp/127.0.0.1/3310 2>/dev/null; then
+# 3. ClamAV readiness. A PING only proves clamd answers; the app needs a scan
+#    decision and fresh signatures, so check all three.
+CLAMD_PORT="${CLAMAV_MONITOR_PORT:-3310}"
+CLAMD_MAX_SIGNATURE_AGE=604800 # 7 days; freshclam normally refreshes daily
+
+# 3a. Liveness.
+if exec 3<>"/dev/tcp/127.0.0.1/${CLAMD_PORT}" 2>/dev/null; then
   printf 'PING\n' >&3
   pong="$(head -c 4 <&3 2>/dev/null || true)"
   exec 3<&- 3>&-
@@ -50,7 +55,47 @@ if exec 3<>/dev/tcp/127.0.0.1/3310 2>/dev/null; then
     fail "clamd unexpected PING response"
   fi
 else
-  fail "clamd unavailable on 127.0.0.1:3310"
+  fail "clamd unavailable on 127.0.0.1:${CLAMD_PORT}"
+fi
+
+# 3b. A real INSTREAM scan of one byte. This exercises the same code path an
+#     upload takes, so a scanner that answers PING but cannot scan is caught.
+scan_reply=""
+if exec 4<>"/dev/tcp/127.0.0.1/${CLAMD_PORT}" 2>/dev/null; then
+  # zINSTREAM + NUL, 4-byte length (00000001), one byte of payload, 4-byte NUL terminator.
+  printf '%b' 'zINSTREAM\000\000\000\000\001K\000\000\000\000' >&4 2>/dev/null
+  IFS= read -r -d '' -t 10 scan_reply <&4 2>/dev/null || true
+  exec 4<&- 4>&-
+  scan_reply="${scan_reply//$'\r'/}"
+  scan_reply="${scan_reply//$'\n'/}"
+fi
+if [[ "$scan_reply" == "stream: OK" ]]; then
+  pass "clamd INSTREAM scan"
+else
+  fail "clamd INSTREAM scan: ${scan_reply:-no reply}"
+fi
+
+# 3c. Signature age, parsed from `VERSION` ("ClamAV <ver>/<sigs>/<date>").
+version_reply=""
+if exec 5<>"/dev/tcp/127.0.0.1/${CLAMD_PORT}" 2>/dev/null; then
+  printf 'VERSION\n' >&5
+  IFS= read -r -d '' -t 10 version_reply <&5 2>/dev/null || true
+  exec 5<&- 5>&-
+  version_reply="${version_reply//$'\r'/}"
+  version_reply="${version_reply//$'\n'/}"
+fi
+signature_date="${version_reply##*/}"
+if [[ -z "$version_reply" ]]; then
+  fail "clamd VERSION unavailable"
+elif signature_epoch="$(date -d "$signature_date" +%s 2>/dev/null)"; then
+  signature_age=$(( $(date +%s) - signature_epoch ))
+  if (( signature_age > CLAMD_MAX_SIGNATURE_AGE )); then
+    fail "clamd signatures stale (${signature_age}s since ${signature_date})"
+  else
+    pass "clamd signatures fresh (${signature_date})"
+  fi
+else
+  fail "clamd VERSION not parsed: ${version_reply}"
 fi
 
 # 4. Backup freshness: newest backup must be <= 26h old (24h + 2h slack).

@@ -70,8 +70,8 @@ class Settings(BaseSettings):
     clamav_host: str = Field(default="127.0.0.1", min_length=1, max_length=253)
     clamav_port: int = Field(default=3310, ge=1, le=65535)
     clamav_connect_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
-    clamav_read_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
-    clamav_max_chunks: int = Field(default=256, ge=1, le=4096)
+    clamav_read_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    clamav_max_chunks: int = Field(default=512, ge=1, le=4096)
     clamav_max_response_bytes: int = Field(default=4096, ge=64, le=65536)
     s3_endpoint_url: str | None = None
     s3_public_endpoint_url: str | None = None
