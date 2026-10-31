@@ -212,7 +212,9 @@ export function DocumentUpload({
             <span>
               {item.filename} — {categoryLabel(item.category)} —{" "}
               {Math.round(item.size_bytes / 1024)} KB —{" "}
-              {item.scan_status === "clean" ? "scanned, clean" : item.scan_status}
+              {item.scan_status === "clean"
+                ? "scanned, clean"
+                : item.scan_status}
             </span>{" "}
             <button
               type="button"
