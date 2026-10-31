@@ -1,15 +1,18 @@
 import { Button, FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
 import { emptyEmployment, type EmploymentState } from "./types";
 
 function EmploymentList({
   borrowerLabel,
   prefix,
   entries,
+  fieldErrors,
   onChange,
 }: {
   borrowerLabel: string;
   prefix: string;
   entries: EmploymentState[];
+  fieldErrors?: Record<string, string>;
   onChange: (entries: EmploymentState[]) => void;
 }) {
   const update = (index: number, field: keyof EmploymentState, value: string) =>
@@ -34,6 +37,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-employment-type-${entry.id}`}
               label="Employment or income type (required)"
+              error={fieldErrors?.[`${prefix}-employment-type-${entry.id}`]}
             >
               <select
                 id={`${prefix}-employment-type-${entry.id}`}
@@ -52,6 +56,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-employer-${entry.id}`}
               label="Employer or business name (required when applicable)"
+              error={fieldErrors?.[`${prefix}-employer-${entry.id}`]}
             >
               <input
                 id={`${prefix}-employer-${entry.id}`}
@@ -65,6 +70,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-job-title-${entry.id}`}
               label="Job title (required when applicable)"
+              error={fieldErrors?.[`${prefix}-job-title-${entry.id}`]}
             >
               <input
                 id={`${prefix}-job-title-${entry.id}`}
@@ -78,6 +84,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-occupation-${entry.id}`}
               label="Occupation or category (required)"
+              error={fieldErrors?.[`${prefix}-occupation-${entry.id}`]}
             >
               <input
                 id={`${prefix}-occupation-${entry.id}`}
@@ -95,6 +102,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-industry-${entry.id}`}
               label="Industry (required)"
+              error={fieldErrors?.[`${prefix}-industry-${entry.id}`]}
             >
               <input
                 id={`${prefix}-industry-${entry.id}`}
@@ -108,6 +116,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-duration-years-${entry.id}`}
               label="Years (required)"
+              error={fieldErrors?.[`${prefix}-duration-years-${entry.id}`]}
             >
               <input
                 id={`${prefix}-duration-years-${entry.id}`}
@@ -123,6 +132,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-duration-months-${entry.id}`}
               label="Additional months (required)"
+              error={fieldErrors?.[`${prefix}-duration-months-${entry.id}`]}
             >
               <input
                 id={`${prefix}-duration-months-${entry.id}`}
@@ -138,6 +148,7 @@ function EmploymentList({
             <FormField
               id={`${prefix}-income-${entry.id}`}
               label="Annual gross income (required)"
+              error={fieldErrors?.[`${prefix}-income-${entry.id}`]}
             >
               <input
                 id={`${prefix}-income-${entry.id}`}
@@ -150,11 +161,19 @@ function EmploymentList({
                     event.currentTarget.value,
                   )
                 }
+                onBlur={(event) =>
+                  update(
+                    index,
+                    "annual_gross_income",
+                    formatAmountInput(event.currentTarget.value),
+                  )
+                }
               />
             </FormField>
             <FormField
               id={`${prefix}-employer-address-${entry.id}`}
               label="Employer address (optional)"
+              error={fieldErrors?.[`${prefix}-employer-address-${entry.id}`]}
             >
               <input
                 id={`${prefix}-employer-address-${entry.id}`}
@@ -197,11 +216,13 @@ function EmploymentList({
 export function EmploymentIncomeSection({
   primary,
   coBorrower,
+  fieldErrors,
   onPrimaryChange,
   onCoBorrowerChange,
 }: {
   primary: EmploymentState[];
   coBorrower: EmploymentState[] | null;
+  fieldErrors?: Record<string, string>;
   onPrimaryChange: (entries: EmploymentState[]) => void;
   onCoBorrowerChange: (entries: EmploymentState[]) => void;
 }) {
@@ -211,6 +232,7 @@ export function EmploymentIncomeSection({
         borrowerLabel="Primary borrower"
         prefix="primary"
         entries={primary}
+        fieldErrors={fieldErrors}
         onChange={onPrimaryChange}
       />
       {coBorrower ? (
@@ -218,6 +240,7 @@ export function EmploymentIncomeSection({
           borrowerLabel="Co-borrower"
           prefix="co"
           entries={coBorrower}
+          fieldErrors={fieldErrors}
           onChange={onCoBorrowerChange}
         />
       ) : null}

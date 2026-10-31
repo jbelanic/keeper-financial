@@ -72,7 +72,7 @@ describe("accountless borrower application form", () => {
     expect(
       await screen.findByRole("heading", { name: "Borrowers" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Section saved securely.")).toBeInTheDocument();
+    expect(screen.getByText(/Section saved securely/)).toBeInTheDocument();
   });
 
   it("preserves the current step and visible values on a server failure", async () => {
@@ -294,7 +294,7 @@ describe("accountless borrower application form", () => {
     );
 
     expect(onSettledChange).toHaveBeenCalledWith(false);
-    await screen.findByText("No documents uploaded.");
+    await screen.findByText(/No documents uploaded yet/);
     expect(onSettledChange).toHaveBeenLastCalledWith(true);
   });
 
@@ -311,7 +311,7 @@ describe("accountless borrower application form", () => {
       />,
     );
 
-    await screen.findByText("Documents could not be loaded. Try again.");
+    await screen.findByText(/current documents could not be loaded/i);
     expect(onSettledChange).toHaveBeenCalledWith(false);
     expect(onSettledChange).not.toHaveBeenCalledWith(true);
   });
@@ -334,14 +334,14 @@ describe("accountless borrower application form", () => {
         onSettledChange={onSettledChange}
       />,
     );
-    await screen.findByText("No documents uploaded.");
+    await screen.findByText(/No documents uploaded yet/);
     fireEvent.change(
       screen.getByLabelText("Select a PDF, DOC, DOCX, JPEG, or PNG"),
       { target: { files: [new File(["safe"], "safe.pdf")] } },
     );
     fireEvent.click(screen.getByRole("button", { name: "Upload document" }));
 
-    await screen.findByText(/could not be reconciled/i);
+    await screen.findByText(/could not be uploaded/i);
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
     expect(onSettledChange).toHaveBeenLastCalledWith(false);
   });

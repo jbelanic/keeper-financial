@@ -68,7 +68,7 @@ describe("agent assigned leads", () => {
     );
 
     expect(await screen.findByText("client@example.test")).toBeInTheDocument();
-    expect(screen.getByText("+1 416 555 0100")).toBeInTheDocument();
+    expect(screen.getByText("(416) 555-0100")).toBeInTheDocument();
     expect(
       screen.getByText(/please call me about a first purchase/i),
     ).toBeInTheDocument();

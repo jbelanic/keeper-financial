@@ -1,10 +1,22 @@
 import { FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
+import { POSTAL_CODE_HINT } from "@/lib/validation";
+import { provinces } from "./options";
 import type { SubjectPropertyState } from "./types";
+
+/** Fields in the cost row that hold money rather than a whole count. */
+const MONEY_SUBJECT_FIELDS = [
+  "monthly_property_tax",
+  "monthly_heating_cost",
+  "monthly_condo_fee",
+];
 
 export function SubjectPropertySection({
   value,
   onChange,
+  fieldErrors,
 }: {
+  fieldErrors?: Record<string, string>;
   value: SubjectPropertyState;
   onChange: (value: SubjectPropertyState) => void;
 }) {
@@ -27,7 +39,11 @@ export function SubjectPropertySection({
       </label>
       {value.identified ? (
         <div className="borrower-form-grid">
-          <FormField id="subject-address" label="Address (required)">
+          <FormField
+            id="subject-address"
+            label="Address (required)"
+            error={fieldErrors?.["subject-address"]}
+          >
             <input
               id="subject-address"
               required
@@ -35,7 +51,11 @@ export function SubjectPropertySection({
               onChange={(event) => set("address", event.currentTarget.value)}
             />
           </FormField>
-          <FormField id="subject-city" label="City (required)">
+          <FormField
+            id="subject-city"
+            label="City (required)"
+            error={fieldErrors?.["subject-city"]}
+          >
             <input
               id="subject-city"
               required
@@ -46,16 +66,27 @@ export function SubjectPropertySection({
           <FormField
             id="subject-province"
             label="Province or territory (required)"
+            error={fieldErrors?.["subject-province"]}
           >
-            <input
+            <select
               id="subject-province"
-              maxLength={2}
+              autoComplete="address-level1"
               required
               value={value.province}
               onChange={(event) => set("province", event.currentTarget.value)}
-            />
+            >
+              <option value="">Select</option>
+              {provinces.map((province) => (
+                <option key={province}>{province}</option>
+              ))}
+            </select>
           </FormField>
-          <FormField id="subject-postal" label="Postal code (required)">
+          <FormField
+            id="subject-postal"
+            label="Postal code (required)"
+            hint={POSTAL_CODE_HINT}
+            error={fieldErrors?.["subject-postal"]}
+          >
             <input
               id="subject-postal"
               maxLength={7}
@@ -66,7 +97,11 @@ export function SubjectPropertySection({
               }
             />
           </FormField>
-          <FormField id="subject-type" label="Property type (required)">
+          <FormField
+            id="subject-type"
+            label="Property type (required)"
+            error={fieldErrors?.["subject-type"]}
+          >
             <select
               id="subject-type"
               required
@@ -84,7 +119,11 @@ export function SubjectPropertySection({
               <option value="other">Other</option>
             </select>
           </FormField>
-          <FormField id="subject-style" label="Property style (required)">
+          <FormField
+            id="subject-style"
+            label="Property style (required)"
+            error={fieldErrors?.["subject-style"]}
+          >
             <select
               id="subject-style"
               required
@@ -101,7 +140,11 @@ export function SubjectPropertySection({
               <option value="other">Other</option>
             </select>
           </FormField>
-          <FormField id="subject-occupancy" label="Occupancy (required)">
+          <FormField
+            id="subject-occupancy"
+            label="Occupancy (required)"
+            error={fieldErrors?.["subject-occupancy"]}
+          >
             <select
               id="subject-occupancy"
               required
@@ -123,7 +166,12 @@ export function SubjectPropertySection({
             ["monthly_heating_cost", "Monthly heating cost (optional)"],
             ["monthly_condo_fee", "Monthly condo fee (optional)"],
           ].map(([field, label]) => (
-            <FormField id={`subject-${field}`} label={label} key={field}>
+            <FormField
+              id={`subject-${field}`}
+              label={label}
+              key={field}
+              error={fieldErrors?.[`subject-${field}`]}
+            >
               <input
                 id={`subject-${field}`}
                 inputMode="decimal"
@@ -144,10 +192,22 @@ export function SubjectPropertySection({
                     event.currentTarget.value,
                   )
                 }
+                onBlur={(event) =>
+                  set(
+                    field as keyof SubjectPropertyState,
+                    MONEY_SUBJECT_FIELDS.includes(field)
+                      ? formatAmountInput(event.currentTarget.value)
+                      : event.currentTarget.value,
+                  )
+                }
               />
             </FormField>
           ))}
-          <FormField id="subject-lot-details" label="Lot details (optional)">
+          <FormField
+            id="subject-lot-details"
+            label="Lot details (optional)"
+            error={fieldErrors?.["subject-lot-details"]}
+          >
             <input
               id="subject-lot-details"
               maxLength={200}
@@ -160,6 +220,7 @@ export function SubjectPropertySection({
           <FormField
             id="subject-garage-details"
             label="Garage details (optional)"
+            error={fieldErrors?.["subject-garage-details"]}
           >
             <input
               id="subject-garage-details"

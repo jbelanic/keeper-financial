@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { CandidateRequestError } from "@/lib/candidate-browser-api";
+import { PHONE_EXAMPLE, PHONE_INPUT_PATTERN } from "@/lib/phone";
 import type {
   CandidateApplication,
   CandidatePrivacyDisclosure,
@@ -314,6 +315,30 @@ describe("candidate application UI", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     // Focus returns to the persistent status region, not the unmounted trigger.
     expect(screen.getByText(/application withdrawn/i)).toHaveFocus();
+  });
+
+  it("accepts a normally typed phone number in the candidate application", async () => {
+    const requestJson = vi
+      .fn()
+      .mockResolvedValue({ ...application, revision: 2 });
+    const { CandidateApplicationForm } = await import(
+      "@/app/(candidate)/candidate/applications/[applicationId]/application-form"
+    );
+    render(
+      <CandidateApplicationForm
+        initialApplication={application}
+        disclosure={disclosure}
+        requestJson={requestJson}
+      />,
+    );
+    const phone = screen.getByLabelText(/phone number/i);
+    expect(phone).toHaveAttribute("placeholder", PHONE_EXAMPLE);
+    expect(phone).toHaveAttribute("pattern", PHONE_INPUT_PATTERN);
+    expect(screen.getByText(/10 digits is enough/i)).toBeInTheDocument();
+
+    // A plain 10-digit number is enough: no + or country code required.
+    fireEvent.change(phone, { target: { value: "519-555-0100" } });
+    expect((phone as HTMLInputElement).validity.patternMismatch).toBe(false);
   });
 
   it("saves the current draft before showing the submission review", async () => {

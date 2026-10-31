@@ -8,6 +8,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from keeper_api.core.phone import INTERNATIONAL_ERROR
+from keeper_api.core.phone import normalize_phone as normalize_phone_value
+
 CandidateVisibleStatus = Literal[
     "application_started",
     "application_submitted",
@@ -380,14 +383,12 @@ class ApplicationDraftUpdate(BaseModel):
     @field_validator("phone")
     @classmethod
     def normalize_phone(cls, value: str | None) -> str | None:
+        """Accept a normally typed Canadian/US number; store E.164."""
         if value is None:
             return None
-        clean = value.strip()
-        if not re.fullmatch(r"\+?[0-9 ().-]+", clean) or not clean.startswith("+"):
-            raise ValueError("phone must include a leading country code")
-        normalized = "+" + re.sub(r"\D", "", clean)
-        if not re.fullmatch(r"\+[0-9]{8,15}", normalized):
-            raise ValueError("phone must normalize to E.164")
+        normalized = normalize_phone_value(value, allow_international=True)
+        if normalized is None:
+            raise ValueError(INTERNATIONAL_ERROR)
         return normalized
 
     @field_validator("country_code")

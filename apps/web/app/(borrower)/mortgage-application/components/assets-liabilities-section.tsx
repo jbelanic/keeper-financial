@@ -1,4 +1,6 @@
 import { Button, FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
+import { paymentFrequencies, paymentFrequencyLabel } from "./options";
 import {
   emptyAsset,
   emptyLiability,
@@ -11,6 +13,7 @@ export function AssetsLiabilitiesSection({
   liabilities,
   assetsComplete,
   liabilitiesComplete,
+  fieldErrors,
   onAssetsChange,
   onLiabilitiesChange,
   onAssetsCompleteChange,
@@ -20,6 +23,7 @@ export function AssetsLiabilitiesSection({
   liabilities: LiabilityState[];
   assetsComplete: boolean;
   liabilitiesComplete: boolean;
+  fieldErrors?: Record<string, string>;
   onAssetsChange: (entries: AssetState[]) => void;
   onLiabilitiesChange: (entries: LiabilityState[]) => void;
   onAssetsCompleteChange: (value: boolean) => void;
@@ -37,6 +41,7 @@ export function AssetsLiabilitiesSection({
               <FormField
                 id={`asset-type-${entry.id}`}
                 label="Asset type (required)"
+                error={fieldErrors?.[`asset-type-${entry.id}`]}
               >
                 <select
                   id={`asset-type-${entry.id}`}
@@ -72,6 +77,7 @@ export function AssetsLiabilitiesSection({
               <FormField
                 id={`asset-value-${entry.id}`}
                 label="Value (required)"
+                error={fieldErrors?.[`asset-value-${entry.id}`]}
               >
                 <input
                   id={`asset-value-${entry.id}`}
@@ -86,11 +92,26 @@ export function AssetsLiabilitiesSection({
                       ),
                     )
                   }
+                  onBlur={(event) =>
+                    onAssetsChange(
+                      assets.map((item) =>
+                        item.id === entry.id
+                          ? {
+                              ...item,
+                              value: formatAmountInput(
+                                event.currentTarget.value,
+                              ),
+                            }
+                          : item,
+                      ),
+                    )
+                  }
                 />
               </FormField>
               <FormField
                 id={`asset-description-${entry.id}`}
                 label="Description (required for Other)"
+                error={fieldErrors?.[`asset-description-${entry.id}`]}
               >
                 <input
                   id={`asset-description-${entry.id}`}
@@ -149,6 +170,7 @@ export function AssetsLiabilitiesSection({
               <FormField
                 id={`liability-type-${entry.id}`}
                 label="Liability type (required)"
+                error={fieldErrors?.[`liability-type-${entry.id}`]}
               >
                 <select
                   id={`liability-type-${entry.id}`}
@@ -190,6 +212,7 @@ export function AssetsLiabilitiesSection({
                   id={`liability-${field}-${entry.id}`}
                   label={label}
                   key={field}
+                  error={fieldErrors?.[`liability-${field}-${entry.id}`]}
                 >
                   <input
                     id={`liability-${field}-${entry.id}`}
@@ -204,16 +227,30 @@ export function AssetsLiabilitiesSection({
                         ),
                       )
                     }
+                    onBlur={(event) =>
+                      onLiabilitiesChange(
+                        liabilities.map((item) =>
+                          item.id === entry.id
+                            ? {
+                                ...item,
+                                [field]: formatAmountInput(
+                                  event.currentTarget.value,
+                                ),
+                              }
+                            : item,
+                        ),
+                      )
+                    }
                   />
                 </FormField>
               ))}
               <FormField
                 id={`liability-frequency-${entry.id}`}
                 label="Payment frequency (optional)"
+                error={fieldErrors?.[`liability-frequency-${entry.id}`]}
               >
-                <input
+                <select
                   id={`liability-frequency-${entry.id}`}
-                  maxLength={20}
                   value={entry.payment_frequency}
                   onChange={(event) =>
                     onLiabilitiesChange(
@@ -227,11 +264,27 @@ export function AssetsLiabilitiesSection({
                       ),
                     )
                   }
-                />
+                >
+                  <option value="">Select</option>
+                  {paymentFrequencies.map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                  {entry.payment_frequency &&
+                  !paymentFrequencies.some(
+                    ([code]) => code === entry.payment_frequency,
+                  ) ? (
+                    <option value={entry.payment_frequency}>
+                      {paymentFrequencyLabel(entry.payment_frequency)}
+                    </option>
+                  ) : null}
+                </select>
               </FormField>
               <FormField
                 id={`liability-description-${entry.id}`}
                 label="Description (required for Other)"
+                error={fieldErrors?.[`liability-description-${entry.id}`]}
               >
                 <input
                   id={`liability-description-${entry.id}`}

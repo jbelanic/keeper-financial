@@ -1,13 +1,16 @@
 import { FormField } from "@keeper/ui";
+import { formatAmountInput } from "@/lib/number-input";
 import { Button } from "@keeper/ui";
 import { emptyDownPayment, type MortgageRequestState } from "./types";
 
 export function MortgagePurposeSection({
   value,
   onChange,
+  fieldErrors,
 }: {
   value: MortgageRequestState;
   onChange: (value: MortgageRequestState) => void;
+  fieldErrors?: Record<string, string>;
 }) {
   const set = (field: keyof MortgageRequestState, next: string) =>
     onChange({ ...value, [field]: next });
@@ -19,7 +22,11 @@ export function MortgagePurposeSection({
         represent an approval or commitment.
       </p>
       <div className="borrower-form-grid">
-        <FormField id="mortgage-objective" label="Mortgage purpose (required)">
+        <FormField
+          id="mortgage-objective"
+          label="Mortgage purpose (required)"
+          error={fieldErrors?.["mortgage-objective"]}
+        >
           <select
             id="mortgage-objective"
             value={value.mortgage_objective}
@@ -38,6 +45,7 @@ export function MortgagePurposeSection({
           id="requested-amount"
           label="Requested mortgage amount"
           hint="Required when it is the applicable estimate."
+          error={fieldErrors?.["requested-amount"]}
         >
           <input
             id="requested-amount"
@@ -46,12 +54,19 @@ export function MortgagePurposeSection({
             onChange={(event) =>
               set("requested_amount", event.currentTarget.value)
             }
+            onBlur={(event) =>
+              set(
+                "requested_amount",
+                formatAmountInput(event.currentTarget.value),
+              )
+            }
           />
         </FormField>
         <FormField
           id="estimated-property-value"
           label="Estimated property value"
           hint="Required when it is the applicable estimate."
+          error={fieldErrors?.["estimated-property-value"]}
         >
           <input
             id="estimated-property-value"
@@ -60,11 +75,18 @@ export function MortgagePurposeSection({
             onChange={(event) =>
               set("estimated_property_value", event.currentTarget.value)
             }
+            onBlur={(event) =>
+              set(
+                "estimated_property_value",
+                formatAmountInput(event.currentTarget.value),
+              )
+            }
           />
         </FormField>
         <FormField
           id="expected-closing-date"
           label="Expected closing date (optional)"
+          error={fieldErrors?.["expected-closing-date"]}
         >
           <input
             id="expected-closing-date"
@@ -85,6 +107,7 @@ export function MortgagePurposeSection({
             <FormField
               id={`down-payment-source-${entry.id}`}
               label="Source (required)"
+              error={fieldErrors?.[`down-payment-source-${entry.id}`]}
             >
               <select
                 id={`down-payment-source-${entry.id}`}
@@ -112,6 +135,7 @@ export function MortgagePurposeSection({
               </select>
             </FormField>
             <FormField
+              error={fieldErrors?.[`down-payment-amount-${entry.id}`]}
               id={`down-payment-amount-${entry.id}`}
               label="Amount (required)"
             >
@@ -133,6 +157,7 @@ export function MortgagePurposeSection({
               />
             </FormField>
             <FormField
+              error={fieldErrors?.[`down-payment-description-${entry.id}`]}
               id={`down-payment-description-${entry.id}`}
               label="Description (required for Other)"
             >

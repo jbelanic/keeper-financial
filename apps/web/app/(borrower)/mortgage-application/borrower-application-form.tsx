@@ -37,6 +37,19 @@ import {
   type SubjectPropertyState,
 } from "./components/types";
 import { hydrateBorrowerDraft } from "./draft-hydration";
+import {
+  humaniseIssueMessage,
+  issueSummary,
+  type BorrowerIssue,
+} from "@/lib/validation-issues";
+import { numberChecks, numberValue } from "@/lib/number-input";
+import { formatRelativeTime } from "@/lib/relative-time";
+import { isAcceptablePhoneInput } from "@/lib/phone";
+import {
+  isValidEmail,
+  isValidPostalCode,
+  passesSinChecksum,
+} from "@/lib/validation";
 
 const steps = [
   "Mortgage request",
@@ -67,9 +80,6 @@ const defaultApi: FormApi = {
   submit: submitBorrowerApplication,
 };
 
-const numberOrUndefined = (value: string) =>
-  value.trim() ? Number(value) : undefined;
-
 function compact<T extends Record<string, unknown>>(record: T) {
   return Object.fromEntries(
     Object.entries(record).filter(
@@ -84,8 +94,8 @@ function addressPayload(value: BorrowerState["current_address"]) {
     city: value.city.trim(),
     province: value.province,
     postal_code: value.postal_code.trim(),
-    years_at_address: Number(value.years_at_address),
-    months_at_address: Number(value.months_at_address),
+    years_at_address: numberValue(value.years_at_address, "integer"),
+    months_at_address: numberValue(value.months_at_address, "integer"),
   };
 }
 
@@ -99,7 +109,7 @@ function borrowerPayload(value: BorrowerState, includeRelationship: boolean) {
     date_of_birth: value.date_of_birth,
     sin: value.sin || undefined,
     marital_status: value.marital_status,
-    number_of_dependants: Number(value.number_of_dependants),
+    number_of_dependants: numberValue(value.number_of_dependants, "integer"),
     relationship_to_primary: includeRelationship
       ? value.relationship_to_primary.trim()
       : undefined,
@@ -115,9 +125,9 @@ function employmentPayload(entries: EmploymentState[]) {
       job_title: entry.job_title.trim() || undefined,
       occupation_category: entry.occupation_category.trim(),
       industry: entry.industry.trim(),
-      duration_years: Number(entry.duration_years),
-      duration_months: Number(entry.duration_months),
-      annual_gross_income: Number(entry.annual_gross_income),
+      duration_years: numberValue(entry.duration_years, "integer"),
+      duration_months: numberValue(entry.duration_months, "integer"),
+      annual_gross_income: numberValue(entry.annual_gross_income),
       employer_address: entry.employer_address.trim() || undefined,
     }),
   );
@@ -150,11 +160,114 @@ function validateBorrower(
   });
   if (!sinAlreadyProvided && !/^\d{9}$/.test(value.sin)) {
     errors.push(`${label}: enter all nine SIN digits.`);
+  } else if (value.sin && !passesSinChecksum(value.sin)) {
+    errors.push(
+      `${label}: that SIN does not pass the checksum — check the nine digits.`,
+    );
   }
   if (value.sin && !/^\d{9}$/.test(value.sin)) {
     errors.push(`${label}: replacement SIN must contain nine digits.`);
   }
+  if (value.email.trim() && !isValidEmail(value.email)) {
+    errors.push(
+      `${label}: enter a valid email address, for example name@example.com.`,
+    );
+  }
+  if (value.phone.trim() && !isAcceptablePhoneInput(value.phone)) {
+    errors.push(
+      `${label}: enter a 10-digit phone number, for example (519) 123-4567.`,
+    );
+  }
+  if (
+    value.current_address.postal_code.trim() &&
+    !isValidPostalCode(value.current_address.postal_code)
+  ) {
+    errors.push(`${label}: enter a Canadian postal code, for example N6H 4T6.`);
+  }
+  errors.push(
+    ...numberChecks([
+      {
+        label: `${label} number of dependants`,
+        raw: value.number_of_dependants,
+        kind: "integer",
+      },
+      {
+        label: `${label} years at address`,
+        raw: value.current_address.years_at_address,
+        kind: "integer",
+      },
+      {
+        label: `${label} months at address`,
+        raw: value.current_address.months_at_address,
+        kind: "integer",
+      },
+    ]),
+  );
   return errors;
+}
+
+export function validateEmploymentEntries(
+  label: string,
+  entries: EmploymentState[],
+): string[] {
+  return entries.flatMap((entry) => {
+    const index = entries.indexOf(entry) + 1;
+    const missing =
+      !entry.employment_type ||
+      !entry.occupation_category.trim() ||
+      !entry.industry.trim() ||
+      !entry.annual_gross_income.trim();
+    return [
+      ...(missing
+        ? [`${label} income entry ${index} is missing a required value.`]
+        : []),
+      ...numberChecks([
+        {
+          label: `${label} income entry ${index} years`,
+          raw: entry.duration_years,
+          kind: "integer",
+        },
+        {
+          label: `${label} income entry ${index} months`,
+          raw: entry.duration_months,
+          kind: "integer",
+        },
+        {
+          label: `${label} income entry ${index} annual gross income`,
+          raw: entry.annual_gross_income,
+        },
+      ]),
+    ];
+  });
+}
+
+export function validateAssetsAndLiabilities(
+  assets: AssetState[],
+  liabilities: LiabilityState[],
+  assetsComplete: boolean,
+  liabilitiesComplete: boolean,
+): string[] {
+  return [
+    ...assets.flatMap((asset, index) =>
+      numberChecks([{ label: `Asset ${index + 1} value`, raw: asset.value }]),
+    ),
+    ...liabilities.flatMap((liability, index) =>
+      numberChecks([
+        {
+          label: `Liability ${index + 1} current balance`,
+          raw: liability.current_balance,
+        },
+        {
+          label: `Liability ${index + 1} payment amount`,
+          raw: liability.payment_amount,
+        },
+      ]),
+    ),
+    ...(!assetsComplete ? ["Confirm whether the asset list is complete."] : []),
+    ...(!liabilitiesComplete
+      ? ["Confirm whether the liability list is complete."]
+      : []),
+  ];
 }
 
 export function validateSubjectProperty(value: SubjectPropertyState) {
@@ -168,51 +281,349 @@ export function validateSubjectProperty(value: SubjectPropertyState) {
     [value.property_style, "Property style"],
     [value.occupancy, "Occupancy"],
   ];
-  return required.flatMap(([candidate, label]) =>
-    candidate.trim() ? [] : [`${label} is required.`],
-  );
+  return [
+    ...required.flatMap(([candidate, label]) =>
+      candidate.trim() ? [] : [`${label} is required.`],
+    ),
+    ...numberChecks([
+      { label: "Year built", raw: value.year_built, kind: "integer" },
+      {
+        label: "Livable area in square feet",
+        raw: value.livable_area_sqft,
+        kind: "integer",
+      },
+      { label: "Number of units", raw: value.units, kind: "integer" },
+      { label: "Monthly property tax", raw: value.monthly_property_tax },
+      { label: "Monthly heating cost", raw: value.monthly_heating_cost },
+      { label: "Monthly condo fee", raw: value.monthly_condo_fee },
+    ]),
+  ];
 }
 
-function saveErrorMessages(error: unknown) {
-  if (error instanceof BorrowerApplicationError) {
-    if (error.status === 409) {
-      return [
-        "This draft changed in another request. Reload this page before saving again.",
-      ];
+export function validateOtherProperties(
+  properties: OtherPropertyState[],
+): string[] {
+  return properties.flatMap((property, index) => [
+    ...numberChecks([
+      {
+        label: `Other property ${index + 1} purchase price`,
+        raw: property.purchase_price,
+      },
+      {
+        label: `Other property ${index + 1} estimated value`,
+        raw: property.estimated_value,
+      },
+    ]),
+    ...property.mortgages.flatMap((mortgage, mortgageIndex) =>
+      numberChecks([
+        {
+          label: `Other property ${index + 1} mortgage ${mortgageIndex + 1} balance`,
+          raw: mortgage.balance,
+        },
+        {
+          label: `Other property ${index + 1} mortgage ${mortgageIndex + 1} payment amount`,
+          raw: mortgage.payment_amount,
+        },
+      ]),
+    ),
+  ]);
+}
+
+export function validateMortgageRequest(value: MortgageRequestState): string[] {
+  const errors: string[] = [];
+  if (!value.mortgage_objective) {
+    errors.push("Mortgage request: select a mortgage purpose.");
+  }
+  if (
+    ["purchase", "refinance"].includes(value.mortgage_objective) &&
+    !value.requested_amount.trim() &&
+    !value.estimated_property_value.trim()
+  ) {
+    errors.push(
+      "Mortgage request: enter a requested amount or estimated property value for this purpose.",
+    );
+  }
+  errors.push(
+    ...numberChecks([
+      { label: "Requested mortgage amount", raw: value.requested_amount },
+      {
+        label: "Estimated property value",
+        raw: value.estimated_property_value,
+      },
+    ]),
+  );
+  value.down_payment_sources.forEach((source, index) => {
+    if (!source.source) {
+      errors.push(`Down-payment source ${index + 1}: choose a source.`);
     }
-    if (error.status === 422 && error.issues.length) {
-      return error.issues.map(
-        (issue) =>
-          `Review ${issue.path.filter((part) => part !== "body").join(" → ") || "this section"}: ${issue.message}`,
+    if (source.source === "other" && !source.description.trim()) {
+      errors.push(
+        `Down-payment source ${index + 1}: describe the other source.`,
       );
     }
+    if (!source.amount.trim()) {
+      errors.push(`Down-payment source ${index + 1}: enter an amount.`);
+    }
+    errors.push(
+      ...numberChecks([
+        {
+          label: `Down-payment source ${index + 1} amount`,
+          raw: source.amount,
+        },
+      ]),
+    );
+  });
+  return errors;
+}
+
+type SaveFailure = {
+  /** Ready-to-show summary lines: never an internal path or library wording. */
+  summary: string[];
+  /** The rejected fields, so the section can mark the input itself. */
+  issues: BorrowerIssue[];
+};
+
+function saveFailure(error: unknown): SaveFailure {
+  if (error instanceof BorrowerApplicationError) {
+    if (error.status === 409) {
+      return {
+        summary: [
+          "This draft changed in another request. Reload this page before saving again.",
+        ],
+        issues: [],
+      };
+    }
+    if (error.status === 422 && error.issues.length) {
+      return {
+        summary: error.issues.map(issueSummary),
+        issues: error.issues,
+      };
+    }
     if (error.status === 422 && error.code === "payload_incomplete") {
-      return [
-        "The saved application is incomplete. Return to the earlier sections and confirm every required field before submitting again.",
-      ];
+      return {
+        summary: [
+          "The saved application is missing required information. Go back through the sections, fill in what is marked, and save each section again before submitting.",
+        ],
+        issues: [],
+      };
     }
     if (error.status === 422) {
-      return [
-        "The saved application could not be submitted. Review the consent and borrower sections before trying again.",
-      ];
+      return {
+        summary: [
+          "The saved application could not be submitted. Check the consent acknowledgement and try again.",
+        ],
+        issues: [],
+      };
     }
     if (error.status === 404) {
-      return [
-        "This browser can no longer access the draft. Your visible entries have not been cleared.",
-      ];
+      return {
+        summary: [
+          "This browser can no longer access the draft. Your visible entries have not been cleared.",
+        ],
+        issues: [],
+      };
     }
     if (error.status === 429) {
-      return ["Too many requests. Wait briefly, then try this save again."];
+      return {
+        summary: ["Too many requests. Wait briefly, then try this save again."],
+        issues: [],
+      };
     }
     if (error.status === 503) {
-      return [
-        "The private draft service is unavailable. Nothing was advanced or cleared.",
-      ];
+      return {
+        summary: [
+          "The private draft service is unavailable. Nothing was advanced or cleared.",
+        ],
+        issues: [],
+      };
     }
   }
-  return [
-    "The section could not be saved. Check your connection and try again; your visible entries remain here.",
-  ];
+  return {
+    summary: [
+      "The section could not be saved. Check your connection and try again; your visible entries remain here.",
+    ],
+    issues: [],
+  };
+}
+
+const MORTGAGE_FIELD_IDS: Record<string, string> = {
+  mortgage_objective: "mortgage-objective",
+  requested_amount: "requested-amount",
+  estimated_property_value: "estimated-property-value",
+  expected_closing_date: "expected-closing-date",
+};
+
+const BORROWER_FIELD_IDS: Record<string, string> = {
+  first_name: "first-name",
+  last_name: "last-name",
+  email: "email",
+  phone: "phone",
+  preferred_contact_method: "contact",
+  date_of_birth: "dob",
+  sin: "sin",
+  marital_status: "marital",
+  number_of_dependants: "dependants",
+  relationship_to_primary: "relationship",
+};
+
+const ADDRESS_FIELD_IDS: Record<string, string> = {
+  street: "street",
+  city: "city",
+  province: "province",
+  postal_code: "postal",
+  years_at_address: "address-years",
+  months_at_address: "address-months",
+};
+
+const EMPLOYMENT_FIELD_IDS: Record<string, string> = {
+  employment_type: "employment-type",
+  employer_name: "employer",
+  job_title: "job-title",
+  occupation_category: "occupation",
+  industry: "industry",
+  duration_years: "duration-years",
+  duration_months: "duration-months",
+  annual_gross_income: "income",
+  employer_address: "employer-address",
+};
+
+const SUBJECT_FIELD_IDS: Record<string, string> = {
+  address: "address",
+  city: "city",
+  province: "province",
+  postal_code: "postal",
+  property_type: "type",
+  property_style: "style",
+  occupancy: "occupancy",
+  year_built: "year_built",
+  livable_area_sqft: "livable_area_sqft",
+  units: "units",
+  monthly_property_tax: "monthly_property_tax",
+  monthly_heating_cost: "monthly_heating_cost",
+  monthly_condo_fee: "monthly_condo_fee",
+  lot_details: "lot-details",
+  garage_details: "garage-details",
+};
+
+type IssueLookupState = {
+  downPaymentSources: MortgageRequestState["down_payment_sources"];
+  primaryEmployment: EmploymentState[];
+  coEmployment: EmploymentState[] | null;
+  assets: AssetState[];
+  liabilities: LiabilityState[];
+  otherProperties: OtherPropertyState[];
+};
+
+/**
+ * The DOM id of the input an issue belongs to, so the message can sit beside it.
+ *
+ * Repeatable rows carry a client-generated id rather than an index, so the
+ * current state is needed to translate `assets[0].value` into `asset-value-…`.
+ */
+export function fieldIdForIssue(
+  path: Array<string | number>,
+  state: IssueLookupState,
+): string | null {
+  const parts = path.filter((part) => part !== "body");
+  const at = (index: number) =>
+    typeof parts[index] === "number" ? (parts[index] as number) : undefined;
+
+  if (parts[0] === "mortgage_request") {
+    if (parts[1] === "down_payment_sources") {
+      const entry = state.downPaymentSources[at(2) ?? -1];
+      if (!entry) return null;
+      if (parts[3] === "amount") return `down-payment-amount-${entry.id}`;
+      if (parts[3] === "source") return `down-payment-source-${entry.id}`;
+      if (parts[3] === "description") {
+        return `down-payment-description-${entry.id}`;
+      }
+      return null;
+    }
+    return MORTGAGE_FIELD_IDS[String(parts[1])] ?? null;
+  }
+
+  if (parts[0] === "primary_borrower" || parts[0] === "co_borrower") {
+    const prefix = parts[0] === "primary_borrower" ? "primary" : "co";
+    if (parts[1] === "current_address") {
+      const suffix = ADDRESS_FIELD_IDS[String(parts[2])];
+      return suffix ? `${prefix}-${suffix}` : null;
+    }
+    if (parts[1] === "employment") {
+      const entries =
+        parts[0] === "primary_borrower"
+          ? state.primaryEmployment
+          : (state.coEmployment ?? []);
+      const entry = entries[at(2) ?? -1];
+      const suffix = EMPLOYMENT_FIELD_IDS[String(parts[3])];
+      return entry && suffix ? `${prefix}-${suffix}-${entry.id}` : null;
+    }
+    const suffix = BORROWER_FIELD_IDS[String(parts[1])];
+    return suffix ? `${prefix}-${suffix}` : null;
+  }
+
+  if (parts[0] === "assets") {
+    const entry = state.assets[at(1) ?? -1];
+    if (!entry) return null;
+    if (parts[2] === "value") return `asset-value-${entry.id}`;
+    if (parts[2] === "asset_type") return `asset-type-${entry.id}`;
+    if (parts[2] === "description") return `asset-description-${entry.id}`;
+    return null;
+  }
+
+  if (parts[0] === "liabilities") {
+    const entry = state.liabilities[at(1) ?? -1];
+    if (!entry) return null;
+    if (parts[2] === "current_balance") {
+      return `liability-current_balance-${entry.id}`;
+    }
+    if (parts[2] === "payment_amount") {
+      return `liability-payment_amount-${entry.id}`;
+    }
+    if (parts[2] === "payment_frequency") {
+      return `liability-frequency-${entry.id}`;
+    }
+    if (parts[2] === "description") {
+      return `liability-description-${entry.id}`;
+    }
+    return null;
+  }
+
+  if (parts[0] === "subject_property") {
+    const suffix = SUBJECT_FIELD_IDS[String(parts[1])];
+    return suffix ? `subject-${suffix}` : null;
+  }
+
+  if (parts[0] === "other_properties") {
+    const entry = state.otherProperties[at(1) ?? -1];
+    if (!entry) return null;
+    if (parts[2] === "mortgages") {
+      const mortgage = entry.mortgages[at(3) ?? -1];
+      const field = String(parts[4]);
+      return mortgage && field
+        ? `other-mortgage-${field}-${mortgage.id}`
+        : null;
+    }
+    const suffix = String(parts[2]);
+    return suffix && suffix !== "undefined"
+      ? `other-${suffix}-${entry.id}`
+      : null;
+  }
+
+  return null;
+}
+
+/** Field messages keyed by DOM id, first message wins for a repeated field. */
+function fieldErrorsFor(
+  issues: BorrowerIssue[],
+  state: IssueLookupState,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const issue of issues) {
+    const id = fieldIdForIssue(issue.path, state);
+    if (!id || errors[id]) continue;
+    errors[id] = humaniseIssueMessage(issue.message);
+  }
+  return errors;
 }
 
 export function BorrowerApplicationForm({
@@ -232,6 +643,10 @@ export function BorrowerApplicationForm({
   const [step, setStep] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errors, setErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [errorTitle, setErrorTitle] = useState("This section was not saved");
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const errorRef = useRef<HTMLElement>(null);
 
   const [mortgage, setMortgage] = useState<MortgageRequestState>({
@@ -356,11 +771,72 @@ export function BorrowerApplicationForm({
     if (errors.length) errorRef.current?.focus();
   }, [errors]);
 
+  // Keep "saved N minutes ago" honest without re-rendering on every keystroke.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function issueState(): IssueLookupState {
+    return {
+      downPaymentSources: mortgage.down_payment_sources,
+      primaryEmployment,
+      coEmployment,
+      assets,
+      liabilities,
+      otherProperties,
+    };
+  }
+
+  /** Every section that would fail a submission, in form order. */
+  function incompleteSections() {
+    const checks = [
+      { index: 0, errors: validateMortgageRequest(mortgage) },
+      {
+        index: 1,
+        errors: [
+          ...validateBorrower("Primary borrower", primary, hasSavedSin, false),
+          ...(coBorrower
+            ? validateBorrower(
+                "Co-borrower",
+                coBorrower,
+                hasSavedCoBorrower,
+                true,
+              )
+            : []),
+        ],
+      },
+      {
+        index: 2,
+        errors: [
+          ...validateEmploymentEntries("Primary borrower", primaryEmployment),
+          ...(coBorrower
+            ? validateEmploymentEntries("Co-borrower", coEmployment ?? [])
+            : []),
+        ],
+      },
+      {
+        index: 3,
+        errors: validateAssetsAndLiabilities(
+          assets,
+          liabilities,
+          assetsComplete,
+          liabilitiesComplete,
+        ),
+      },
+      { index: 4, errors: validateSubjectProperty(subjectProperty) },
+      { index: 5, errors: validateOtherProperties(otherProperties) },
+    ];
+    return checks.filter((entry) => entry.errors.length > 0);
+  }
+
   async function saveSection(
     payload: BorrowerDraftPayload,
     validationErrors: string[] = [],
   ) {
     if (!draft || validationErrors.length) {
+      setFieldErrors({});
+      setErrorTitle("This section was not saved");
       setErrors(
         validationErrors.length
           ? validationErrors
@@ -369,6 +845,8 @@ export function BorrowerApplicationForm({
       return;
     }
     setErrors([]);
+    setFieldErrors({});
+    setErrorTitle("This section was not saved");
     setSaveState("saving");
     try {
       const saved = await api.patch(
@@ -378,13 +856,16 @@ export function BorrowerApplicationForm({
       );
       setDraft(saved);
       setSaveState("saved");
+      setSavedAt(Date.now());
       setStep((current) => Math.min(current + 1, steps.length - 1));
       window.requestAnimationFrame(() => {
         document.querySelector<HTMLElement>("#borrower-step-heading")?.focus();
       });
     } catch (error) {
       setSaveState("error");
-      setErrors(saveErrorMessages(error));
+      const failure = saveFailure(error);
+      setErrors(failure.summary);
+      setFieldErrors(fieldErrorsFor(failure.issues, issueState()));
     }
   }
 
@@ -412,11 +893,18 @@ export function BorrowerApplicationForm({
 
   const section = (() => {
     if (step === 0) {
-      return <MortgagePurposeSection value={mortgage} onChange={setMortgage} />;
+      return (
+        <MortgagePurposeSection
+          value={mortgage}
+          onChange={setMortgage}
+          fieldErrors={fieldErrors}
+        />
+      );
     }
     if (step === 1) {
       return (
         <BorrowerDetailsSection
+          fieldErrors={fieldErrors}
           primary={primary}
           coBorrower={coBorrower}
           hasSavedPrimarySin={hasSavedSin}
@@ -437,6 +925,7 @@ export function BorrowerApplicationForm({
     if (step === 2) {
       return (
         <EmploymentIncomeSection
+          fieldErrors={fieldErrors}
           primary={primaryEmployment}
           coBorrower={coBorrower ? (coEmployment ?? [emptyEmployment()]) : null}
           onPrimaryChange={setPrimaryEmployment}
@@ -447,6 +936,7 @@ export function BorrowerApplicationForm({
     if (step === 3) {
       return (
         <AssetsLiabilitiesSection
+          fieldErrors={fieldErrors}
           assets={assets}
           liabilities={liabilities}
           assetsComplete={assetsComplete}
@@ -461,6 +951,7 @@ export function BorrowerApplicationForm({
     if (step === 4) {
       return (
         <SubjectPropertySection
+          fieldErrors={fieldErrors}
           value={subjectProperty}
           onChange={setSubjectProperty}
         />
@@ -469,6 +960,7 @@ export function BorrowerApplicationForm({
     if (step === 5) {
       return (
         <OtherPropertiesSection
+          fieldErrors={fieldErrors}
           properties={otherProperties}
           onChange={setOtherProperties}
         />
@@ -499,25 +991,12 @@ export function BorrowerApplicationForm({
 
   function currentSave() {
     if (step === 0) {
-      const validation: string[] = [];
-      if (!mortgage.mortgage_objective) {
-        validation.push("Select a mortgage purpose.");
-      }
-      if (
-        ["purchase", "refinance"].includes(mortgage.mortgage_objective) &&
-        !mortgage.requested_amount &&
-        !mortgage.estimated_property_value
-      ) {
-        validation.push(
-          "Enter a requested amount or estimated property value for this purpose.",
-        );
-      }
       return saveSection(
         {
           mortgage_request: compact({
             mortgage_objective: mortgage.mortgage_objective,
-            requested_amount: numberOrUndefined(mortgage.requested_amount),
-            estimated_property_value: numberOrUndefined(
+            requested_amount: numberValue(mortgage.requested_amount),
+            estimated_property_value: numberValue(
               mortgage.estimated_property_value,
             ),
             expected_closing_date: mortgage.expected_closing_date || undefined,
@@ -526,13 +1005,13 @@ export function BorrowerApplicationForm({
             down_payment_sources: mortgage.down_payment_sources.map((source) =>
               compact({
                 source: source.source,
-                amount: Number(source.amount),
+                amount: numberValue(source.amount),
                 description: source.description || undefined,
               }),
             ),
           }),
         },
-        validation,
+        validateMortgageRequest(mortgage),
       );
     }
     if (step === 1) {
@@ -556,22 +1035,12 @@ export function BorrowerApplicationForm({
       );
     }
     if (step === 2) {
-      const allEntries = [
-        ...primaryEmployment.map(
-          (entry) => ["Primary borrower", entry] as const,
-        ),
-        ...(coEmployment ?? []).map((entry) => ["Co-borrower", entry] as const),
+      const validation = [
+        ...validateEmploymentEntries("Primary borrower", primaryEmployment),
+        ...(coBorrower
+          ? validateEmploymentEntries("Co-borrower", coEmployment ?? [])
+          : []),
       ];
-      const validation = allEntries.flatMap(([label, entry], index) => {
-        const missing =
-          !entry.employment_type ||
-          !entry.occupation_category.trim() ||
-          !entry.industry.trim() ||
-          !entry.annual_gross_income.trim();
-        return missing
-          ? [`${label} income entry ${index + 1} is missing a required value.`]
-          : [];
-      });
       return saveSection(
         {
           primary_borrower: {
@@ -594,7 +1063,7 @@ export function BorrowerApplicationForm({
           assets: assets.map((asset) =>
             compact({
               asset_type: asset.asset_type,
-              value: Number(asset.value),
+              value: numberValue(asset.value),
               description: asset.description || undefined,
             }),
           ),
@@ -602,22 +1071,20 @@ export function BorrowerApplicationForm({
           liabilities: liabilities.map((liability) =>
             compact({
               liability_type: liability.liability_type,
-              current_balance: Number(liability.current_balance),
-              payment_amount: Number(liability.payment_amount),
+              current_balance: numberValue(liability.current_balance),
+              payment_amount: numberValue(liability.payment_amount),
               payment_frequency: liability.payment_frequency || undefined,
               description: liability.description || undefined,
             }),
           ),
           liabilities_complete: liabilitiesComplete,
         },
-        [
-          ...(!assetsComplete
-            ? ["Confirm whether the asset list is complete."]
-            : []),
-          ...(!liabilitiesComplete
-            ? ["Confirm whether the liability list is complete."]
-            : []),
-        ],
+        validateAssetsAndLiabilities(
+          assets,
+          liabilities,
+          assetsComplete,
+          liabilitiesComplete,
+        ),
       );
     }
     if (step === 4) {
@@ -632,18 +1099,19 @@ export function BorrowerApplicationForm({
                 property_type: subjectProperty.property_type,
                 property_style: subjectProperty.property_style,
                 occupancy: subjectProperty.occupancy,
-                year_built: numberOrUndefined(subjectProperty.year_built),
-                livable_area_sqft: numberOrUndefined(
+                year_built: numberValue(subjectProperty.year_built, "integer"),
+                livable_area_sqft: numberValue(
                   subjectProperty.livable_area_sqft,
+                  "integer",
                 ),
-                units: numberOrUndefined(subjectProperty.units),
-                monthly_property_tax: numberOrUndefined(
+                units: numberValue(subjectProperty.units, "integer"),
+                monthly_property_tax: numberValue(
                   subjectProperty.monthly_property_tax,
                 ),
-                monthly_heating_cost: numberOrUndefined(
+                monthly_heating_cost: numberValue(
                   subjectProperty.monthly_heating_cost,
                 ),
-                monthly_condo_fee: numberOrUndefined(
+                monthly_condo_fee: numberValue(
                   subjectProperty.monthly_condo_fee,
                 ),
                 lot_details: subjectProperty.lot_details || undefined,
@@ -655,23 +1123,26 @@ export function BorrowerApplicationForm({
       );
     }
     if (step === 5) {
-      return saveSection({
-        other_properties: otherProperties.map((property) => ({
-          address: property.address || undefined,
-          purchase_date: property.purchase_date || undefined,
-          purchase_price: numberOrUndefined(property.purchase_price),
-          estimated_value: numberOrUndefined(property.estimated_value),
-          is_owner_occupied: property.is_owner_occupied,
-          mortgages: property.mortgages.map((mortgage) =>
-            compact({
-              balance: Number(mortgage.balance),
-              payment_amount: Number(mortgage.payment_amount),
-              payment_frequency: mortgage.payment_frequency,
-              maturity_date: mortgage.maturity_date || undefined,
-            }),
-          ),
-        })),
-      });
+      return saveSection(
+        {
+          other_properties: otherProperties.map((property) => ({
+            address: property.address || undefined,
+            purchase_date: property.purchase_date || undefined,
+            purchase_price: numberValue(property.purchase_price),
+            estimated_value: numberValue(property.estimated_value),
+            is_owner_occupied: property.is_owner_occupied,
+            mortgages: property.mortgages.map((mortgage) =>
+              compact({
+                balance: numberValue(mortgage.balance),
+                payment_amount: numberValue(mortgage.payment_amount),
+                payment_frequency: mortgage.payment_frequency,
+                maturity_date: mortgage.maturity_date || undefined,
+              }),
+            ),
+          })),
+        },
+        validateOtherProperties(otherProperties),
+      );
     }
     if (step === 6) {
       return saveSection({ additional_notes: notes || null });
@@ -680,7 +1151,23 @@ export function BorrowerApplicationForm({
 
   async function submitApplication() {
     if (!draft || !consent || !consentAcknowledged || !documentsSettled) return;
+    const incomplete = incompleteSections();
+    if (incomplete.length) {
+      const summary = incomplete.map(({ index, errors: sectionErrors }) =>
+        sectionErrors.length === 1
+          ? `${steps[index]}: ${sectionErrors[0]}`
+          : `${steps[index]}: ${sectionErrors[0]} (and ${
+              sectionErrors.length - 1
+            } more in this section)`,
+      );
+      setFieldErrors({});
+      setErrorTitle("Finish these sections before submitting");
+      setErrors(summary);
+      setStep(incomplete[0].index);
+      return;
+    }
     setErrors([]);
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await (api.submit ?? submitBorrowerApplication)(
@@ -692,7 +1179,9 @@ export function BorrowerApplicationForm({
       forgetBorrowerApplicationId();
       setSubmitted(true);
     } catch (error) {
-      setErrors(saveErrorMessages(error));
+      const failure = saveFailure(error);
+      setErrors(failure.summary);
+      setFieldErrors(fieldErrorsFor(failure.issues, issueState()));
     } finally {
       setSubmitting(false);
     }
@@ -768,7 +1257,7 @@ export function BorrowerApplicationForm({
           ref={errorRef}
           aria-labelledby="borrower-error-heading"
         >
-          <h2 id="borrower-error-heading">This section was not saved</h2>
+          <h2 id="borrower-error-heading">{errorTitle}</h2>
           <ul>
             {errors.map((error) => (
               <li key={error}>{error}</li>
@@ -841,7 +1330,9 @@ export function BorrowerApplicationForm({
           {saveState === "saving"
             ? "Saving this section securely…"
             : saveState === "saved"
-              ? "Section saved securely."
+              ? savedAt
+                ? `Section saved securely — ${formatRelativeTime(savedAt, now)}.`
+                : "Section saved securely."
               : saveState === "error"
                 ? "Nothing was advanced or cleared."
                 : ""}

@@ -1,21 +1,8 @@
 import { Button, FormField } from "@keeper/ui";
+import { PHONE_EXAMPLE } from "@/lib/phone";
+import { EMAIL_HINT, POSTAL_CODE_HINT, SIN_HINT } from "@/lib/validation";
+import { provinces } from "./options";
 import type { BorrowerState } from "./types";
-
-const provinces = [
-  "AB",
-  "BC",
-  "MB",
-  "NB",
-  "NL",
-  "NS",
-  "NT",
-  "NU",
-  "ON",
-  "PE",
-  "QC",
-  "SK",
-  "YT",
-];
 
 function BorrowerFields({
   prefix,
@@ -23,6 +10,7 @@ function BorrowerFields({
   value,
   sinProvided,
   coBorrower,
+  fieldErrors,
   onChange,
 }: {
   prefix: string;
@@ -30,6 +18,7 @@ function BorrowerFields({
   value: BorrowerState;
   sinProvided: boolean;
   coBorrower?: boolean;
+  fieldErrors?: Record<string, string>;
   onChange: (value: BorrowerState) => void;
 }) {
   const set = (field: keyof BorrowerState, next: string) =>
@@ -49,6 +38,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-first-name`}
           label="Legal first name (required)"
+          error={fieldErrors?.[`${prefix}-first-name`]}
         >
           <input
             id={`${prefix}-first-name`}
@@ -60,6 +50,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-last-name`}
           label="Legal last name (required)"
+          error={fieldErrors?.[`${prefix}-last-name`]}
         >
           <input
             id={`${prefix}-last-name`}
@@ -68,7 +59,12 @@ function BorrowerFields({
             onChange={(event) => set("last_name", event.currentTarget.value)}
           />
         </FormField>
-        <FormField id={`${prefix}-email`} label="Email (required)">
+        <FormField
+          id={`${prefix}-email`}
+          label="Email (required)"
+          hint={EMAIL_HINT}
+          error={fieldErrors?.[`${prefix}-email`]}
+        >
           <input
             id={`${prefix}-email`}
             type="email"
@@ -77,11 +73,18 @@ function BorrowerFields({
             onChange={(event) => set("email", event.currentTarget.value)}
           />
         </FormField>
-        <FormField id={`${prefix}-phone`} label="Phone (required)">
+        <FormField
+          id={`${prefix}-phone`}
+          label="Phone (required)"
+          hint={`10 digits is enough — for example ${PHONE_EXAMPLE}.`}
+          error={fieldErrors?.[`${prefix}-phone`]}
+        >
           <input
             id={`${prefix}-phone`}
             type="tel"
+            inputMode="tel"
             autoComplete="tel"
+            placeholder={PHONE_EXAMPLE}
             value={value.phone}
             onChange={(event) => set("phone", event.currentTarget.value)}
           />
@@ -89,6 +92,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-contact`}
           label="Preferred contact method (required)"
+          error={fieldErrors?.[`${prefix}-contact`]}
         >
           <select
             id={`${prefix}-contact`}
@@ -102,7 +106,11 @@ function BorrowerFields({
             <option value="phone">Phone</option>
           </select>
         </FormField>
-        <FormField id={`${prefix}-dob`} label="Date of birth (required)">
+        <FormField
+          id={`${prefix}-dob`}
+          label="Date of birth (required)"
+          error={fieldErrors?.[`${prefix}-dob`]}
+        >
           <input
             id={`${prefix}-dob`}
             type="date"
@@ -119,8 +127,9 @@ function BorrowerFields({
           hint={
             sinProvided
               ? "SIN provided ••• ••• •••. Enter all nine digits only to replace it; the saved value cannot be retrieved."
-              : "Enter nine digits. It is encrypted and will not be shown again."
+              : SIN_HINT
           }
+          error={fieldErrors?.[`${prefix}-sin`]}
         >
           <input
             id={`${prefix}-sin`}
@@ -136,7 +145,11 @@ function BorrowerFields({
             }
           />
         </FormField>
-        <FormField id={`${prefix}-marital`} label="Marital status (required)">
+        <FormField
+          id={`${prefix}-marital`}
+          label="Marital status (required)"
+          error={fieldErrors?.[`${prefix}-marital`]}
+        >
           <select
             id={`${prefix}-marital`}
             value={value.marital_status}
@@ -156,6 +169,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-dependants`}
           label="Number of dependants (required)"
+          error={fieldErrors?.[`${prefix}-dependants`]}
         >
           <input
             id={`${prefix}-dependants`}
@@ -172,6 +186,7 @@ function BorrowerFields({
           <FormField
             id={`${prefix}-relationship`}
             label="Relationship to primary borrower (required)"
+            error={fieldErrors?.[`${prefix}-relationship`]}
           >
             <input
               id={`${prefix}-relationship`}
@@ -186,7 +201,11 @@ function BorrowerFields({
       </div>
       <h3>Current address</h3>
       <div className="borrower-form-grid">
-        <FormField id={`${prefix}-street`} label="Street address (required)">
+        <FormField
+          id={`${prefix}-street`}
+          label="Street address (required)"
+          error={fieldErrors?.[`${prefix}-street`]}
+        >
           <input
             id={`${prefix}-street`}
             autoComplete="street-address"
@@ -196,7 +215,11 @@ function BorrowerFields({
             }
           />
         </FormField>
-        <FormField id={`${prefix}-city`} label="City (required)">
+        <FormField
+          id={`${prefix}-city`}
+          label="City (required)"
+          error={fieldErrors?.[`${prefix}-city`]}
+        >
           <input
             id={`${prefix}-city`}
             autoComplete="address-level2"
@@ -207,6 +230,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-province`}
           label="Province or territory (required)"
+          error={fieldErrors?.[`${prefix}-province`]}
         >
           <select
             id={`${prefix}-province`}
@@ -222,7 +246,12 @@ function BorrowerFields({
             ))}
           </select>
         </FormField>
-        <FormField id={`${prefix}-postal`} label="Postal code (required)">
+        <FormField
+          id={`${prefix}-postal`}
+          label="Postal code (required)"
+          hint={POSTAL_CODE_HINT}
+          error={fieldErrors?.[`${prefix}-postal`]}
+        >
           <input
             id={`${prefix}-postal`}
             autoComplete="postal-code"
@@ -235,6 +264,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-address-years`}
           label="Years at address (required)"
+          error={fieldErrors?.[`${prefix}-address-years`]}
         >
           <input
             id={`${prefix}-address-years`}
@@ -250,6 +280,7 @@ function BorrowerFields({
         <FormField
           id={`${prefix}-address-months`}
           label="Additional months (required)"
+          error={fieldErrors?.[`${prefix}-address-months`]}
         >
           <input
             id={`${prefix}-address-months`}
@@ -272,6 +303,7 @@ export function BorrowerDetailsSection({
   coBorrower,
   hasSavedPrimarySin,
   hasSavedCoBorrower,
+  fieldErrors,
   onPrimaryChange,
   onCoBorrowerChange,
   onAddCoBorrower,
@@ -281,6 +313,7 @@ export function BorrowerDetailsSection({
   coBorrower: BorrowerState | null;
   hasSavedPrimarySin: boolean;
   hasSavedCoBorrower: boolean;
+  fieldErrors?: Record<string, string>;
   onPrimaryChange: (value: BorrowerState) => void;
   onCoBorrowerChange: (value: BorrowerState) => void;
   onAddCoBorrower: () => void;
@@ -289,6 +322,7 @@ export function BorrowerDetailsSection({
   return (
     <>
       <BorrowerFields
+        fieldErrors={fieldErrors}
         prefix="primary"
         label="Primary borrower"
         value={primary}
@@ -298,6 +332,7 @@ export function BorrowerDetailsSection({
       {coBorrower ? (
         <>
           <BorrowerFields
+            fieldErrors={fieldErrors}
             prefix="co"
             label="Co-borrower"
             value={coBorrower}

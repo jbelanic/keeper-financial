@@ -7,6 +7,7 @@ import {
   uploadBorrowerDocument,
   type BorrowerDocument,
 } from "@/lib/borrower-application-api";
+import { uploadFailureMessage } from "@/lib/upload-messages";
 
 const categories = [
   ["income_employment", "Income or employment"],
@@ -19,6 +20,9 @@ const categories = [
   ["other", "Other"],
 ] as const;
 
+const categoryLabel = (value: string) =>
+  categories.find(([code]) => code === value)?.[1] ?? value;
+
 export function DocumentUpload({
   applicationId,
   onSettledChange,
@@ -30,7 +34,9 @@ export function DocumentUpload({
   const [category, setCategory] = useState("income_employment");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState("Loading current documents…");
+  const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -43,25 +49,36 @@ export function DocumentUpload({
           setStatus(
             documents.length
               ? "Current documents loaded."
-              : "No documents uploaded.",
+              : "No documents uploaded yet. Supporting documents are optional.",
           );
           onSettledChange(true);
         }
       })
-      .catch(
-        () => active && setStatus("Documents could not be loaded. Try again."),
-      );
+      .catch(() => {
+        if (!active) return;
+        setFailure(
+          "Your current documents could not be loaded. Retry before adding another; nothing has been changed.",
+        );
+        setStatus("");
+      });
     return () => {
       active = false;
     };
   }, [applicationId, onSettledChange]);
 
   async function upload() {
-    if (!file || (category === "other" && !description.trim())) {
-      setStatus("Choose a file and describe documents categorized as Other.");
+    if (!file) {
+      setFailure("Choose a file to upload first.");
+      return;
+    }
+    if (category === "other" && !description.trim()) {
+      setFailure(
+        "Describe the document before uploading it as Other, for example “Notice of assessment 2025”.",
+      );
       return;
     }
     setBusy(true);
+    setFailure(null);
     onSettledChange(false);
     setStatus("Uploading, validating, and scanning…");
     try {
@@ -74,20 +91,17 @@ export function DocumentUpload({
       setItems((current) => [...current, document]);
       setFile(null);
       setDescription("");
-      setStatus("Document uploaded securely.");
+      setStatus("Document uploaded and scanned successfully.");
       onSettledChange(true);
-    } catch {
+    } catch (error) {
+      // Keep the authoritative list on screen and say why the file was refused.
+      setFailure(uploadFailureMessage(error));
       try {
-        const documents = await listBorrowerDocuments(applicationId);
-        setItems(documents);
-        setStatus(
-          "The upload response was uncertain. The authoritative document list was reloaded.",
-        );
+        setItems(await listBorrowerDocuments(applicationId));
+        setStatus("Your saved documents are listed below.");
         onSettledChange(true);
       } catch {
-        setStatus(
-          "The upload result could not be reconciled. Reload the current document list before continuing.",
-        );
+        setStatus("");
         onSettledChange(false);
       }
     } finally {
@@ -97,6 +111,7 @@ export function DocumentUpload({
 
   async function remove(documentId: string) {
     setBusy(true);
+    setFailure(null);
     onSettledChange(false);
     try {
       await removeBorrowerDocument(applicationId, documentId);
@@ -110,8 +125,8 @@ export function DocumentUpload({
         const documents = await listBorrowerDocuments(applicationId);
         setItems(documents);
         if (documents.some((item) => item.document_id === documentId)) {
-          setStatus(
-            "Document removal did not complete. Retry removal before continuing.",
+          setFailure(
+            "That document is still on the application. Retry removal before continuing.",
           );
           onSettledChange(false);
         } else {
@@ -119,8 +134,8 @@ export function DocumentUpload({
           onSettledChange(true);
         }
       } catch {
-        setStatus(
-          "The removal result could not be reconciled. Reload the current document list before continuing.",
+        setFailure(
+          "The removal result could not be confirmed. Reload this page before continuing; nothing was changed in the browser.",
         );
         onSettledChange(false);
       }
@@ -132,9 +147,14 @@ export function DocumentUpload({
   return (
     <section aria-labelledby="borrower-documents-heading">
       <h3 id="borrower-documents-heading">Supporting documents</h3>
-      <label>
-        Category
+      <p>
+        Upload one file at a time — PDF, DOC, DOCX, JPEG, or PNG, up to 25 MB
+        each. Every file is virus-scanned before it is stored.
+      </p>
+      <div className="form-field">
+        <label htmlFor="borrower-document-category">Category</label>
         <select
+          id="borrower-document-category"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
         >
@@ -144,25 +164,54 @@ export function DocumentUpload({
             </option>
           ))}
         </select>
-      </label>
+      </div>
       {category === "other" ? (
-        <label>
-          Other document description (required)
+        <div className="form-field">
+          <label htmlFor="borrower-document-description">
+            Other document description (required)
+          </label>
           <input
+            id="borrower-document-description"
             maxLength={200}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
-        </label>
+        </div>
       ) : null}
-      <label>
-        Select a PDF, DOC, DOCX, JPEG, or PNG
+      <div
+        className={`form-field drop-zone${dragging ? " is-dragging" : ""}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          const dropped = event.dataTransfer?.files?.[0];
+          if (dropped) setFile(dropped);
+        }}
+      >
+        <label htmlFor="borrower-document-file">
+          Select a PDF, DOC, DOCX, JPEG, or PNG
+        </label>
+        <span id="borrower-document-file-hint">
+          Drag a file onto this box, or choose one.
+        </span>
         <input
+          id="borrower-document-file"
           type="file"
           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          aria-describedby="borrower-document-file-hint"
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
         />
-      </label>
+        {file ? (
+          <p className="drop-zone-file">
+            Selected: {file.name} ({Math.max(1, Math.round(file.size / 1024))}{" "}
+            KB)
+          </p>
+        ) : null}
+      </div>
       <button
         type="button"
         disabled={busy || !file}
@@ -171,11 +220,23 @@ export function DocumentUpload({
         {busy ? "Document operation in progress…" : "Upload document"}
       </button>
       <p aria-live="polite">{status}</p>
+      {failure ? (
+        <p role="alert" className="field-error">
+          {failure}
+        </p>
+      ) : null}
+      {items.length ? (
+        <p>{`${items.length} document${items.length === 1 ? "" : "s"} on this application:`}</p>
+      ) : null}
       <ul>
         {items.map((item) => (
           <li key={item.document_id}>
             <span>
-              {item.filename} — {item.category} — {item.size_bytes} bytes
+              {item.filename} — {categoryLabel(item.category)} —{" "}
+              {Math.round(item.size_bytes / 1024)} KB —{" "}
+              {item.scan_status === "clean"
+                ? "scanned, clean"
+                : item.scan_status}
             </span>{" "}
             <button
               type="button"

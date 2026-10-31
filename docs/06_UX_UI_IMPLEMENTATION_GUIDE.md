@@ -275,6 +275,62 @@ Create:
 - Consent checkbox.
 - Breadcrumbs.
 
+## Phone entry and display standard
+
+- Enter a phone number as a normal North American 10-digit number. The `+`
+  prefix and the country code are optional input, never a required format:
+  `5195550123`, `519-555-0123`, `(519) 555-0123`, and `+1 519 555 0123` are all
+  accepted and stored as one canonical E.164 value (`+15195550123`).
+- Display a stored number as `(519) 123-4567` in every public and internal
+  surface, and derive `tel:` links from the same value. A value that is not a
+  North American number is shown unchanged rather than hidden or re-formatted.
+- The candidate application and the public contact form additionally accept an
+  explicitly international number (`+` plus 8 to 15 digits). The agent profile
+  public phone is North American only, because it is published contact detail.
+- A rejected phone number produces one sentence naming the expected shape and
+  an example — for example "Enter a 10-digit phone number, for example
+  (519) 123-4567." — rather than a schema path or a normalisation rule.
+
+## Form validation and error messaging
+
+- Amount and whole-number fields read the way people type them: `650000`,
+  `650,000`, `$650,000`, `2 000`, `650000.50`. The parsed number is what gets
+  stored.
+- An entry that cannot be read is refused with the field named and an example
+  ("Requested mortgage amount must be an amount, for example 650000 or
+  650,000."). A section is never saved with a value silently dropped, because a
+  dropped amount only surfaced at submission as a generic "incomplete" notice.
+- A rejected save is reported one sentence per field, with the input marked
+  invalid and linked through `aria-describedby` ("Postal code: Enter a Canadian
+  postal code, for example N6H 4T6."). Internal schema paths (`primary_borrower →
+  current_address → postal_code`) and validation-library wording ("Value error",
+  "String should have at least 6 characters") never reach the interface.
+- Document uploads report the actual refusal — damaged PDF, unsupported type,
+  per-file or total size limit, document count limit, virus scan, scanning or
+  storage unavailable — and keep the saved document list on screen. A generic
+  "the response was uncertain" notice is not acceptable.
+- Submission names the incomplete sections and opens the first one instead of a
+  single "the saved application is incomplete" line.
+- Format rules are checked in the browser before a save: email shape, Canadian
+  postal code, North American phone, and the SIN checksum. The SIN hint states
+  that the number is checksummed, so the rule is disclosed rather than hidden —
+  a mistyped digit is caught immediately instead of after a round trip.
+- Fixed vocabularies are selects, never free text: province or territory (both
+  the borrower address and the subject property), plus liability and
+  other-property-mortgage payment frequency. A saved draft value outside the
+  list is preserved and shown as its own option rather than silently replaced.
+- Every field states required or optional, and the optional other-property
+  fields are labelled as such.
+- The public contact form marks the field the API refused (with the sentence it
+  returned) instead of only showing one generic summary line.
+- Save feedback says when: "Section saved securely — just now", then minutes and
+  hours, refreshed without a reload.
+- Amounts tidy themselves on blur (`650000` → `650,000`, `$2 000` → `2,000`) and
+  money inputs ask for a decimal keyboard on touch devices. An unparseable entry
+  is left exactly as typed so the rejection message still matches it.
+- Supporting documents accept drag-and-drop as well as the file picker, and the
+  chosen file is named with its size before it is uploaded.
+
 ## Responsive requirements
 
 - Public pages must work from small mobile through desktop.
