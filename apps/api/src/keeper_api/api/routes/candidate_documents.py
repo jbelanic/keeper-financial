@@ -27,7 +27,11 @@ from keeper_api.services.audit import AuditService
 from keeper_api.services.auth import Principal, require_candidate_aal2
 from keeper_api.services.candidate_applications import owned_application
 from keeper_api.services.candidate_files import CandidateFileRejected, validate_candidate_file
-from keeper_api.services.malware_scanner import MalwareScannerUnavailable, build_malware_scanner
+from keeper_api.services.malware_scanner import (
+    MalwareScannerPayloadTooLarge,
+    MalwareScannerUnavailable,
+    build_malware_scanner,
+)
 from keeper_api.services.storage import StorageError, build_storage
 
 router = APIRouter(prefix="/candidate/applications", tags=["candidate documents"])
@@ -170,6 +174,21 @@ def upload_candidate_document(
             raise HTTPException(
                 status_code=422,
                 detail=exc.code,
+                headers=NO_STORE,
+            ) from exc
+        except MalwareScannerPayloadTooLarge as exc:
+            _rejection_audit(
+                db,
+                application.id,
+                principal,
+                request,
+                category=category,
+                reason="file_too_large",
+                event_type="candidate_document.scan_decision",
+            )
+            raise HTTPException(
+                status_code=413,
+                detail="file_too_large",
                 headers=NO_STORE,
             ) from exc
         except MalwareScannerUnavailable as exc:

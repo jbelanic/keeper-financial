@@ -15,6 +15,7 @@ from keeper_api.services.candidate_files import (
     validate_document_bytes,
 )
 from keeper_api.services.malware_scanner import (
+    MalwareScannerPayloadTooLarge,
     MalwareScannerUnavailable,
     ScanDecision,
     build_malware_scanner,
@@ -91,6 +92,12 @@ async def upload_document(
             raise HTTPException(
                 status_code=415 if unsupported else 422,
                 detail="document type is unsupported" if unsupported else "document was rejected",
+                headers=NO_STORE,
+            ) from exc
+        except MalwareScannerPayloadTooLarge as exc:
+            raise HTTPException(
+                status_code=413,
+                detail="document exceeds the size limit",
                 headers=NO_STORE,
             ) from exc
         except MalwareScannerUnavailable as exc:

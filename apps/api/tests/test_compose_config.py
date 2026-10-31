@@ -1,3 +1,4 @@
+import re
 import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
@@ -159,7 +160,11 @@ def test_compose_runs_healthchecked_loopback_only_clamav_with_persistent_definit
         0
     ]
 
-    assert "image: clamav/clamav:stable" in clamav_service
+    # Pinned to a version tag: a floating `stable` can change startup time,
+    # memory use or protocol behaviour under a running deployment.
+    assert "image: clamav/clamav:stable" not in clamav_service
+    assert "image: clamav/clamav:latest" not in clamav_service
+    assert re.search(r"image: clamav/clamav:\d+\.\d+\.\d+", clamav_service)
     assert "127.0.0.1:3310:3310" in clamav_service
     assert "keeper_clamav:/var/lib/clamav" in clamav_service
     assert "/usr/local/bin/clamdcheck.sh" in clamav_service

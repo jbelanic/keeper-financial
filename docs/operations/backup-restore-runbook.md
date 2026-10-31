@@ -182,7 +182,8 @@ Failure response procedures: `docs/operations/incident-response.md`.
 | --- | --- |
 | Backup job failed | cron wrapper → `send_alert.py` |
 | Backup stale/missing (PG/MinIO/USB) | `monitor_health.sh` non-zero → cron wrapper → `send_alert.py` |
-| Scanner unavailable/stale | `monitor_health.sh` (fail-closed in the upload path already) |
+| Scanner unavailable | `monitor_health.sh` PING + one-byte `INSTREAM` scan (uploads fail closed at 503 meanwhile) |
+| Scanner signatures stale (>7 days) | `monitor_health.sh` parses `VERSION`; `freshclam` refreshes daily from `database.clamav.net` |
 | Alert send fails | `send_alert.py` exit 1 is visible in cron output |
 
 `send_alert.py` requires `ALERT_EMAIL` and the SMTP settings (`SMTP_HOST`,

@@ -104,9 +104,26 @@ failure alerting — is `docs/operations/backup-restore-runbook.md`.
 - Fail-closed is enforced in code: a scanner timeout, malformed response, unavailable daemon,
   or non-clean result persists **no** MinIO bytes and **no** PostgreSQL document metadata.
 - Freshness: `freshclam` updates signatures from the public mirror by default.
-  `scripts/monitor_health.sh` (decision 49 P0) checks clamd availability (PING over
-  loopback 3310), API/DB health, and PostgreSQL/MinIO backup freshness, and exits non-zero
-  on any critical failure; run it from cron with `MAILTO` for the digest.
+  `scripts/monitor_health.sh` (decision 49 P0) checks clamd liveness (PING over loopback
+  3310), performs a real one-byte `INSTREAM` scan so a daemon that answers PING but cannot
+  decide is caught, parses `VERSION` and fails when signatures are older than seven days,
+  and also checks API/DB health and PostgreSQL/MinIO/USB backup freshness. It exits
+  non-zero on any critical failure; run it from cron with `MAILTO` for the digest.
+- The chunk cap is derived from the largest accepted upload
+  (`max(MAX_DOCUMENT_BYTES, BORROWER_MAX_DOCUMENT_BYTES, AGENT_PHOTO_MAX_BYTES)` at 64 KiB
+  per chunk) and never below it, so raising a document limit cannot silently turn valid
+  uploads into "scanner unavailable" 503s; a configuration value below that floor logs a
+  warning and is raised for the scan.
+- A clamd refusal caused by its own size limit (`Size limit reached`) is reported as a
+  413 `file_too_large`, not as a scanner outage, while remaining a fail-closed refusal.
+- The clamav image is pinned (`clamav/clamav:1.5.3`) so an upstream major release cannot
+  change startup time, memory use, or protocol behaviour under a running deployment;
+  definitions still refresh through `freshclam` on the `keeper_clamav` volume.
+- The web tier proxies `/api` through middleware, whose body cap (`experimental.
+  proxyClientMaxBodySize`) must stay above the largest accepted upload plus multipart
+  overhead. The 10 MB Next.js default silently truncated borrower documents; it is set to
+  32 MiB and pinned by `apps/web/tests/proxied-upload-body-limit.test.ts`. Individual
+  upload routes still enforce their own smaller limits before parsing.
 
 ## 4. DNS / TLS / ingress (local done; production requirements)
 

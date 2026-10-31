@@ -45,6 +45,7 @@ from keeper_api.schemas.leads import (
 from keeper_api.schemas.lifecycle import AgentStatusResponse, AgentTransitionRequest
 from keeper_api.services.agent_photos import (
     AgentPhotoRejected,
+    MalwareScannerPayloadTooLarge,
     MalwareScannerUnavailable,
     audit_target_id,
     delete_agent_photo,
@@ -409,6 +410,10 @@ async def upload_admin_agent_photo(
                 status_code=415 if unsupported else 422,
                 detail="photo type is unsupported" if unsupported else "photo was rejected",
                 headers=NO_STORE,
+            ) from exc
+        except MalwareScannerPayloadTooLarge as exc:
+            raise HTTPException(
+                status_code=413, detail="photo exceeds the size limit", headers=NO_STORE
             ) from exc
         except MalwareScannerUnavailable as exc:
             raise HTTPException(
