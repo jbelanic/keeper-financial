@@ -119,6 +119,11 @@ failure alerting — is `docs/operations/backup-restore-runbook.md`.
 - The clamav image is pinned (`clamav/clamav:1.5.3`) so an upstream major release cannot
   change startup time, memory use, or protocol behaviour under a running deployment;
   definitions still refresh through `freshclam` on the `keeper_clamav` volume.
+- The web tier proxies `/api` through middleware, whose body cap (`experimental.
+  proxyClientMaxBodySize`) must stay above the largest accepted upload plus multipart
+  overhead. The 10 MB Next.js default silently truncated borrower documents; it is set to
+  32 MiB and pinned by `apps/web/tests/proxied-upload-body-limit.test.ts`. Individual
+  upload routes still enforce their own smaller limits before parsing.
 
 ## 4. DNS / TLS / ingress (local done; production requirements)
 
