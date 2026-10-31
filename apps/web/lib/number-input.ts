@@ -79,6 +79,22 @@ export function numberIssueMessage(
     : `${label} must be an amount, for example 650000 or 650,000.`;
 }
 
+/**
+ * The same rejection as {@link numberIssueMessage}, written to sit under a field
+ * whose label is already visible, so it does not repeat the label back.
+ */
+export function numberFieldMessage(
+  kind: NumberKind,
+  reason: "format" | "precision",
+): string {
+  if (reason === "precision") {
+    return "Use at most two decimal places, for example 650.50.";
+  }
+  return kind === "integer"
+    ? "Enter a whole number, for example 2."
+    : "Enter an amount, for example 650000 or 650,000.";
+}
+
 export type NumberCheck = {
   label: string;
   raw: string | null | undefined;

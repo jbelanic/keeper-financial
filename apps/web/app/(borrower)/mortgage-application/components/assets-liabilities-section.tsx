@@ -149,8 +149,15 @@ export function AssetsLiabilitiesSection({
         </Button>
         <label className="consent">
           <input
+            id="assets-complete"
             type="checkbox"
             checked={assetsComplete}
+            aria-invalid={fieldErrors?.["assets-complete"] ? true : undefined}
+            aria-describedby={
+              fieldErrors?.["assets-complete"]
+                ? "assets-complete-error"
+                : undefined
+            }
             onChange={(event) =>
               onAssetsCompleteChange(event.currentTarget.checked)
             }
@@ -159,6 +166,11 @@ export function AssetsLiabilitiesSection({
             I confirm this asset list is complete, including if it is empty.
           </span>
         </label>
+        {fieldErrors?.["assets-complete"] ? (
+          <span className="field-error" id="assets-complete-error">
+            {fieldErrors["assets-complete"]}
+          </span>
+        ) : null}
       </fieldset>
       <fieldset>
         <legend>Liabilities</legend>
@@ -326,8 +338,17 @@ export function AssetsLiabilitiesSection({
         </Button>
         <label className="consent">
           <input
+            id="liabilities-complete"
             type="checkbox"
             checked={liabilitiesComplete}
+            aria-invalid={
+              fieldErrors?.["liabilities-complete"] ? true : undefined
+            }
+            aria-describedby={
+              fieldErrors?.["liabilities-complete"]
+                ? "liabilities-complete-error"
+                : undefined
+            }
             onChange={(event) =>
               onLiabilitiesCompleteChange(event.currentTarget.checked)
             }
@@ -336,6 +357,11 @@ export function AssetsLiabilitiesSection({
             I confirm this liability list is complete, including if it is empty.
           </span>
         </label>
+        {fieldErrors?.["liabilities-complete"] ? (
+          <span className="field-error" id="liabilities-complete-error">
+            {fieldErrors["liabilities-complete"]}
+          </span>
+        ) : null}
       </fieldset>
     </>
   );

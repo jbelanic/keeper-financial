@@ -38,18 +38,23 @@ import {
 } from "./components/types";
 import { hydrateBorrowerDraft } from "./draft-hydration";
 import {
+  fieldMessages,
+  issueLines,
+  validateAssetsAndLiabilities,
+  validateBorrowerDetails,
+  validateEmploymentEntries,
+  validateMortgageRequest,
+  validateOtherProperties,
+  validateSubjectProperty,
+  type FieldIssue,
+} from "./section-validation";
+import {
   humaniseIssueMessage,
   issueSummary,
   type BorrowerIssue,
 } from "@/lib/validation-issues";
-import { numberChecks, numberValue } from "@/lib/number-input";
+import { numberValue } from "@/lib/number-input";
 import { formatRelativeTime } from "@/lib/relative-time";
-import { isAcceptablePhoneInput } from "@/lib/phone";
-import {
-  isValidEmail,
-  isValidPostalCode,
-  passesSinChecksum,
-} from "@/lib/validation";
 
 const steps = [
   "Mortgage request",
@@ -131,249 +136,6 @@ function employmentPayload(entries: EmploymentState[]) {
       employer_address: entry.employer_address.trim() || undefined,
     }),
   );
-}
-
-function validateBorrower(
-  label: string,
-  value: BorrowerState,
-  sinAlreadyProvided: boolean,
-  coBorrower: boolean,
-) {
-  const errors: string[] = [];
-  const required: Array<[string, string]> = [
-    [value.first_name, "legal first name"],
-    [value.last_name, "legal last name"],
-    [value.email, "email"],
-    [value.phone, "phone"],
-    [value.preferred_contact_method, "preferred contact method"],
-    [value.date_of_birth, "date of birth"],
-    [value.marital_status, "marital status"],
-    [value.current_address.street, "street address"],
-    [value.current_address.city, "city"],
-    [value.current_address.province, "province or territory"],
-    [value.current_address.postal_code, "postal code"],
-  ];
-  if (coBorrower)
-    required.push([value.relationship_to_primary, "relationship"]);
-  required.forEach(([candidate, field]) => {
-    if (!candidate.trim()) errors.push(`${label}: ${field} is required.`);
-  });
-  if (!sinAlreadyProvided && !/^\d{9}$/.test(value.sin)) {
-    errors.push(`${label}: enter all nine SIN digits.`);
-  } else if (value.sin && !passesSinChecksum(value.sin)) {
-    errors.push(
-      `${label}: that SIN does not pass the checksum — check the nine digits.`,
-    );
-  }
-  if (value.sin && !/^\d{9}$/.test(value.sin)) {
-    errors.push(`${label}: replacement SIN must contain nine digits.`);
-  }
-  if (value.email.trim() && !isValidEmail(value.email)) {
-    errors.push(
-      `${label}: enter a valid email address, for example name@example.com.`,
-    );
-  }
-  if (value.phone.trim() && !isAcceptablePhoneInput(value.phone)) {
-    errors.push(
-      `${label}: enter a 10-digit phone number, for example (519) 123-4567.`,
-    );
-  }
-  if (
-    value.current_address.postal_code.trim() &&
-    !isValidPostalCode(value.current_address.postal_code)
-  ) {
-    errors.push(`${label}: enter a Canadian postal code, for example N6H 4T6.`);
-  }
-  errors.push(
-    ...numberChecks([
-      {
-        label: `${label} number of dependants`,
-        raw: value.number_of_dependants,
-        kind: "integer",
-      },
-      {
-        label: `${label} years at address`,
-        raw: value.current_address.years_at_address,
-        kind: "integer",
-      },
-      {
-        label: `${label} months at address`,
-        raw: value.current_address.months_at_address,
-        kind: "integer",
-      },
-    ]),
-  );
-  return errors;
-}
-
-export function validateEmploymentEntries(
-  label: string,
-  entries: EmploymentState[],
-): string[] {
-  return entries.flatMap((entry) => {
-    const index = entries.indexOf(entry) + 1;
-    const missing =
-      !entry.employment_type ||
-      !entry.occupation_category.trim() ||
-      !entry.industry.trim() ||
-      !entry.annual_gross_income.trim();
-    return [
-      ...(missing
-        ? [`${label} income entry ${index} is missing a required value.`]
-        : []),
-      ...numberChecks([
-        {
-          label: `${label} income entry ${index} years`,
-          raw: entry.duration_years,
-          kind: "integer",
-        },
-        {
-          label: `${label} income entry ${index} months`,
-          raw: entry.duration_months,
-          kind: "integer",
-        },
-        {
-          label: `${label} income entry ${index} annual gross income`,
-          raw: entry.annual_gross_income,
-        },
-      ]),
-    ];
-  });
-}
-
-export function validateAssetsAndLiabilities(
-  assets: AssetState[],
-  liabilities: LiabilityState[],
-  assetsComplete: boolean,
-  liabilitiesComplete: boolean,
-): string[] {
-  return [
-    ...assets.flatMap((asset, index) =>
-      numberChecks([{ label: `Asset ${index + 1} value`, raw: asset.value }]),
-    ),
-    ...liabilities.flatMap((liability, index) =>
-      numberChecks([
-        {
-          label: `Liability ${index + 1} current balance`,
-          raw: liability.current_balance,
-        },
-        {
-          label: `Liability ${index + 1} payment amount`,
-          raw: liability.payment_amount,
-        },
-      ]),
-    ),
-    ...(!assetsComplete ? ["Confirm whether the asset list is complete."] : []),
-    ...(!liabilitiesComplete
-      ? ["Confirm whether the liability list is complete."]
-      : []),
-  ];
-}
-
-export function validateSubjectProperty(value: SubjectPropertyState) {
-  if (!value.identified) return [];
-  const required: Array<[string, string]> = [
-    [value.address, "Address"],
-    [value.city, "City"],
-    [value.province, "Province or territory"],
-    [value.postal_code, "Postal code"],
-    [value.property_type, "Property type"],
-    [value.property_style, "Property style"],
-    [value.occupancy, "Occupancy"],
-  ];
-  return [
-    ...required.flatMap(([candidate, label]) =>
-      candidate.trim() ? [] : [`${label} is required.`],
-    ),
-    ...numberChecks([
-      { label: "Year built", raw: value.year_built, kind: "integer" },
-      {
-        label: "Livable area in square feet",
-        raw: value.livable_area_sqft,
-        kind: "integer",
-      },
-      { label: "Number of units", raw: value.units, kind: "integer" },
-      { label: "Monthly property tax", raw: value.monthly_property_tax },
-      { label: "Monthly heating cost", raw: value.monthly_heating_cost },
-      { label: "Monthly condo fee", raw: value.monthly_condo_fee },
-    ]),
-  ];
-}
-
-export function validateOtherProperties(
-  properties: OtherPropertyState[],
-): string[] {
-  return properties.flatMap((property, index) => [
-    ...numberChecks([
-      {
-        label: `Other property ${index + 1} purchase price`,
-        raw: property.purchase_price,
-      },
-      {
-        label: `Other property ${index + 1} estimated value`,
-        raw: property.estimated_value,
-      },
-    ]),
-    ...property.mortgages.flatMap((mortgage, mortgageIndex) =>
-      numberChecks([
-        {
-          label: `Other property ${index + 1} mortgage ${mortgageIndex + 1} balance`,
-          raw: mortgage.balance,
-        },
-        {
-          label: `Other property ${index + 1} mortgage ${mortgageIndex + 1} payment amount`,
-          raw: mortgage.payment_amount,
-        },
-      ]),
-    ),
-  ]);
-}
-
-export function validateMortgageRequest(value: MortgageRequestState): string[] {
-  const errors: string[] = [];
-  if (!value.mortgage_objective) {
-    errors.push("Mortgage request: select a mortgage purpose.");
-  }
-  if (
-    ["purchase", "refinance"].includes(value.mortgage_objective) &&
-    !value.requested_amount.trim() &&
-    !value.estimated_property_value.trim()
-  ) {
-    errors.push(
-      "Mortgage request: enter a requested amount or estimated property value for this purpose.",
-    );
-  }
-  errors.push(
-    ...numberChecks([
-      { label: "Requested mortgage amount", raw: value.requested_amount },
-      {
-        label: "Estimated property value",
-        raw: value.estimated_property_value,
-      },
-    ]),
-  );
-  value.down_payment_sources.forEach((source, index) => {
-    if (!source.source) {
-      errors.push(`Down-payment source ${index + 1}: choose a source.`);
-    }
-    if (source.source === "other" && !source.description.trim()) {
-      errors.push(
-        `Down-payment source ${index + 1}: describe the other source.`,
-      );
-    }
-    if (!source.amount.trim()) {
-      errors.push(`Down-payment source ${index + 1}: enter an amount.`);
-    }
-    errors.push(
-      ...numberChecks([
-        {
-          label: `Down-payment source ${index + 1} amount`,
-          raw: source.amount,
-        },
-      ]),
-    );
-  });
-  return errors;
 }
 
 type SaveFailure = {
@@ -788,60 +550,94 @@ export function BorrowerApplicationForm({
     };
   }
 
+  /** Every problem in one step, each pointing at the control that needs it. */
+  function sectionIssues(index: number): FieldIssue[] {
+    if (index === 0) return validateMortgageRequest(mortgage);
+    if (index === 1) {
+      return [
+        ...validateBorrowerDetails(
+          "primary",
+          "Primary borrower",
+          primary,
+          hasSavedSin,
+          false,
+        ),
+        ...(coBorrower
+          ? validateBorrowerDetails(
+              "co",
+              "Co-borrower",
+              coBorrower,
+              hasSavedCoBorrower,
+              true,
+            )
+          : []),
+      ];
+    }
+    if (index === 2) {
+      return [
+        ...validateEmploymentEntries(
+          "primary",
+          "Primary borrower",
+          primaryEmployment,
+        ),
+        ...(coBorrower
+          ? validateEmploymentEntries("co", "Co-borrower", coEmployment ?? [])
+          : []),
+      ];
+    }
+    if (index === 3) {
+      return validateAssetsAndLiabilities(
+        assets,
+        liabilities,
+        assetsComplete,
+        liabilitiesComplete,
+      );
+    }
+    if (index === 4) return validateSubjectProperty(subjectProperty);
+    if (index === 5) return validateOtherProperties(otherProperties);
+    return [];
+  }
+
+  /** Put the cursor in the field that needs an answer, once it has rendered. */
+  function focusField(field: string | undefined) {
+    if (!field) return;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const control = document.getElementById(field);
+        if (!control) return;
+        control.scrollIntoView?.({ block: "center", behavior: "smooth" });
+        control.focus({ preventScroll: true });
+      });
+    });
+  }
+
+  /** Mark the controls, then move focus to the first one that needs an answer. */
+  function blockOn(issues: FieldIssue[], title: string) {
+    setErrorTitle(title);
+    setFieldErrors(fieldMessages(issues));
+    setErrors(issueLines(issues));
+    focusField(issues[0]?.field);
+  }
+
   /** Every section that would fail a submission, in form order. */
   function incompleteSections() {
-    const checks = [
-      { index: 0, errors: validateMortgageRequest(mortgage) },
-      {
-        index: 1,
-        errors: [
-          ...validateBorrower("Primary borrower", primary, hasSavedSin, false),
-          ...(coBorrower
-            ? validateBorrower(
-                "Co-borrower",
-                coBorrower,
-                hasSavedCoBorrower,
-                true,
-              )
-            : []),
-        ],
-      },
-      {
-        index: 2,
-        errors: [
-          ...validateEmploymentEntries("Primary borrower", primaryEmployment),
-          ...(coBorrower
-            ? validateEmploymentEntries("Co-borrower", coEmployment ?? [])
-            : []),
-        ],
-      },
-      {
-        index: 3,
-        errors: validateAssetsAndLiabilities(
-          assets,
-          liabilities,
-          assetsComplete,
-          liabilitiesComplete,
-        ),
-      },
-      { index: 4, errors: validateSubjectProperty(subjectProperty) },
-      { index: 5, errors: validateOtherProperties(otherProperties) },
-    ];
-    return checks.filter((entry) => entry.errors.length > 0);
+    return steps
+      .map((_, index) => ({ index, issues: sectionIssues(index) }))
+      .filter((entry) => entry.issues.length > 0);
   }
 
   async function saveSection(
     payload: BorrowerDraftPayload,
-    validationErrors: string[] = [],
+    issues: FieldIssue[] = [],
   ) {
-    if (!draft || validationErrors.length) {
-      setFieldErrors({});
-      setErrorTitle("This section was not saved");
-      setErrors(
-        validationErrors.length
-          ? validationErrors
-          : ["The private draft is not ready. Try again shortly."],
-      );
+    if (!draft || issues.length) {
+      if (issues.length) {
+        blockOn(issues, "This section needs a few answers");
+      } else {
+        setErrorTitle("This section was not saved");
+        setFieldErrors({});
+        setErrors(["The private draft is not ready. Try again shortly."]);
+      }
       return;
     }
     setErrors([]);
@@ -1011,36 +807,19 @@ export function BorrowerApplicationForm({
             ),
           }),
         },
-        validateMortgageRequest(mortgage),
+        sectionIssues(0),
       );
     }
     if (step === 1) {
-      const validation = [
-        ...validateBorrower("Primary borrower", primary, hasSavedSin, false),
-        ...(coBorrower
-          ? validateBorrower(
-              "Co-borrower",
-              coBorrower,
-              hasSavedCoBorrower,
-              true,
-            )
-          : []),
-      ];
       return saveSection(
         {
           primary_borrower: borrowerPayload(primary, false),
           co_borrower: coBorrower ? borrowerPayload(coBorrower, true) : null,
         },
-        validation,
+        sectionIssues(1),
       );
     }
     if (step === 2) {
-      const validation = [
-        ...validateEmploymentEntries("Primary borrower", primaryEmployment),
-        ...(coBorrower
-          ? validateEmploymentEntries("Co-borrower", coEmployment ?? [])
-          : []),
-      ];
       return saveSection(
         {
           primary_borrower: {
@@ -1054,7 +833,7 @@ export function BorrowerApplicationForm({
               }
             : {}),
         },
-        validation,
+        sectionIssues(2),
       );
     }
     if (step === 3) {
@@ -1079,12 +858,7 @@ export function BorrowerApplicationForm({
           ),
           liabilities_complete: liabilitiesComplete,
         },
-        validateAssetsAndLiabilities(
-          assets,
-          liabilities,
-          assetsComplete,
-          liabilitiesComplete,
-        ),
+        sectionIssues(3),
       );
     }
     if (step === 4) {
@@ -1119,7 +893,7 @@ export function BorrowerApplicationForm({
               })
             : null,
         },
-        validateSubjectProperty(subjectProperty),
+        sectionIssues(4),
       );
     }
     if (step === 5) {
@@ -1141,7 +915,7 @@ export function BorrowerApplicationForm({
             ),
           })),
         },
-        validateOtherProperties(otherProperties),
+        sectionIssues(5),
       );
     }
     if (step === 6) {
@@ -1153,17 +927,22 @@ export function BorrowerApplicationForm({
     if (!draft || !consent || !consentAcknowledged || !documentsSettled) return;
     const incomplete = incompleteSections();
     if (incomplete.length) {
-      const summary = incomplete.map(({ index, errors: sectionErrors }) =>
-        sectionErrors.length === 1
-          ? `${steps[index]}: ${sectionErrors[0]}`
-          : `${steps[index]}: ${sectionErrors[0]} (and ${
-              sectionErrors.length - 1
-            } more in this section)`,
-      );
-      setFieldErrors({});
+      const summary = incomplete.flatMap(({ index, issues }) => [
+        ...issues
+          .slice(0, 3)
+          .map((issue) => `${steps[index]} — ${issue.label}: ${issue.message}`),
+        ...(issues.length > 3
+          ? [
+              `${steps[index]} — and ${issues.length - 3} more to fix in this section.`,
+            ]
+          : []),
+      ]);
+      const allIssues = incomplete.flatMap(({ issues }) => issues);
       setErrorTitle("Finish these sections before submitting");
+      setFieldErrors(fieldMessages(allIssues));
       setErrors(summary);
       setStep(incomplete[0].index);
+      focusField(allIssues[0]?.field);
       return;
     }
     setErrors([]);

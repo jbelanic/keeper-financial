@@ -296,10 +296,21 @@ Create:
 - Amount and whole-number fields read the way people type them: `650000`,
   `650,000`, `$650,000`, `2 000`, `650000.50`. The parsed number is what gets
   stored.
-- An entry that cannot be read is refused with the field named and an example
-  ("Requested mortgage amount must be an amount, for example 650000 or
-  650,000."). A section is never saved with a value silently dropped, because a
-  dropped amount only surfaced at submission as a generic "incomplete" notice.
+- Every client-side check returns a *field-targeted* issue — the control's DOM
+  id, the field's name with its context, and one actionable sentence
+  (`section-validation.ts`). A rejected save marks that control
+  (`aria-invalid`, `aria-describedby`), prints the sentence under the field
+  inside a red 2px border, and moves focus to the first one. A bare
+  "Primary borrower income entry 2 is missing a required value." is not
+  acceptable: it names neither the control nor what to type.
+- The error summary repeats the same sentences with their context
+  ("Primary borrower income entry 1 — annual gross income: Enter the annual
+  gross income before deductions."), so the applicant can fix a field without
+  hunting through the section.
+- The browser checks the same required fields the API enforces (including
+  number of dependants, years/months at address, and employment duration), so a
+  save is not sent to be rejected by the server for something the form already
+  knew.
 - A rejected save is reported one sentence per field, with the input marked
   invalid and linked through `aria-describedby` ("Postal code: Enter a Canadian
   postal code, for example N6H 4T6."). Internal schema paths (`primary_borrower →
@@ -309,8 +320,12 @@ Create:
   per-file or total size limit, document count limit, virus scan, scanning or
   storage unavailable — and keep the saved document list on screen. A generic
   "the response was uncertain" notice is not acceptable.
-- Submission names the incomplete sections and opens the first one instead of a
-  single "the saved application is incomplete" line.
+- Submission names the incomplete sections, opens the first one, and marks its
+  fields instead of showing a single "the saved application is incomplete" line.
+- Layout: `.form-field` uses `align-content: start` so a control never stretches
+  to match a taller neighbour in the same grid row (this produced double-height
+  selects such as the contact form's preferred contact method). Controls are a
+  consistent 44px, textareas 128px.
 - Format rules are checked in the browser before a save: email shape, Canadian
   postal code, North American phone, and the SIN checksum. The SIN hint states
   that the number is checksummed, so the rule is disclosed rather than hidden —
