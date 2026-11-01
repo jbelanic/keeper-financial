@@ -21,12 +21,18 @@ class MaskedBorrowerInfo(BaseModel):
     email: str
     phone: str
     date_of_birth: str
-    sin: MaskedSIN
+    # The projection emits `None` when nothing is on file for this borrower, and
+    # `has_sin` carries the boolean.
+    sin: MaskedSIN | None = None
     marital_status: str
     number_of_dependants: int
     current_address: dict[str, Any]
     employment: list[dict[str, Any]]
     has_sin: bool = True
+    # Present for a co-borrower only; the projection always includes the key, so
+    # `extra="forbid"` rejected every application that had one and turned the
+    # reviewer's GET /internal into an unhandled 500.
+    relationship_to_primary: str | None = None
 
 
 class BorrowerInternalProjection(BaseModel):

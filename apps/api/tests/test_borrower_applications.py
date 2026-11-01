@@ -2704,9 +2704,11 @@ class TestBorrowerPhaseDRouteIntegration:
         assert second.status_code == 200, second.text
         assert second.json()["revision"] == 2
 
-    def _submit_full_application_with_financials(self, client: TestClient) -> str:
+    def _submit_full_application_with_financials(
+        self, client: TestClient, *, with_co_borrower: bool = False
+    ) -> str:
         application_id = self._start(client)
-        payload = _valid_submit_payload()
+        payload = _valid_submit_payload(with_co_borrower=with_co_borrower)
         payload["subject_property"] = {
             "address": "123 Main St",
             "city": "Toronto",
@@ -2741,7 +2743,7 @@ class TestBorrowerPhaseDRouteIntegration:
             json={
                 "consent_version": "test-v1",
                 "consent_wording_digest": client._keeper_consent_digest,
-                "borrower_coverage": "primary",
+                "borrower_coverage": "both" if with_co_borrower else "primary",
                 "expected_revision": save.json()["revision"],
             },
         )
@@ -2838,6 +2840,44 @@ class TestBorrowerPhaseDRouteIntegration:
         assert body.get("assets") is None
         assert body.get("liabilities") is None
         assert body.get("subject_property") is None
+
+    def test_admin_internal_projection_accepts_an_application_with_a_co_borrower(
+        self, route_client: TestClient
+    ) -> None:
+        """A co-borrower used to break the reviewer's detail view.
+
+        ``MaskedBorrowerInfo`` forbids unknown keys and had no
+        ``relationship_to_primary``, while the projection always sends one for a
+        co-borrower. The response then failed validation and FastAPI returned an
+        unhandled 500, so only applications without a co-borrower could be opened.
+        """
+        application_id = self._submit_full_application_with_financials(
+            route_client, with_co_borrower=True
+        )
+        session_factory = route_client._keeper_session_factory
+        with session_factory() as session:
+            _create_review_user(session, subject="admin-co", role_code="brokerage_admin")
+            application = session.get(BorrowerApplication, uuid.UUID(application_id))
+            application.assigned_agent_id = _create_review_user(
+                session,
+                subject="agent-co",
+                role_code="agent",
+                candidate_status=CandidateStatus.ACTIVE.value,
+            ).id
+            session.commit()
+
+        response = route_client.get(
+            f"/api/v1/borrower-applications/{application_id}/internal",
+            headers=self._auth_headers("admin-co"),
+        )
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["has_co_borrower"] is True
+        assert body["co_borrower"]["first_name"] == "Alex"
+        assert body["co_borrower"]["relationship_to_primary"] == "spouse"
+        assert body["co_borrower"]["sin"]["display"] == "*** *** 286"
+        assert "046454286" not in json.dumps(body)
 
     def test_agent_assigned_list_and_email_notification(
         self, route_client: TestClient, monkeypatch: pytest.MonkeyPatch
